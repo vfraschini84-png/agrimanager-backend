@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../database');
 const router = express.Router();
 
-const JWT_SECRET = 'agrimanager_secret_key_change_this_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
 const SALT_ROUNDS = 10;
 
 // ==================== MIDDLEWARE DI AUTENTICAZIONE ====================
