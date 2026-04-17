@@ -24,3 +24,6 @@ agrimanager/
 # File temporanei
 *.log
 .DS_Store
+
+# File di ambiente (contiene chiavi segrete)
+.env
