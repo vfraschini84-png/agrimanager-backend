@@ -20,21 +20,21 @@ const db = new sqlite3.Database(dbPath, (err) => {
 function initializeDatabase() {
     // Tabella lotti
     db.run(`CREATE TABLE IF NOT EXISTS lots (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    company_name TEXT NOT NULL,
-    location TEXT NOT NULL,
-    gps_coordinates TEXT,
-    product_type TEXT NOT NULL,
-    product_category TEXT,
-    variety TEXT,
-    field_lot TEXT,
-    field_size REAL,
-    owner_id INTEGER,
-    owner_username TEXT,
-    created_by TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)`, (err) => {
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_name TEXT NOT NULL,
+        location TEXT NOT NULL,
+        gps_coordinates TEXT,
+        product_type TEXT NOT NULL,
+        product_category TEXT,
+        variety TEXT,
+        field_lot TEXT,
+        field_size REAL,
+        owner_id INTEGER,
+        owner_username TEXT,
+        created_by TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`, (err) => {
         if (err) {
             console.error('❌ Errore creazione tabella lots:', err);
         } else {
@@ -61,27 +61,27 @@ function initializeDatabase() {
         }
     });
 
-    // Tabella utenti (aggiornata con email e azienda_data)
+    // Tabella utenti
     db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'visitatore',
-        user_type TEXT NOT NULL DEFAULT 'libero_professionista',
-        azienda_data TEXT,
-        permissions TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`, (err) => {
-        if (err) {
-            console.error('❌ Errore creazione tabella users:', err);
-        } else {
-            console.log('✅ Tabella users verificata');
-            
-            // Crea utente admin di default se non esiste
-            createDefaultAdmin();
-        }
-    });
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'visitatore',
+    user_type TEXT NOT NULL DEFAULT 'libero_professionista',
+    azienda_data TEXT,
+    permissions TEXT,
+    parent_id INTEGER,
+    parent_username TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`, (err) => {
+    if (err) {
+        console.error('❌ Errore creazione tabella users:', err);
+    } else {
+        console.log('✅ Tabella users verificata');
+        createDefaultAdmin();
+    }
+});
 
     // Tabella attività di raccolta
     db.run(`CREATE TABLE IF NOT EXISTS activities (
@@ -149,6 +149,24 @@ function initializeDatabase() {
             console.log('✅ Tabella economic_records verificata');
         }
     });
+
+    // Tabella per token di reset password
+db.run(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+)`, (err) => {
+    if (err) {
+        console.error('❌ Errore creazione tabella password_reset_tokens:', err);
+    } else {
+        console.log('✅ Tabella password_reset_tokens verificata');
+    }
+});
+
 }
 
 // Funzione per creare admin di default
@@ -157,19 +175,23 @@ async function createDefaultAdmin() {
         const adminExists = await db.getAsync('SELECT id FROM users WHERE username = ?', ['admin']);
         
         if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
-            db.run(
+            // Genera una password casuale di 12 caratteri
+            const crypto = require('crypto');
+            const tempPassword = crypto.randomBytes(6).toString('hex');
+            
+            const hashedPassword = await bcrypt.hash(tempPassword, 10);
+            await db.runAsync(
                 `INSERT INTO users (username, email, password_hash, role, user_type)
                  VALUES (?, ?, ?, ?, ?)`,
-                ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista'],
-                (err) => {
-                    if (err) {
-                        console.error('❌ Errore creazione admin:', err);
-                    } else {
-                        console.log('✅ Utente admin creato di default (username: admin, password: admin123)');
-                    }
-                }
+                ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista']
             );
+            
+            console.log('==================================================');
+            console.log('🔐 NUOVO UTENTE ADMIN CREATO');
+            console.log(`👤 Username: admin`);
+            console.log(`🔑 Password: ${tempPassword}`);
+            console.log('⚠️  CAMBIA QUESTA PASSWORD AL PRIMO ACCESSO!');
+            console.log('==================================================');
         }
     } catch (error) {
         console.error('❌ Errore verifica admin:', error);
@@ -177,8 +199,6 @@ async function createDefaultAdmin() {
 }
 
 // ==================== FUNZIONI HELPER PROMISIFICATE ====================
-
-// Get single row
 db.getAsync = function(sql, params = []) {
     return new Promise((resolve, reject) => {
         this.get(sql, params, (err, row) => {
@@ -188,7 +208,6 @@ db.getAsync = function(sql, params = []) {
     });
 };
 
-// Get all rows
 db.allAsync = function(sql, params = []) {
     return new Promise((resolve, reject) => {
         this.all(sql, params, (err, rows) => {
@@ -198,22 +217,11 @@ db.allAsync = function(sql, params = []) {
     });
 };
 
-// Run query (insert/update/delete)
 db.runAsync = function(sql, params = []) {
     return new Promise((resolve, reject) => {
         this.run(sql, params, function(err) {
             if (err) reject(err);
             else resolve({ id: this.lastID, changes: this.changes });
-        });
-    });
-};
-
-// Exec multiple statements
-db.execAsync = function(sql) {
-    return new Promise((resolve, reject) => {
-        this.exec(sql, (err) => {
-            if (err) reject(err);
-            else resolve();
         });
     });
 };

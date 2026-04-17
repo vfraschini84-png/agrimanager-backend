@@ -367,4 +367,140 @@ router.delete('/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
+const crypto = require('crypto');
+const nodemailer = require('nodemailer'); // Da installare
+
+// Configurazione email (per sviluppo usa Ethereal)
+const transporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
+    auth: {
+        user: 'verlie34@ethereal.email', // Da configurare
+        pass: 'Hx2uaaKs2BFFzwaRqC'
+    }
+});
+
+// POST /api/auth/forgot-password - Richiede reset password
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    
+    if (!email) {
+        return res.status(400).json({ error: 'Email obbligatoria' });
+    }
+    
+    try {
+        // Cerca utente per email
+        const user = await db.getAsync(
+            'SELECT id, username, email FROM users WHERE email = ?',
+            [email]
+        );
+        
+        if (!user) {
+            // Per sicurezza, non rivelare se l'email esiste o no
+            return res.json({ success: true, message: 'Se l\'email esiste, riceverai un link di reset' });
+        }
+        
+        // Genera token unico
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000); // 1 ora
+        
+        // Salva token nel database
+        await db.runAsync(
+            `INSERT INTO password_reset_tokens (user_id, token, expires_at)
+             VALUES (?, ?, ?)`,
+            [user.id, token, expiresAt.toISOString()]
+        );
+        
+        // Invia email (in sviluppo, stampa il link in console)
+        const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
+        console.log('==================================');
+        console.log('🔐 LINK RESET PASSWORD:');
+        console.log(resetLink);
+        console.log('==================================');
+        
+        // TODO: Invia email reale quando in produzione
+        
+        res.json({ success: true, message: 'Link di reset inviato (controlla console)' });
+    } catch (error) {
+        console.error('Errore forgot-password:', error);
+        res.status(500).json({ error: 'Errore interno del server' });
+    }
+});
+
+// POST /api/auth/reset-password - Conferma reset password
+router.post('/reset-password', async (req, res) => {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+        return res.status(400).json({ error: 'Token e nuova password obbligatori' });
+    }
+    
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'La password deve avere almeno 6 caratteri' });
+    }
+    
+    try {
+        // Verifica token
+        const resetToken = await db.getAsync(
+            `SELECT * FROM password_reset_tokens 
+             WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
+            [token]
+        );
+        
+        if (!resetToken) {
+            return res.status(400).json({ error: 'Token non valido o scaduto' });
+        }
+        
+        // Aggiorna password
+        const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+        await db.runAsync(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [hashedPassword, resetToken.user_id]
+        );
+        
+        // Marca token come usato
+        await db.runAsync(
+            'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
+            [resetToken.id]
+        );
+        
+        res.json({ success: true, message: 'Password aggiornata con successo' });
+    } catch (error) {
+        console.error('Errore reset-password:', error);
+        res.status(500).json({ error: 'Errore interno del server' });
+    }
+});
+
+// POST /api/auth/admin-reset-password - Reset forzato (solo super-admin)
+router.post('/admin-reset-password', authenticateToken, async (req, res) => {
+    // Solo super-admin (username 'admin') può farlo
+    if (req.user.username !== 'admin') {
+        return res.status(403).json({ error: 'Accesso negato. Solo il super-admin può resettare password.' });
+    }
+    
+    const { userId, newPassword } = req.body;
+    
+    if (!userId || !newPassword) {
+        return res.status(400).json({ error: 'ID utente e nuova password obbligatori' });
+    }
+    
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'La password deve avere almeno 6 caratteri' });
+    }
+    
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+        await db.runAsync(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [hashedPassword, userId]
+        );
+        
+        res.json({ success: true, message: 'Password resettata con successo' });
+    } catch (error) {
+        console.error('Errore admin-reset-password:', error);
+        res.status(500).json({ error: 'Errore interno del server' });
+    }
+});
+
 module.exports = router;

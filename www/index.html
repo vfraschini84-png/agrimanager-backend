@@ -2457,6 +2457,12 @@ input[type="radio"]:checked + span {
         </div>
     </div>
  
+    <div style="text-align: center; margin-top: 15px;">
+    <a href="#" onclick="showForgotPasswordForm()" style="color: #4CAF50; text-decoration: none; font-size: 14px;">
+        Password dimenticata?
+    </a>
+</div>
+
     <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
         <h4 style="margin-bottom: 10px;">Credenziali di test:</h4>
         <p><strong>Admin:</strong> admin / admin123 (accesso completo)</p>
@@ -2465,6 +2471,31 @@ input[type="radio"]:checked + span {
     </div>
 </div>
             
+<!-- Form Password Dimenticata -->
+<div id="forgotPasswordSection" style="display: none; max-width: 400px; margin: 50px auto; padding: 20px;">
+    <h2>Recupera Password</h2>
+    <p style="color: #666; margin-bottom: 20px;">
+        Inserisci la tua email. Riceverai un link per reimpostare la password.
+    </p>
+    
+    <div class="form-group">
+        <label for="forgotEmail">Email</label>
+        <input type="email" id="forgotEmail" class="form-control" placeholder="es. mario.rossi@email.com">
+    </div>
+    
+    <button onclick="requestPasswordReset()" class="btn btn-primary" style="width: 100%;">
+        Invia Link di Reset
+    </button>
+    
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="#" onclick="showLoginForm()" style="color: #4CAF50; text-decoration: none;">
+            ← Torna al Login
+        </a>
+    </div>
+    
+    <div id="forgotPasswordMessage" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+</div>
+
             <!-- Form Registrazione (solo per admin) - VERSIONE AGGIORNATA -->
 <div id="register-form" class="auth-form">
     <div class="form-group">
@@ -3322,6 +3353,62 @@ function loadSavedCredentials() {
             document.getElementById('login-password').value = atob(savedPassword);
             document.getElementById('remember-me').checked = true;
         }
+    }
+}
+
+// Mostra il form password dimenticata
+function showForgotPasswordForm() {
+    document.querySelector('.login-container')?.setAttribute('style', 'display: none;');
+    document.getElementById('forgotPasswordSection').style.display = 'block';
+}
+
+// Mostra il form di login
+function showLoginForm() {
+    document.querySelector('.login-container')?.setAttribute('style', 'display: block;');
+    document.getElementById('forgotPasswordSection').style.display = 'none';
+}
+
+// Richiede il reset password
+async function requestPasswordReset() {
+    const email = document.getElementById('forgotEmail').value;
+    const messageDiv = document.getElementById('forgotPasswordMessage');
+    
+    if (!email) {
+        messageDiv.style.display = 'block';
+        messageDiv.style.backgroundColor = '#ffebee';
+        messageDiv.style.color = '#c62828';
+        messageDiv.textContent = 'Inserisci un indirizzo email valido';
+        return;
+    }
+    
+    messageDiv.style.display = 'block';
+    messageDiv.style.backgroundColor = '#e3f2fd';
+    messageDiv.style.color = '#1565c0';
+    messageDiv.textContent = 'Invio in corso...';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.style.backgroundColor = '#e8f5e9';
+            messageDiv.style.color = '#2e7d32';
+            messageDiv.innerHTML = `
+                ✅ Link di reset inviato!<br>
+                <small>Controlla la console del server per il link (in sviluppo).</small>
+            `;
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        messageDiv.style.backgroundColor = '#ffebee';
+        messageDiv.style.color = '#c62828';
+        messageDiv.textContent = 'Errore: ' + error.message;
     }
 }
 

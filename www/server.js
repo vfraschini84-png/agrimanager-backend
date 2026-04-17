@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+require('dotenv').config();  // ← AGGIUNGI QUESTA RIGA QUI
 
 const app = express();
 const PORT = process.env.PORT || 3000;
