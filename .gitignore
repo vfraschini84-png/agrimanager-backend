@@ -1,0 +1,26 @@
+﻿# Dipendenze
+node_modules/
+package-lock.json
+
+# Build e cache
+android_old/
+android/app/build/
+android/.gradle/
+android/captures/
+ios/
+
+# Database e backup
+*.db
+backups/*.db
+!backups/.gitkeep
+
+# File di ambiente
+.env
+
+# Repository annidati (li ignoreremo per ora)
+agrimanager/
+"agrimanager app/"
+
+# File temporanei
+*.log
+.DS_Store
