@@ -39,18 +39,31 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
 
 // Funzione per creare admin di default
 async function createDefaultAdmin() {
-    const bcrypt = require('bcrypt');
-    
-    const adminExists = await db.getAsync('SELECT id FROM users WHERE username = ?', ['admin']);
-    
-    if (!adminExists) {
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        db.run(
-            `INSERT INTO users (username, email, password_hash, role, user_type)
-             VALUES (?, ?, ?, ?, ?)`,
-            ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista']
-        );
-        console.log('✅ Utente admin creato di default (username: admin, password: admin123)');
+    try {
+        const adminExists = await db.getAsync('SELECT id FROM users WHERE username = ?', ['admin']);
+        
+        if (!adminExists) {
+            // Genera una password casuale di 12 caratteri
+            const crypto = require('crypto');
+            const tempPassword = crypto.randomBytes(6).toString('hex'); // 12 caratteri
+            
+            const hashedPassword = await bcrypt.hash(tempPassword, 10);
+            await db.runAsync(
+                `INSERT INTO users (username, email, password_hash, role, user_type)
+                 VALUES (?, ?, ?, ?, ?)`,
+                ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista']
+            );
+            
+            // STAMPA LA PASSWORD IN CONSOLE SOLO AL PRIMO AVVIO
+            console.log('==================================================');
+            console.log('🔐 NUOVO UTENTE ADMIN CREATO');
+            console.log(`👤 Username: admin`);
+            console.log(`🔑 Password: ${tempPassword}`);
+            console.log('⚠️  CAMBIA QUESTA PASSWORD AL PRIMO ACCESSO!');
+            console.log('==================================================');
+        }
+    } catch (error) {
+        console.error('❌ Errore verifica admin:', error);
     }
 }
 
