@@ -5745,6 +5745,10 @@ function calcolaKgRaccoltiAutomaticoCompleto() {
         return;
     }
     
+    // ✅ VERIFICA SE STIAMO MODIFICANDO UNA REGISTRAZIONE ESISTENTE
+    const editingIdField = document.getElementById('editing-economic-id');
+    const editingId = editingIdField ? editingIdField.value : null;
+    
     // Leggi i valori dal form
     const stagioneAgricola = document.getElementById('stagione-agricola').value;
     const dataAcquistoVendita = document.getElementById('data-acquisto-vendita').value;
@@ -5757,6 +5761,7 @@ function calcolaKgRaccoltiAutomaticoCompleto() {
     const beniDurevoli = raccogliBeniDurevoli();
     
     console.log('📊 Dati form:', {
+        editingId,
         stagioneAgricola,
         dataAcquistoVendita,
         metodoKg,
@@ -5810,24 +5815,40 @@ function calcolaKgRaccoltiAutomaticoCompleto() {
         bilancio: bilancio
     };
 
-console.log('🔍 Valori del form:', {
-    stagione: document.getElementById('stagione-agricola').value,
-    data: document.getElementById('data-acquisto-vendita').value,
-    prezzoKg: document.getElementById('prezzo-acquisto-vendita').value,
-    kg: document.getElementById('totale-kg-raccolti').value
-});    
+    console.log('🔍 Valori del form:', {
+        stagione: document.getElementById('stagione-agricola').value,
+        data: document.getElementById('data-acquisto-vendita').value,
+        prezzoKg: document.getElementById('prezzo-acquisto-vendita').value,
+        kg: document.getElementById('totale-kg-raccolti').value
+    });    
 
     try {
-        showNotification('Salvataggio in corso...', 'loading');
+        showNotification(editingId ? 'Aggiornamento in corso...' : 'Salvataggio in corso...', 'loading');
+        
+        // ✅ DECIDI SE USARE POST (nuovo) O PUT (modifica)
+        const url = editingId ? `/economic/${editingId}` : '/economic';
+        const method = editingId ? 'PUT' : 'POST';
+        
+        console.log(`📤 Invio ${method} a ${url}`, registrazione);
         
         // Invia al backend
-        const response = await apiCall('/economic', {
-            method: 'POST',
+        const response = await apiCall(url, {
+            method: method,
             body: registrazione
         });
         
         if (response.success) {
-            showNotification('Registrazione economica salvata con successo!', 'success');
+            showNotification(
+                editingId ? 'Registrazione economica aggiornata con successo!' : 'Registrazione economica salvata con successo!', 
+                'success'
+            );
+            
+            // ✅ PULISCI IL CAMPO HIDDEN DELL'ID
+            if (editingIdField) editingIdField.value = '';
+            
+            // ✅ RIPRISTINA IL TESTO DEL PULSANTE
+            const saveBtn = document.getElementById('save-economic-btn');
+            if (saveBtn) saveBtn.textContent = '💾 Salva Registrazione';
             
             // Aggiorna la lista visualizzata
             await loadRegistrazioniEconomiche(lotId);
@@ -6042,7 +6063,106 @@ console.log('🔍 Valori del form:', {
     }
 }
 
-        function modificaRegistrazioneEconomica(registrazioneId) {
+// Funzione helper per popolare il form economico con i dati di un record
+function popolaFormEconomico(record) {
+    console.log('📝 Popolamento form con record:', record);
+    
+    // Imposta ID nascosto per la modifica
+    let economicIdField = document.getElementById('editing-economic-id');
+    if (!economicIdField) {
+        economicIdField = document.createElement('input');
+        economicIdField.type = 'hidden';
+        economicIdField.id = 'editing-economic-id';
+        
+        // ✅ CERCA UN CONTAINER VALIDO (più opzioni)
+        const container = document.querySelector('#gestione-economica form') || 
+                          document.querySelector('#gestione-economica .form-container') ||
+                          document.querySelector('#gestione-economica') ||
+                          document.getElementById('save-economic-btn')?.parentNode;
+        
+        if (container) {
+            container.appendChild(economicIdField);
+            console.log('🆔 Campo hidden aggiunto a:', container.tagName, container.id || '');
+        } else {
+            document.body.appendChild(economicIdField);
+            console.log('🆔 Campo hidden aggiunto a body (fallback)');
+        }
+    }
+    economicIdField.value = record.id;
+    console.log('🆔 ID impostato:', economicIdField.value);
+    
+    // Stagione agricola
+    document.getElementById('stagione-agricola').value = record.stagione_agricola || '';
+    
+    // Data
+    if (record.data_acquisto_vendita) {
+        const data = record.data_acquisto_vendita.split('T')[0];
+        document.getElementById('data-acquisto-vendita').value = data;
+    }
+    
+    // Metodo calcolo
+    const metodoCalcolo = record.metodo_calcolo || 'kg';
+    if (metodoCalcolo === 'kg') {
+        document.getElementById('metodo-prezzo-kg').checked = true;
+        document.getElementById('prezzo-acquisto-vendita').value = record.prezzo_kg || 0;
+    } else {
+        document.getElementById('metodo-prezzo-totale').checked = true;
+        document.getElementById('prezzo-totale').value = record.prezzo_totale || 0;
+    }
+    toggleMetodoCalcolo();
+    
+    // Kg totali
+    document.getElementById('totale-kg-raccolti').value = record.totale_kg || 0;
+    
+    // Costi
+    document.getElementById('costo-mezzi-tecnici').value = record.costo_mezzi_tecnici || 0;
+    document.getElementById('costo-personale').value = record.costo_personale || 0;
+    
+    // Beni durevoli
+    const container = document.getElementById('beni-durevoli-container');
+    container.innerHTML = '';
+    beniDurevoliCount = 0;
+    
+    let beniDurevoli = [];
+    if (record.beni_durevoli) {
+        try {
+            beniDurevoli = typeof record.beni_durevoli === 'string' 
+                ? JSON.parse(record.beni_durevoli) 
+                : record.beni_durevoli;
+        } catch (e) {
+            console.error('Errore parsing beni durevoli:', e);
+            beniDurevoli = [];
+        }
+    }
+    
+    if (Array.isArray(beniDurevoli) && beniDurevoli.length > 0) {
+        beniDurevoli.forEach(bene => {
+            aggiungiBeneDurevole();
+            const lastIdx = beniDurevoliCount;
+            document.getElementById(`bene-desc-${lastIdx}`).value = bene.descrizione || '';
+            document.getElementById(`bene-costo-${lastIdx}`).value = bene.costo || 0;
+        });
+    } else {
+        aggiungiBeneDurevole();
+    }
+    
+    // Cambia il pulsante di salvataggio
+    const saveBtn = document.getElementById('save-economic-btn');
+    if (saveBtn) {
+        saveBtn.textContent = '🔄 Aggiorna Registrazione';
+    }
+    
+    // ✅ VERIFICA FINALE
+    console.log('🔍 Verifica finale - campo hidden:', {
+        element: document.getElementById('editing-economic-id'),
+        value: document.getElementById('editing-economic-id')?.value
+    });
+    
+    // Scrolla al form
+    document.querySelector('#gestione-economica .form-container')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+       async function modificaRegistrazioneEconomica(registrazioneId) {
     // Controlla i permessi
     const permissions = getUserPermissions();
     if (!permissions.canEditLots) {
@@ -6050,37 +6170,31 @@ console.log('🔍 Valori del form:', {
         return;
     }
     
-    const registrazione = registrazioniEconomiche.find(r => r.id === registrazioneId);
-    if (!registrazione) return;
+    console.log('🔧 Modifica registrazione economica ID:', registrazioneId);
     
-    // Imposta il metodo di calcolo corretto
-    if (registrazione.metodoCalcolo === 'kg') {
-        document.getElementById('metodo-prezzo-kg').checked = true;
-        document.getElementById('prezzo-acquisto-vendita').value = registrazione.prezzoKg;
-    } else {
-        document.getElementById('metodo-prezzo-totale').checked = true;
-        document.getElementById('prezzo-totale').value = registrazione.prezzoTotale;
+    try {
+        showNotification('Caricamento dati in corso...', 'loading');
+        
+        // ✅ CHIAMA L'API PER RECUPERARE I DATI AGGIORNATI
+        const response = await apiCall(`/economic/record/${registrazioneId}`);
+        const record = response.data;
+        
+        if (!record) {
+            showNotification('Registrazione non trovata', 'error');
+            return;
+        }
+        
+        console.log('✅ Record caricato:', record);
+        
+        // Popola il form
+        popolaFormEconomico(record);
+        
+        showNotification('Modifica la registrazione e salva le modifiche', 'info');
+        
+    } catch (error) {
+        console.error('Errore caricamento registrazione:', error);
+        showNotification('Errore nel caricamento dei dati: ' + error.message, 'error');
     }
-    toggleMetodoCalcolo();
-    
-    // Imposta gli altri campi
-    document.getElementById('stagione-agricola').value = registrazione.stagioneAgricola;
-    document.getElementById('data-acquisto-vendita').value = registrazione.dataAcquistoVendita;
-    document.getElementById('totale-kg-raccolti').value = registrazione.totaleKg;
-    document.getElementById('costo-mezzi-tecnici').value = registrazione.costoMezziTecnici;
-    document.getElementById('costo-personale').value = registrazione.costoPersonale;
-    
-    document.getElementById('beni-durevoli-container').innerHTML = '';
-    beniDurevoliCount = 0;
-    registrazione.beniDurevoli.forEach(bene => {
-        aggiungiBeneDurevole();
-        document.getElementById(`bene-desc-${beniDurevoliCount}`).value = bene.descrizione;
-        document.getElementById(`bene-costo-${beniDurevoliCount}`).value = bene.costo;
-    });
-    
-    eliminaRegistrazioneEconomica(registrazioneId, false);
-    
-    showNotification('Modifica la registrazione e salva le modifiche', 'info');
 }
 
         async function eliminaRegistrazioneEconomica(registrazioneId, showConfirm = true) {

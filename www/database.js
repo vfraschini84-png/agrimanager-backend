@@ -50,6 +50,8 @@ function initializeDatabase() {
         estimated_kg REAL,
         purchase_date TEXT,
         harvested_kg REAL,
+        owner_id INTEGER,
+    owner_username TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
@@ -91,6 +93,8 @@ function initializeDatabase() {
         date TEXT NOT NULL,
         kg REAL NOT NULL,
         notes TEXT,
+        owner_id INTEGER,
+    owner_username TEXT,
         created_by TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
@@ -112,6 +116,8 @@ function initializeDatabase() {
         file_url TEXT,
         notes TEXT,
         file_size TEXT,
+        owner_id INTEGER,
+    owner_username TEXT,
         uploaded_by TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
@@ -125,23 +131,25 @@ function initializeDatabase() {
 
     // Tabella registrazioni economiche
     db.run(`CREATE TABLE IF NOT EXISTS economic_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        lot_id INTEGER NOT NULL,
-        stagione_agricola TEXT,
-        data_acquisto_vendita TEXT,
-        metodo_calcolo TEXT,
-        prezzo_kg REAL,
-        prezzo_totale REAL,
-        totale_kg REAL,
-        ricavi_totali REAL,
-        costo_mezzi_tecnici REAL,
-        costo_personale REAL,
-        beni_durevoli TEXT,
-        costi_totali REAL,
-        bilancio REAL,
-        created_by TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lot_id INTEGER NOT NULL,
+    stagione_agricola TEXT,
+    data_acquisto_vendita TEXT,
+    metodo_calcolo TEXT,
+    prezzo_kg REAL,
+    prezzo_totale REAL,
+    totale_kg REAL,
+    ricavi_totali REAL,
+    costo_mezzi_tecnici REAL,
+    costo_personale REAL,
+    beni_durevoli TEXT,
+    costi_totali REAL,
+    bilancio REAL,
+    owner_id INTEGER,
+    owner_username TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
     )`, (err) => {
         if (err) {
             console.error('❌ Errore creazione tabella economic_records:', err);

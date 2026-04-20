@@ -1,8 +1,9 @@
 const express = require('express');
 const db = require('../database');
 const router = express.Router();
+require('dotenv').config();
 // Secret per JWT (stessa di auth.js)
-const JWT_SECRET = 'agrimanager_secret_key_change_this_in_production';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Validazione avanzata URL Google Maps con misure di sicurezza
 const isValidGoogleMapsUrl = (url) => {
@@ -217,7 +218,7 @@ const validateLotDetail = (detailData) => {
     return errors;
 };
 
-// GET /api/lots - Tutti i lotti (filtrati per proprietario)
+// GET /api/lots - Tutti i lotti (filtrati per proprietario e gerarchia)
 router.get('/', async (req, res) => {
     try {
         // Ottieni l'ID dell'utente dal token
@@ -235,8 +236,11 @@ router.get('/', async (req, res) => {
                 currentUserRole = decoded.role;
                 currentUsername = decoded.username;
                 
-                // Ottieni il parent_id dell'utente (se è un sottoutente)
-                const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [currentUserId]);
+                // Ottieni il parent_id e parent_username dell'utente (se è un sottoutente)
+                const user = await db.getAsync(
+                    'SELECT parent_id, parent_username FROM users WHERE id = ?', 
+                    [currentUserId]
+                );
                 if (user && user.parent_id) {
                     parentId = user.parent_id;
                 }
@@ -247,23 +251,57 @@ router.get('/', async (req, res) => {
         
         let rows;
         
-        // Se è super-admin (username 'admin'), vede tutti i lotti
+        console.log('📊 GET /lots - Utente:', { currentUserId, currentUsername, currentUserRole, parentId });
+        
+        // ✅ CASO 1: SUPER-ADMIN (username 'admin') - vede TUTTI i lotti
         if (currentUsername === 'admin') {
             rows = await db.allAsync('SELECT * FROM lots ORDER BY created_at DESC');
+            console.log('👑 Super-admin: vede tutti i lotti');
         } 
-        // Se è un sottoutente (ha parent_id), vede i lotti del suo admin
+        // ✅ CASO 2: ADMIN NORMALE (role='admin' ma username != 'admin') - vede i propri lotti E quelli dei sottoutenti
+        else if (currentUserRole === 'admin') {
+            // Recupera tutti i sottoutenti di questo admin
+            const subUsers = await db.allAsync(
+                'SELECT id, username FROM users WHERE parent_id = ?',
+                [currentUserId]
+            );
+            
+            // Crea array di owner_id da includere: l'admin stesso + tutti i suoi sottoutenti
+            const ownerIds = [currentUserId, ...subUsers.map(u => u.id)];
+            const ownerUsernames = [currentUsername, ...subUsers.map(u => u.username)];
+            
+            // Costruisci la clausola IN per gli ID
+            const idPlaceholders = ownerIds.map(() => '?').join(',');
+            const usernamePlaceholders = ownerUsernames.map(() => '?').join(',');
+            
+            rows = await db.allAsync(
+                `SELECT * FROM lots 
+                 WHERE owner_id IN (${idPlaceholders}) 
+                    OR owner_username IN (${usernamePlaceholders})
+                 ORDER BY created_at DESC`,
+                [...ownerIds, ...ownerUsernames]
+            );
+            console.log(`👤 Admin normale (${currentUsername}): vede ${rows.length} lotti (propri + sottoutenti)`);
+        } 
+        // ✅ CASO 3: SOTTOUTENTE (ha parent_id) - vede solo i lotti del suo admin padre
         else if (parentId) {
+            // Recupera l'username del parent
+            const parent = await db.getAsync('SELECT username FROM users WHERE id = ?', [parentId]);
+            const parentUsername = parent ? parent.username : currentUsername;
+            
             rows = await db.allAsync(
                 'SELECT * FROM lots WHERE owner_id = ? OR owner_username = ? ORDER BY created_at DESC',
-                [parentId, currentUsername]
+                [parentId, parentUsername]
             );
-        }
-        // Altrimenti (admin normale o utente senza parent), vede i propri lotti
+            console.log(`👤 Sottoutente (${currentUsername}): vede lotti di ${parentUsername}`);
+        } 
+        // ✅ CASO 4: FALLBACK - utente senza ruolo specifico, vede solo i propri
         else {
             rows = await db.allAsync(
                 'SELECT * FROM lots WHERE owner_id = ? OR owner_username = ? ORDER BY created_at DESC',
                 [currentUserId, currentUsername]
             );
+            console.log(`❓ Utente generico (${currentUsername}): vede solo i propri lotti`);
         }
         
         res.json({

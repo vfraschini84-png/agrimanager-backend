@@ -1,7 +1,8 @@
 const express = require('express');
 const db = require('../database');
 const router = express.Router();
-const JWT_SECRET = 'agrimanager_secret_key_change_this_in_production';
+require('dotenv').config();
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Middleware per autenticazione
 function authenticateToken(req, res, next) {
