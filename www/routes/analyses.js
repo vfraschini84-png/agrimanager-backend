@@ -18,15 +18,67 @@ function authenticateToken(req, res, next) {
     }
 }
 
-// GET /api/analyses/:lotId - Analisi di un lotto
+// GET /api/analyses/:lotId - Analisi di un lotto con paginazione
 router.get('/:lotId', authenticateToken, async (req, res) => {
     try {
-        const analyses = await db.allAsync(
-            'SELECT * FROM analyses WHERE lot_id = ? ORDER BY created_at DESC',
-            [req.params.lotId]
+        const lotId = req.params.lotId;
+        
+        // ✅ PAGINAZIONE
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        
+        if (page < 1 || limit < 1 || limit > 100) {
+            return res.status(400).json({ 
+                error: 'Parametri di paginazione non validi. page >= 1, 1 <= limit <= 100' 
+            });
+        }
+        
+        // Verifica permessi
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
+            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+            const ownerId = user?.parent_id || req.user.id;
+            
+            if (lot.owner_id !== ownerId) {
+                return res.status(403).json({ error: 'Accesso negato' });
+            }
+        }
+        
+        // Query per il totale
+        const countResult = await db.getAsync(
+            'SELECT COUNT(*) as total FROM analyses WHERE lot_id = ?',
+            [lotId]
         );
-        res.json({ data: analyses });
+        const totalItems = countResult.total;
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        // Query principale con paginazione
+        const analyses = await db.allAsync(
+            `SELECT * FROM analyses 
+             WHERE lot_id = ? 
+             ORDER BY year DESC, created_at DESC 
+             LIMIT ? OFFSET ?`,
+            [lotId, limit, offset]
+        );
+        
+        res.json({
+            data: analyses,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalItems,
+                totalPages: totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
+        console.error('Errore GET analyses:', error);
         res.status(500).json({ error: error.message });
     }
 });

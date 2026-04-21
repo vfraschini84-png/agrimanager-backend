@@ -21,15 +21,67 @@ function authenticateToken(req, res, next) {
     }
 }
 
-// GET /api/activities/:lotId - Attività di un lotto
+// GET /api/activities/:lotId - Attività di un lotto con paginazione
 router.get('/:lotId', authenticateToken, async (req, res) => {
     try {
-        const activities = await db.allAsync(
-            'SELECT * FROM activities WHERE lot_id = ? ORDER BY date DESC',
-            [req.params.lotId]
+        const lotId = req.params.lotId;
+        
+        // ✅ PAGINAZIONE
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = (page - 1) * limit;
+        
+        if (page < 1 || limit < 1 || limit > 200) {
+            return res.status(400).json({ 
+                error: 'Parametri di paginazione non validi. page >= 1, 1 <= limit <= 200' 
+            });
+        }
+        
+        // Verifica permessi
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
+            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+            const ownerId = user?.parent_id || req.user.id;
+            
+            if (lot.owner_id !== ownerId) {
+                return res.status(403).json({ error: 'Accesso negato' });
+            }
+        }
+        
+        // Query per il totale
+        const countResult = await db.getAsync(
+            'SELECT COUNT(*) as total FROM activities WHERE lot_id = ?',
+            [lotId]
         );
-        res.json({ data: activities });
+        const totalItems = countResult.total;
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        // Query principale con paginazione
+        const activities = await db.allAsync(
+            `SELECT * FROM activities 
+             WHERE lot_id = ? 
+             ORDER BY date DESC, created_at DESC 
+             LIMIT ? OFFSET ?`,
+            [lotId, limit, offset]
+        );
+        
+        res.json({
+            data: activities,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalItems,
+                totalPages: totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        });
     } catch (error) {
+        console.error('Errore GET activities:', error);
         res.status(500).json({ error: error.message });
     }
 });

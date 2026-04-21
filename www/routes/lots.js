@@ -2,226 +2,65 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 require('dotenv').config();
-// Secret per JWT (stessa di auth.js)
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Validazione avanzata URL Google Maps con misure di sicurezza
+// Validazione avanzata URL Google Maps
 const isValidGoogleMapsUrl = (url) => {
-    // ✅ Controllo sicuro per null/undefined
     if (!url || typeof url !== 'string') return false;
-    
     const lowerUrl = url.toLowerCase().trim();
-// ✅ Se la stringa è vuota dopo il trim
     if (lowerUrl.length === 0) return false;
-    
-    // 1. Verifica che sia un URL valido
     try {
         new URL(lowerUrl);
     } catch {
         return false;
     }
-    
-    // 2. Verifica dominio Google genuino (protezione da phishing)
-    const isGoogleDomain = lowerUrl.includes('google.') || 
-                          lowerUrl.includes('goo.gl') ||
-                          lowerUrl.includes('google.com') ||
-                          lowerUrl.includes('google.it') ||
-                          lowerUrl.includes('google.fr') ||
-                          lowerUrl.includes('google.de') ||
-                          lowerUrl.includes('google.es');
-    
+    const isGoogleDomain = lowerUrl.includes('google.') || lowerUrl.includes('goo.gl');
     if (!isGoogleDomain) return false;
-    
-    // 3. Verifica che sia specificamente un link Maps (protezione da URL ingannevoli)
-    const mapsPatterns = [
-        '/maps',
-        'maps.',
-        'maps/',
-        'maps?',
-        'maps%',
-        'map=',
-        'place/',
-        'search/',
-        'dir/',
-        '@'
-    ];
-    
+    const mapsPatterns = ['/maps', 'maps.', 'place/', 'search/', 'dir/', '@'];
     const isMapsUrl = mapsPatterns.some(pattern => lowerUrl.includes(pattern));
     if (!isMapsUrl) return false;
-    
-    // 4. Protezione da URL malevoli o ingannevoli
-    const maliciousPatterns = [
-        'javascript:',
-        'data:',
-        'vbscript:',
-        'expression(',
-        'onload=',
-        'onerror=',
-        'alert(',
-        'eval(',
-        'document.cookie',
-        'window.location',
-        '%0d', // CR injection
-        '%0a', // LF injection
-        '%00', // Null byte
-        '../', // Directory traversal
-        '\\x'  // Hex encoding
-    ];
-    
-    const isMalicious = maliciousPatterns.some(pattern => lowerUrl.includes(pattern));
-    if (isMalicious) return false;
-    
-    // 5. Verifica formati specifici Google Maps
-    const validFormats = [
-        // Formati standard
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/place\/.+/i,
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/search\/.+/i,
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/dir\/.+/i,
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/@.+/i,
-        /https?:\/\/(www\.)?maps\.google\.[a-z]{2,3}\/.+/i,
-        
-        // Formati con coordinate
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\?q=-?\d+\.\d+,-?\d+\.\d+/i,
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/\?q=-?\d+\.\d+,-?\d+\.\d+/i,
-        
-        // Short links
-        /https?:\/\/(www\.)?goo\.gl\/maps\/[a-z0-9]+/i,
-        /https?:\/\/(www\.)?maps\.app\.goo\.gl\/[a-z0-9]+/i,
-        
-        // Formati internazionali
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/place\/.+/i,
-        /https?:\/\/(www\.)?google\.[a-z]{2,3}\/maps\/search\/.+/i
-    ];
-    
-    return validFormats.some(pattern => pattern.test(lowerUrl));
+    return true;
 };
 
-// ✅ VERSIONE CORRETTA - con validazione sicura
+// Validazione lotto
 const validateLot = (lotData, isUpdate = false) => {
     const errors = [];
-    
-    // ✅ Validazione sicura - usa sempre optional chaining e default values
     if (!isUpdate || lotData.company_name !== undefined) {
         const companyName = (lotData.company_name || '').trim();
         if (!companyName || companyName.length < 2) {
             errors.push('Nome azienda deve avere almeno 2 caratteri');
         }
     }
-    
     if (!isUpdate || lotData.location !== undefined) {
         const location = (lotData.location || '').trim();
         if (!location || location.length < 2) {
             errors.push('Luogo deve avere almeno 2 caratteri');
         }
     }
-    
     if (!isUpdate || lotData.gps_coordinates !== undefined) {
-    const gps = (lotData.gps_coordinates || '').trim();
-    // Se viene inserito un valore GPS, deve essere valido, ma non è obbligatorio
-    if (gps && !isValidGoogleMapsUrl(gps)) {
-        errors.push('Coordinate GPS devono essere un link Google Maps valido. Formati accettati: google.com/maps, maps.google.com, goo.gl/maps, maps.app.goo.gl');
-    }
-}
-    
-    if (!isUpdate || lotData.product_type !== undefined) {
-        const validProductTypes = ['frutta', 'verdura', 'cereali', 'vino', 'olio', 'latte', 'carne'];
-        const productType = (lotData.product_type || '').toLowerCase();
-        if (!productType || !validProductTypes.includes(productType)) {
-            errors.push(`Tipologia prodotto deve essere uno di: ${validProductTypes.join(', ')}`);
+        const gps = (lotData.gps_coordinates || '').trim();
+        if (gps && !isValidGoogleMapsUrl(gps)) {
+            errors.push('Coordinate GPS devono essere un link Google Maps valido');
         }
     }
-    
-    // VARIETÀ NON PIÙ OBBLIGATORIA - RIMOSSA LA VALIDAZIONE OBBLIGATORIA
-    if (!isUpdate || lotData.variety !== undefined) {
-        const variety = (lotData.variety || '').trim();
-        // Se viene inserita una varietà, deve avere almeno 2 caratteri, ma non è obbligatoria
-        if (variety && variety.length < 2) {
-            errors.push('Varietà deve avere almeno 2 caratteri se inserita');
-        }
-    }
-    
-    // Validazione campo product_category (opzionale)
-    if (!isUpdate || lotData.product_category !== undefined) {
-        const productCategory = (lotData.product_category || '').trim();
-        // Se viene inserito un prodotto, deve avere almeno 2 caratteri, ma non è obbligatorio
-        if (productCategory && productCategory.length < 2) {
-            errors.push('Prodotto deve avere almeno 2 caratteri se inserito');
-        }
-    }
-    
-    // Validazione campi opzionali - ✅ VERSIONE SICURA
-    if (lotData.field_lot !== undefined && lotData.field_lot !== null) {
-        const fieldLot = String(lotData.field_lot || '');
-        if (fieldLot.length > 100) {
-            errors.push('Lotto campo non può superare 100 caratteri');
-        }
-    }
-    
-    if (lotData.field_size !== undefined && lotData.field_size !== null) {
-        const fieldSize = parseFloat(lotData.field_size);
-        if (isNaN(fieldSize) || fieldSize < 0) {
-            errors.push('Superficie deve essere un numero positivo');
-        }
-        if (fieldSize > 10000) {
-            errors.push('Superficie non può superare 10.000 ettari');
-        }
-    }
-    
-    // Validazione campi opzionali per update
-    if (isUpdate && lotData.cost_per_kg !== undefined && lotData.cost_per_kg !== null) {
-        const cost = parseFloat(lotData.cost_per_kg);
-        if (cost < 0) {
-            errors.push('Costo per kg non può essere negativo');
-        }
-    }
-    
-    if (isUpdate && lotData.estimated_kg !== undefined && lotData.estimated_kg !== null) {
-        const estimated = parseFloat(lotData.estimated_kg);
-        if (estimated < 0) {
-            errors.push('Kg stimati non possono essere negativi');
-        }
-    }
-    
-    if (isUpdate && lotData.harvested_kg !== undefined && lotData.harvested_kg !== null) {
-        const harvested = parseFloat(lotData.harvested_kg);
-        if (harvested < 0) {
-            errors.push('Kg raccolti non possono essere negativi');
-        }
-    }
-    
     return errors;
 };
 
-// Validazione dettagli lotto
-const validateLotDetail = (detailData) => {
-    const errors = [];
-    
-    if (detailData.cost_per_kg !== undefined && detailData.cost_per_kg < 0) {
-        errors.push('Costo per kg non può essere negativo');
-    }
-    
-    if (detailData.estimated_kg !== undefined && detailData.estimated_kg < 0) {
-        errors.push('Kg stimati non possono essere negativi');
-    }
-    
-    if (detailData.harvested_kg !== undefined && detailData.harvested_kg < 0) {
-        errors.push('Kg raccolti non possono essere negativi');
-    }
-    
-    if (detailData.purchase_date !== undefined) {
-        const date = new Date(detailData.purchase_date);
-        if (isNaN(date.getTime())) {
-            errors.push('Data di acquisto non valida');
-        }
-    }
-    
-    return errors;
-};
-
-// GET /api/lots - Tutti i lotti (filtrati per proprietario e gerarchia)
+// ==================== GET / CON PAGINAZIONE ====================
 router.get('/', async (req, res) => {
     try {
-        // Ottieni l'ID dell'utente dal token
+        // ==================== PAGINAZIONE ====================
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+        
+        if (page < 1 || limit < 1 || limit > 100) {
+            return res.status(400).json({ 
+                error: 'Parametri di paginazione non validi. page >= 1, 1 <= limit <= 100' 
+            });
+        }
+        
+        // ==================== AUTENTICAZIONE ====================
         const token = req.headers.authorization?.split(' ')[1];
         let currentUserId = null;
         let currentUserRole = null;
@@ -236,9 +75,8 @@ router.get('/', async (req, res) => {
                 currentUserRole = decoded.role;
                 currentUsername = decoded.username;
                 
-                // Ottieni il parent_id e parent_username dell'utente (se è un sottoutente)
                 const user = await db.getAsync(
-                    'SELECT parent_id, parent_username FROM users WHERE id = ?', 
+                    'SELECT parent_id FROM users WHERE id = ?', 
                     [currentUserId]
                 );
                 if (user && user.parent_id) {
@@ -249,66 +87,73 @@ router.get('/', async (req, res) => {
             }
         }
         
-        let rows;
+        // ==================== COSTRUZIONE QUERY ====================
+        let whereClause = '';
+        let params = [];
+        let countParams = [];
         
-        console.log('📊 GET /lots - Utente:', { currentUserId, currentUsername, currentUserRole, parentId });
-        
-        // ✅ CASO 1: SUPER-ADMIN (username 'admin') - vede TUTTI i lotti
+        // SUPER-ADMIN
         if (currentUsername === 'admin') {
-            rows = await db.allAsync('SELECT * FROM lots ORDER BY created_at DESC');
-            console.log('👑 Super-admin: vede tutti i lotti');
+            whereClause = '';
         } 
-        // ✅ CASO 2: ADMIN NORMALE (role='admin' ma username != 'admin') - vede i propri lotti E quelli dei sottoutenti
+        // ADMIN NORMALE
         else if (currentUserRole === 'admin') {
-            // Recupera tutti i sottoutenti di questo admin
             const subUsers = await db.allAsync(
-                'SELECT id, username FROM users WHERE parent_id = ?',
+                'SELECT id FROM users WHERE parent_id = ?',
                 [currentUserId]
             );
-            
-            // Crea array di owner_id da includere: l'admin stesso + tutti i suoi sottoutenti
             const ownerIds = [currentUserId, ...subUsers.map(u => u.id)];
-            const ownerUsernames = [currentUsername, ...subUsers.map(u => u.username)];
-            
-            // Costruisci la clausola IN per gli ID
-            const idPlaceholders = ownerIds.map(() => '?').join(',');
-            const usernamePlaceholders = ownerUsernames.map(() => '?').join(',');
-            
-            rows = await db.allAsync(
-                `SELECT * FROM lots 
-                 WHERE owner_id IN (${idPlaceholders}) 
-                    OR owner_username IN (${usernamePlaceholders})
-                 ORDER BY created_at DESC`,
-                [...ownerIds, ...ownerUsernames]
-            );
-            console.log(`👤 Admin normale (${currentUsername}): vede ${rows.length} lotti (propri + sottoutenti)`);
+            const placeholders = ownerIds.map(() => '?').join(',');
+            whereClause = `WHERE owner_id IN (${placeholders})`;
+            params = ownerIds;
+            countParams = ownerIds;
         } 
-        // ✅ CASO 3: SOTTOUTENTE (ha parent_id) - vede solo i lotti del suo admin padre
+        // SOTTOUTENTE
         else if (parentId) {
-            // Recupera l'username del parent
-            const parent = await db.getAsync('SELECT username FROM users WHERE id = ?', [parentId]);
-            const parentUsername = parent ? parent.username : currentUsername;
-            
-            rows = await db.allAsync(
-                'SELECT * FROM lots WHERE owner_id = ? OR owner_username = ? ORDER BY created_at DESC',
-                [parentId, parentUsername]
-            );
-            console.log(`👤 Sottoutente (${currentUsername}): vede lotti di ${parentUsername}`);
+            whereClause = `WHERE owner_id = ?`;
+            params = [parentId];
+            countParams = [parentId];
         } 
-        // ✅ CASO 4: FALLBACK - utente senza ruolo specifico, vede solo i propri
+        // FALLBACK
         else {
-            rows = await db.allAsync(
-                'SELECT * FROM lots WHERE owner_id = ? OR owner_username = ? ORDER BY created_at DESC',
-                [currentUserId, currentUsername]
-            );
-            console.log(`❓ Utente generico (${currentUsername}): vede solo i propri lotti`);
+            whereClause = `WHERE owner_id = ?`;
+            params = [currentUserId];
+            countParams = [currentUserId];
         }
         
+        // ==================== QUERY PER IL TOTALE ====================
+        const countQuery = `SELECT COUNT(*) as total FROM lots ${whereClause}`;
+        const countResult = await db.getAsync(countQuery, countParams);
+        const totalItems = countResult.total;
+        const totalPages = Math.ceil(totalItems / limit);
+        
+        // ==================== QUERY PRINCIPALE ====================
+        const query = `
+            SELECT * FROM lots 
+            ${whereClause}
+            ORDER BY created_at DESC
+            LIMIT ? OFFSET ?
+        `;
+        
+        const queryParams = [...params, limit, offset];
+        const lots = await db.allAsync(query, queryParams);
+        
+        // ==================== RISPOSTA CON PAGINAZIONE ====================
         res.json({
             message: 'success',
-            data: rows,
-            count: rows.length
+            data: lots,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalItems,
+                totalPages: totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+                nextPage: page < totalPages ? page + 1 : null,
+                prevPage: page > 1 ? page - 1 : null
+            }
         });
+        
     } catch (error) {
         console.error('Errore GET lots:', error);
         res.status(500).json({ error: error.message });
@@ -319,15 +164,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        res.json({
-            message: 'success',
-            data: lot
-        });
+        if (!lot) return res.status(404).json({ error: 'Lotto non trovato' });
+        res.json({ message: 'success', data: lot });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -338,7 +176,6 @@ router.post('/', async (req, res) => {
     try {
         const { company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, createdBy } = req.body;
         
-        // Ottieni l'utente corrente dal token
         const token = req.headers.authorization?.split(' ')[1];
         let ownerId = null;
         let ownerUsername = null;
@@ -351,36 +188,20 @@ router.post('/', async (req, res) => {
                 ownerId = decoded.id;
                 ownerUsername = decoded.username;
                 
-                // Se l'utente ha un parent (è un sottoutente), usa il parent come owner
                 const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [ownerId]);
                 if (user && user.parent_id) {
                     parentId = user.parent_id;
-                    // Ottieni il parent username
                     const parent = await db.getAsync('SELECT username FROM users WHERE id = ?', [parentId]);
                     ownerUsername = parent ? parent.username : ownerUsername;
                 }
-            } catch(e) {
-                console.error('Errore verifica token:', e.message);
-            }
+            } catch(e) {}
         }
         
-        // Determina l'owner finale: se c'è parentId, usa quello, altrimenti usa l'ID dell'utente
         const finalOwnerId = parentId || ownerId;
         
-        console.log('📝 Creazione lotto per owner:', { 
-            originalUserId: ownerId, 
-            parentId: parentId,
-            finalOwnerId: finalOwnerId,
-            ownerUsername: ownerUsername 
-        });
-        
-        // Validazione
         const errors = validateLot(req.body);
         if (errors.length > 0) {
-            return res.status(400).json({
-                error: 'Dati non validi',
-                details: errors
-            });
+            return res.status(400).json({ error: 'Dati non validi', details: errors });
         }
 
         const result = await db.runAsync(
@@ -390,43 +211,27 @@ router.post('/', async (req, res) => {
         );
 
         const newLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [result.id]);
-
-        res.status(201).json({
-            message: 'Lotto creato con successo',
-            data: newLot
-        });
+        res.status(201).json({ message: 'Lotto creato con successo', data: newLot });
     } catch (error) {
-        console.error('❌ Errore creazione lotto:', error);
+        console.error('Errore POST lotto:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PUT /api/lots/:id - Aggiorna lotto (COMPLETO)
+// PUT /api/lots/:id - Aggiorna lotto
 router.put('/:id', async (req, res) => {
     try {
-        // Verifica che il lotto esista
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        if (!existingLot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
+        if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
         
-        // Validazione
         const errors = validateLot(req.body, true);
         if (errors.length > 0) {
-            return res.status(400).json({ 
-                error: 'Dati non validi',
-                details: errors 
-            });
+            return res.status(400).json({ error: 'Dati non validi', details: errors });
         }
         
-        // Costruisci dinamicamente la query UPDATE
         const fields = [];
         const values = [];
-        
-        const updatableFields = [
-            'company_name', 'location', 'gps_coordinates', 
-            'product_type', 'product_category', 'variety', 'field_lot', 'field_size' // AGGIUNTO product_category
-        ];
+        const updatableFields = ['company_name', 'location', 'gps_coordinates', 'product_type', 'product_category', 'variety', 'field_lot', 'field_size'];
         
         updatableFields.forEach(field => {
             if (req.body[field] !== undefined) {
@@ -440,17 +245,10 @@ router.put('/:id', async (req, res) => {
         }
         
         values.push(req.params.id);
-        
-        const query = `UPDATE lots SET ${fields.join(', ')} WHERE id = ?`;
-        
-        const result = await db.runAsync(query, values);
+        await db.runAsync(`UPDATE lots SET ${fields.join(', ')} WHERE id = ?`, values);
         
         const updatedLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        
-        res.json({
-            message: 'Lotto aggiornato con successo',
-            data: updatedLot
-        });
+        res.json({ message: 'Lotto aggiornato con successo', data: updatedLot });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -459,23 +257,16 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/lots/:id - Elimina lotto
 router.delete('/:id', async (req, res) => {
     try {
-        // Verifica che il lotto esista
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        if (!existingLot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
+        if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
         
-        // Elimina prima i dettagli (per integrità referenziale)
         await db.runAsync('DELETE FROM lot_details WHERE lot_id = ?', [req.params.id]);
+        await db.runAsync('DELETE FROM activities WHERE lot_id = ?', [req.params.id]);
+        await db.runAsync('DELETE FROM analyses WHERE lot_id = ?', [req.params.id]);
+        await db.runAsync('DELETE FROM economic_records WHERE lot_id = ?', [req.params.id]);
+        await db.runAsync('DELETE FROM lots WHERE id = ?', [req.params.id]);
         
-        // Poi elimina il lotto
-        const result = await db.runAsync('DELETE FROM lots WHERE id = ?', [req.params.id]);
-        
-        res.json({
-            message: 'Lotto eliminato con successo',
-            deleted_id: req.params.id,
-            details_deleted: true
-        });
+        res.json({ message: 'Lotto eliminato con successo', deleted_id: req.params.id });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -484,46 +275,26 @@ router.delete('/:id', async (req, res) => {
 // PATCH /api/lots/:id - Aggiorna parziale
 router.patch('/:id', async (req, res) => {
     try {
-        // Verifica che il lotto esista
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        if (!existingLot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
+        if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
         
-        // Validazione per update parziale
         const errors = validateLot(req.body, true);
         if (errors.length > 0) {
-            return res.status(400).json({ 
-                error: 'Dati non validi',
-                details: errors 
-            });
+            return res.status(400).json({ error: 'Dati non validi', details: errors });
         }
         
-        // Combina dati esistenti con nuovi dati
         const updatedData = { ...existingLot, ...req.body };
         
-        const result = await db.runAsync(
+        await db.runAsync(
             `UPDATE lots SET company_name = ?, location = ?, gps_coordinates = ?, 
-             product_type = ?, product_category = ?, variety = ?, field_lot = ?, field_size = ? WHERE id = ?`, // AGGIUNTO product_category
-            [
-                updatedData.company_name,
-                updatedData.location,
-                updatedData.gps_coordinates,
-                updatedData.product_type,
-                updatedData.product_category, // AGGIUNTO
-                updatedData.variety,
-                updatedData.field_lot,
-                updatedData.field_size,
-                req.params.id
-            ]
+             product_type = ?, product_category = ?, variety = ?, field_lot = ?, field_size = ? WHERE id = ?`,
+            [updatedData.company_name, updatedData.location, updatedData.gps_coordinates,
+             updatedData.product_type, updatedData.product_category, updatedData.variety, 
+             updatedData.field_lot, updatedData.field_size, req.params.id]
         );
         
         const updatedLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        
-        res.json({
-            message: 'Lotto aggiornato parzialmente',
-            data: updatedLot
-        });
+        res.json({ message: 'Lotto aggiornato parzialmente', data: updatedLot });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -531,34 +302,92 @@ router.patch('/:id', async (req, res) => {
 
 // ==================== GESTIONE DETTAGLI LOTTO ====================
 
-// POST /api/lots/:id/details - Aggiungi dettagli
-router.post('/:id/details', async (req, res) => {
+// GET /api/lots/:id/details/all - Tutti i dettagli del lotto
+router.get('/:id/details/all', async (req, res) => {
     try {
-        const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
+        const lotId = req.params.id;
         
         // Verifica che il lotto esista
-        const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        if (!existingLot) {
+        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
             return res.status(404).json({ error: 'Lotto non trovato' });
         }
         
-        // Ottieni l'owner dal lotto (per ereditare la proprietà)
-        const ownerId = existingLot.owner_id;
-        const ownerUsername = existingLot.owner_username;
+        const details = await db.allAsync(
+            `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC`,
+            [lotId]
+        );
         
-        // Validazione dettagli
-        const errors = validateLotDetail(req.body);
-        if (errors.length > 0) {
-            return res.status(400).json({ 
-                error: 'Dati non validi',
-                details: errors 
-            });
+        res.json({
+            message: 'success',
+            data: details
+        });
+    } catch (error) {
+        console.error('Errore GET all details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/lots/:id/details - Ultimo dettaglio del lotto
+router.get('/:id/details', async (req, res) => {
+    try {
+        const lotId = req.params.id;
+        
+        // Verifica che il lotto esista
+        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        const details = await db.getAsync(
+            `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC LIMIT 1`,
+            [lotId]
+        );
+        
+        res.json({
+            message: 'success',
+            data: details || {}
+        });
+    } catch (error) {
+        console.error('Errore GET details:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/lots/:id/details - Aggiungi dettagli
+router.post('/:id/details', async (req, res) => {
+    try {
+        const lotId = req.params.id;
+        const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
+        
+        // Verifica che il lotto esista
+        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        // Verifica permessi
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            try {
+                const jwt = require('jsonwebtoken');
+                const decoded = jwt.verify(token, JWT_SECRET);
+                
+                if (decoded.username !== 'admin' && decoded.role !== 'admin') {
+                    const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [decoded.id]);
+                    const ownerId = user?.parent_id || decoded.id;
+                    
+                    if (lot.owner_id !== ownerId) {
+                        return res.status(403).json({ error: 'Accesso negato' });
+                    }
+                }
+            } catch(e) {}
         }
         
         const result = await db.runAsync(
             `INSERT INTO lot_details (lot_id, cost_per_kg, estimated_kg, purchase_date, harvested_kg, owner_id, owner_username) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [req.params.id, cost_per_kg, estimated_kg, purchase_date, harvested_kg, ownerId, ownerUsername]
+            [lotId, cost_per_kg || null, estimated_kg || null, purchase_date || null, harvested_kg || null, lot.owner_id, lot.owner_username]
         );
         
         const newDetail = await db.getAsync('SELECT * FROM lot_details WHERE id = ?', [result.id]);
@@ -568,303 +397,72 @@ router.post('/:id/details', async (req, res) => {
             data: newDetail
         });
     } catch (error) {
-        console.error('Errore aggiunta dettagli:', error);
+        console.error('Errore POST details:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET /api/lots/:id/details/all - Tutti i dettagli del lotto
-router.get('/:id/details/all', async (req, res) => {
+// PUT /api/lots/:lotId/details/:detailId - Aggiorna dettaglio
+router.put('/:lotId/details/:detailId', async (req, res) => {
     try {
-        const details = await db.allAsync(
-            `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY purchase_date DESC, created_at DESC`,
-            [req.params.id]
-        );
+        const { lotId, detailId } = req.params;
+        const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
         
-        res.json({
-            message: 'success',
-            data: details
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET /api/lots/:id/details - Dettagli lotto (ultimo record)
-router.get('/:id/details', async (req, res) => {
-    try {
-        const details = await db.getAsync(
-            `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC LIMIT 1`,
-            [req.params.id]
-        );
-        
-        res.json({
-            message: 'success',
-            data: details || {}
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET /api/lots/:id/details/:recordId - Dettaglio specifico
-router.get('/:id/details/:recordId', async (req, res) => {
-    try {
-        const { id, recordId } = req.params;
-        
-        // Verifica che il lotto esista
-        const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [id]);
-        if (!existingLot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
+        // Verifica che il dettaglio esista e appartenga al lotto
         const detail = await db.getAsync(
-            `SELECT * FROM lot_details WHERE id = ? AND lot_id = ?`,
-            [recordId, id]
+            'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
+            [detailId, lotId]
         );
         
         if (!detail) {
-            return res.status(404).json({ error: 'Record dettaglio non trovato' });
+            return res.status(404).json({ error: 'Dettaglio non trovato' });
         }
         
+        await db.runAsync(
+            `UPDATE lot_details SET 
+                cost_per_kg = ?, 
+                estimated_kg = ?, 
+                purchase_date = ?, 
+                harvested_kg = ?,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [cost_per_kg || null, estimated_kg || null, purchase_date || null, harvested_kg || null, detailId]
+        );
+        
+        const updated = await db.getAsync('SELECT * FROM lot_details WHERE id = ?', [detailId]);
+        
         res.json({
-            message: 'success',
-            data: detail
+            message: 'Dettaglio aggiornato con successo',
+            data: updated
         });
     } catch (error) {
+        console.error('Errore PUT detail:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// PUT /api/lots/:lotId/details/:recordId - Aggiorna record dettaglio specifico
-router.put('/:lotId/details/:recordId', async (req, res) => {
+// DELETE /api/lots/:lotId/details/:detailId - Elimina dettaglio
+router.delete('/:lotId/details/:detailId', async (req, res) => {
     try {
-        const { lotId, recordId } = req.params;
-        const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
-
-        console.log(`Aggiornamento record: lotId=${lotId}, recordId=${recordId}`, req.body);
-
-        // Verifica che il lotto esista
-        const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
-        if (!existingLot) {
-            return res.status(404).json({
-                success: false,
-                error: 'Lotto non trovato'
-            });
-        }
-
-        // Trova il record da aggiornare
-        const existingRecord = await db.getAsync(
+        const { lotId, detailId } = req.params;
+        
+        const detail = await db.getAsync(
             'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
-            [recordId, lotId]
+            [detailId, lotId]
         );
-
-        if (!existingRecord) {
-            return res.status(404).json({
-                success: false,
-                error: 'Record non trovato'
-            });
-        }
-
-        // ✅ CONTROLLO: Verifica che l'utente abbia i permessi per modificare
-        // Ottieni l'utente corrente dal token
-        const token = req.headers.authorization?.split(' ')[1];
-        let currentUserId = null;
-        if (token) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const decoded = jwt.verify(token, JWT_SECRET);
-                currentUserId = decoded.id;
-            } catch(e) {}
+        
+        if (!detail) {
+            return res.status(404).json({ error: 'Dettaglio non trovato' });
         }
         
-        // Solo l'owner o il super-admin possono modificare
-        if (currentUserId !== existingLot.owner_id && currentUserId !== 1) {
-            return res.status(403).json({
-                success: false,
-                error: 'Non hai i permessi per modificare questo record'
-            });
-        }
-
-        // Validazione dettagli
-        const errors = validateLotDetail(req.body);
-        if (errors.length > 0) {
-            return res.status(400).json({ 
-                error: 'Dati non validi',
-                details: errors 
-            });
-        }
-
-        // Costruisci dinamicamente la query UPDATE
-        const fields = [];
-        const values = [];
-        
-        const updatableFields = ['cost_per_kg', 'estimated_kg', 'purchase_date', 'harvested_kg'];
-        
-        updatableFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                fields.push(`${field} = ?`);
-                values.push(req.body[field]);
-            }
-        });
-        
-        if (fields.length === 0) {
-            return res.status(400).json({ error: 'Nessun campo da aggiornare' });
-        }
-        
-        // Aggiungi updated_at
-        fields.push('updated_at = ?');
-        values.push(new Date().toISOString());
-        
-        values.push(recordId, lotId);
-        
-        const query = `UPDATE lot_details SET ${fields.join(', ')} WHERE id = ? AND lot_id = ?`;
-        
-        const result = await db.runAsync(query, values);
-        
-        const updatedRecord = await db.getAsync(
-            'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
-            [recordId, lotId]
-        );
-
-        res.json({
-            success: true,
-            message: 'Record aggiornato con successo',
-            data: updatedRecord
-        });
-
-    } catch (error) {
-        console.error('Errore aggiornamento record:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Errore interno del server'
-        });
-    }
-});
-
-// DELETE /api/lots/:lotId/details/:recordId - Elimina record dettaglio specifico
-router.delete('/:lotId/details/:recordId', async (req, res) => {
-    try {
-        const { lotId, recordId } = req.params;
-
-        console.log(`Eliminazione record: lotId=${lotId}, recordId=${recordId}`);
-
-        // Verifica che il lotto esista
-        const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
-        if (!existingLot) {
-            return res.status(404).json({
-                success: false,
-                error: 'Lotto non trovato'
-            });
-        }
-
-        // ✅ CONTROLLO: Verifica che l'utente abbia i permessi per eliminare
-        const token = req.headers.authorization?.split(' ')[1];
-        let currentUserId = null;
-        if (token) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const decoded = jwt.verify(token, JWT_SECRET);
-                currentUserId = decoded.id;
-            } catch(e) {}
-        }
-        
-        // Solo l'owner o il super-admin possono eliminare
-        if (currentUserId !== existingLot.owner_id && currentUserId !== 1) {
-            return res.status(403).json({
-                success: false,
-                error: 'Non hai i permessi per eliminare questo record'
-            });
-        }
-
-        // Trova il record da eliminare
-        const existingRecord = await db.getAsync(
-            'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
-            [recordId, lotId]
-        );
-
-        if (!existingRecord) {
-            return res.status(404).json({
-                success: false,
-                error: 'Record non trovato'
-            });
-        }
-
-        // Elimina il record
-        const result = await db.runAsync(
-            'DELETE FROM lot_details WHERE id = ? AND lot_id = ?',
-            [recordId, lotId]
-        );
-
-        res.json({
-            success: true,
-            message: 'Record eliminato con successo',
-            deleted_id: recordId
-        });
-
-    } catch (error) {
-        console.error('Errore eliminazione record:', error);
-        res.status(500).json({
-            success: false,
-            error: 'Errore interno del server'
-        });
-    }
-});
-
-// GET /api/lots/:id/full - Lotto completo con dettagli
-router.get('/:id/full', async (req, res) => {
-    try {
-        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        const details = await db.getAsync(
-            `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC LIMIT 1`,
-            [req.params.id]
-        );
+        await db.runAsync('DELETE FROM lot_details WHERE id = ?', [detailId]);
         
         res.json({
-            message: 'success',
-            data: {
-                ...lot,
-                details: details || {}
-            }
+            message: 'Dettaglio eliminato con successo',
+            deleted_id: detailId
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET /api/lots/:id/statistics - Statistiche del lotto
-router.get('/:id/statistics', async (req, res) => {
-    try {
-        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        const statistics = await db.getAsync(`
-            SELECT 
-                COUNT(*) as total_records,
-                AVG(cost_per_kg) as avg_cost_per_kg,
-                SUM(estimated_kg) as total_estimated_kg,
-                SUM(harvested_kg) as total_harvested_kg,
-                MAX(created_at) as last_update
-            FROM lot_details 
-            WHERE lot_id = ?
-        `, [req.params.id]);
-        
-        res.json({
-            message: 'success',
-            data: {
-                lot: lot,
-                statistics: statistics
-            }
-        });
-    } catch (error) {
+        console.error('Errore DELETE detail:', error);
         res.status(500).json({ error: error.message });
     }
 });

@@ -2764,27 +2764,47 @@ input[type="radio"]:checked + span {
         </div>
         
         <!-- Sezione Lista Lotti -->
-        <div id="lista-section" class="section">
-            <h2 class="section-title"><i class="fas fa-list"></i> Lista Lotti Registrati</h2>
-            
-            <div class="search-input-container">
-                <input type="text" id="search-lots" class="search-input" 
-                placeholder="Cerca per nome, luogo, varietà, lotto campo, ID..." 
-                oninput="filterLots()">
-                <i class="fas fa-search search-icon"></i>
-                <div class="help-text">Digita per filtrare i lotti in tempo reale. Cerca per: nome azienda, luogo, varietà, lotto campo, ID o tipo prodotto</div>
-                <div id="search-stats" class="search-stats"></div>
-            </div>
-            
-            <div id="lots-list">
-                <div class="lotto-item">
-                    <div class="lotto-info">
-                        <h3>Caricamento in corso...</h3>
-                        <p>Attendere prego</p>
-                    </div>
-                </div>
+<div id="lista-section" class="section">
+    <h2 class="section-title"><i class="fas fa-list"></i> Lista Lotti Registrati</h2>
+    
+    <div class="search-input-container">
+        <input type="text" id="search-lots" class="search-input" 
+        placeholder="Cerca per nome, luogo, varietà, lotto campo, ID..." 
+        oninput="filterLots()">
+        <i class="fas fa-search search-icon"></i>
+        <div class="help-text">Digita per filtrare i lotti in tempo reale. Cerca per: nome azienda, luogo, varietà, lotto campo, ID o tipo prodotto</div>
+        <div id="search-stats" class="search-stats"></div>
+    </div>
+    
+    <div id="lots-list">
+        <div class="lotto-item">
+            <div class="lotto-info">
+                <h3>Caricamento in corso...</h3>
+                <p>Attendere prego</p>
             </div>
         </div>
+    </div>
+
+    <!-- ✅ CONTROLLI PAGINAZIONE - INSERISCI QUI -->
+    <div id="lots-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; padding: 15px; flex-wrap: wrap;">
+        <button id="prev-page-btn" onclick="loadLotsPage('prev')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
+            ← Precedente
+        </button>
+        <span id="page-info" style="font-weight: bold;">
+            Pagina <span id="current-page">1</span> di <span id="total-pages">1</span>
+        </span>
+        <button id="next-page-btn" onclick="loadLotsPage('next')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
+            Successiva →
+        </button>
+        <select id="items-per-page" onchange="changeItemsPerPage()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-left: 20px;">
+            <option value="10">10 per pagina</option>
+            <option value="20" selected>20 per pagina</option>
+            <option value="50">50 per pagina</option>
+            <option value="100">100 per pagina</option>
+        </select>
+    </div>
+</div>
+<!-- Fine Sezione Lista Lotti -->
                 
         <!-- Sezione Dettagli Lotto -->
         <div id="dettagli-section" class="section">
@@ -3185,6 +3205,11 @@ input[type="radio"]:checked + span {
 let currentUser = null;
 let allUsers = [];
 let userPermissions = {};
+// Variabili globali per paginazione lotti
+let currentLotsPage = 1;
+let totalLotsPages = 1;
+let itemsPerPage = 20;
+let lotsPagination = null;
 
 // Utenti predefiniti
 const defaultUsers = [
@@ -4964,32 +4989,39 @@ function updateLotGPS(lotId, gpsUrl) {
     });
 }
 // ==================== FINE FUNZIONI GPS ====================
-
-        // ==================== FUNZIONI DI GESTIONE DETTAGLI ====================
-        async function loadLotDetails(lotId) {
+// ==================== FUNZIONI DI GESTIONE DETTAGLI ====================
+       async function loadLotDetails(lotId) {
     try {
         showNotification('Caricamento dettagli...', 'loading');
         
         const lotIdNum = parseInt(lotId);
-        currentLotIndex = findLotIndex(lotIdNum);
-        currentLotId = lotIdNum; // ✅ CORREZIONE: Imposta currentLotId
+        currentLotId = lotIdNum;
         
-        if (currentLotIndex === -1) {
-            await loadLots();
-            currentLotIndex = findLotIndex(lotIdNum);
-            if (currentLotIndex === -1) {
-                throw new Error('Lotto non trovato');
-            }
+        // ✅ 1. Carica i dati del lotto
+        const lotResponse = await apiCall(`/lots/${lotIdNum}`);
+        const lotData = lotResponse.data;
+        
+        if (!lotData) {
+            throw new Error('Lotto non trovato');
         }
         
-        const response = await apiCall(`/lots/${lotId}`);
-        const lotData = response.data;
+        // ✅ 2. Carica i dettagli del lotto (da lot_details)
+        let detailsData = {};
+        try {
+            const detailsResponse = await apiCall(`/lots/${lotIdNum}/details`);
+            detailsData = detailsResponse.data || {};
+        } catch (e) {
+            console.log('Nessun dettaglio trovato per questo lotto');
+            detailsData = {};
+        }
         
+        // ✅ 3. Mostra la sezione e popola il form con ENTRAMBI
         showSection('dettagli-section');
-        populateDetailsForm(lotData, {});
+        populateDetailsForm(lotData, detailsData);
         
-        loadLotActivities(lotId);
-        loadLotAnalyses(lotId);
+        // ✅ 4. Carica attività e analisi
+        loadLotActivities(lotIdNum);
+        loadLotAnalyses(lotIdNum);
         populateAnalysisYears();
         
         showNotification('Dettagli caricati con successo', 'success');
@@ -6264,9 +6296,8 @@ function popolaFormEconomico(record) {
         }
 
         // ==================== FUNZIONI RICERCA E FILTRI ====================
-        function filterLots() {
+       function filterLots() {
     const searchText = document.getElementById('search-lots').value.toLowerCase().trim();
-    const lotsList = document.getElementById('lots-list');
     
     if (!searchText) {
         displayLots(allLots);
@@ -6274,15 +6305,24 @@ function popolaFormEconomico(record) {
         return;
     }
     
-    const filteredLots = allLots.filter(lot => 
-        lot.company_name.toLowerCase().includes(searchText) ||
-        lot.location.toLowerCase().includes(searchText) ||
-        lot.variety.toLowerCase().includes(searchText) ||
-        (lot.product_category && lot.product_category.toLowerCase().includes(searchText)) || // NUOVA RICERCA
-        (lot.field_lot && lot.field_lot.toLowerCase().includes(searchText)) ||
-        lot.product_type.toLowerCase().includes(searchText) ||
-        lot.id.toString().includes(searchText)
-    );
+    const filteredLots = allLots.filter(lot => {
+        // ✅ PROTEZIONE DA NULL/UNDEFINED
+        const companyName = (lot.company_name || '').toLowerCase();
+        const location = (lot.location || '').toLowerCase();
+        const variety = (lot.variety || '').toLowerCase();
+        const productCategory = (lot.product_category || '').toLowerCase();
+        const fieldLot = (lot.field_lot || '').toLowerCase();
+        const productType = (lot.product_type || '').toLowerCase();
+        const id = String(lot.id || '');
+        
+        return companyName.includes(searchText) ||
+               location.includes(searchText) ||
+               variety.includes(searchText) ||
+               productCategory.includes(searchText) ||
+               fieldLot.includes(searchText) ||
+               productType.includes(searchText) ||
+               id.includes(searchText);
+    });
     
     displayLots(filteredLots);
     updateSearchStats(filteredLots.length, allLots.length);
@@ -6713,31 +6753,71 @@ function showHome() {
     }
 }
 
-        async function loadLots() {
+        async function loadLots(page = 1) {
     try {
-        showNotification('Caricamento lotti in corso...', 'loading');
+        showNotification('Caricamento lotti...', 'loading');
         
-        // Usa la nuova apiCall con endpoint relativo
-        const response = await apiCall('/lots');
+        const url = `${API_BASE_URL}/lots?page=${page}&limit=${itemsPerPage}`;
+        const response = await apiCall(url);
         
-        if (response.data && response.data.length > 0) {
-            allLots = response.data;
-            currentLotsList = response.data;
-            displayLots(response.data);
-            populateDropdownMenu();
-            updateSearchStats(response.data.length, response.data.length);
-            addExportButton();
-            showNotification(`Caricati ${response.data.length} lotti`, 'success');
-        } else {
-            document.getElementById('lots-list').innerHTML = '<div class="lotto-item">Nessun lotto registrato</div>';
-            allLots = [];
-            updateSearchStats(0, 0);
-            showNotification('Nessun lotto presente', 'info');
+        allLots = response.data || [];
+        lotsPagination = response.pagination;
+        
+        // Aggiorna variabili globali
+        currentLotsPage = lotsPagination.currentPage;
+        totalLotsPages = lotsPagination.totalPages;
+        
+        // Aggiorna UI paginazione
+        updatePaginationUI();
+        
+        // Aggiorna contatore
+        const countBadge = document.getElementById('lotti-count');
+        if (countBadge) {
+            countBadge.textContent = `${lotsPagination.totalItems} totale`;
         }
+        
+        // Mostra i lotti
+        displayLots(allLots);
+        
+        showNotification(`Caricati ${allLots.length} lotti`, 'success');
+                       
     } catch (error) {
         console.error('Errore caricamento lotti:', error);
-        showNotification(`Errore nel caricamento dei lotti: ${error.message}`, 'error');
+        showNotification('Errore nel caricamento lotti', 'error');
     }
+}
+
+function updatePaginationUI() {
+    const prevBtn = document.getElementById('prev-page-btn');
+    const nextBtn = document.getElementById('next-page-btn');
+    const currentPageSpan = document.getElementById('current-page');
+    const totalPagesSpan = document.getElementById('total-pages');
+    
+    if (currentPageSpan) currentPageSpan.textContent = currentLotsPage;
+    if (totalPagesSpan) totalPagesSpan.textContent = totalLotsPages;
+    
+    if (prevBtn) prevBtn.disabled = !lotsPagination.hasPrevPage;
+    if (nextBtn) nextBtn.disabled = !lotsPagination.hasNextPage;
+}
+
+async function loadLotsPage(direction) {
+    let newPage = currentLotsPage;
+    
+    if (direction === 'prev' && lotsPagination.hasPrevPage) {
+        newPage = lotsPagination.prevPage;
+    } else if (direction === 'next' && lotsPagination.hasNextPage) {
+        newPage = lotsPagination.nextPage;
+    }
+    
+    if (newPage !== currentLotsPage) {
+        await loadLots(newPage);
+    }
+}
+
+function changeItemsPerPage() {
+    const select = document.getElementById('items-per-page');
+    itemsPerPage = parseInt(select.value);
+    loadLots(1); // Ricarica dalla prima pagina
 }
 
         async function saveLot() {

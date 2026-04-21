@@ -69,6 +69,19 @@ router.put('/:id', authenticateToken, async (req, res) => {
             costi_totali, bilancio 
         } = req.body;
         
+        // ✅ VALIDAZIONE
+        const errors = [];
+        if (totale_kg !== undefined && totale_kg < 0) errors.push('Kg totali non possono essere negativi');
+        if (prezzo_kg !== undefined && prezzo_kg < 0) errors.push('Prezzo/kg non può essere negativo');
+        if (prezzo_totale !== undefined && prezzo_totale < 0) errors.push('Prezzo totale non può essere negativo');
+        if (costo_mezzi_tecnici !== undefined && costo_mezzi_tecnici < 0) errors.push('Costo mezzi tecnici non può essere negativo');
+        if (costo_personale !== undefined && costo_personale < 0) errors.push('Costo personale non può essere negativo');
+        
+        if (errors.length > 0) {
+            return res.status(400).json({ error: 'Dati non validi', details: errors });
+        }
+        
+        // Verifica che la registrazione esista
         const existing = await db.getAsync(
             'SELECT * FROM economic_records WHERE id = ?',
             [id]
@@ -78,6 +91,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Registrazione non trovata' });
         }
         
+        // Verifica permessi multi-tenant
         const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [existing.lot_id]);
         
         if (req.user.username !== 'admin' && req.user.role !== 'admin') {
@@ -89,6 +103,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             }
         }
         
+        // Aggiorna la registrazione
         await db.runAsync(
             `UPDATE economic_records SET 
                 stagione_agricola = ?, 
