@@ -27,9 +27,16 @@ function authenticateToken(req, res, next) {
 
 // POST /api/auth/register - Registrazione utente
 router.post('/register', async (req, res) => {
-    const { username, email, password, role, user_type, azienda_data, parent_id, parent_username } = req.body;
+    const { username, email, password, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted } = req.body;
 
-    // Validazioni
+    // ✅ VALIDAZIONE PRIVACY
+    if (!privacy_accepted) {
+        return res.status(400).json({ 
+            error: 'È necessario accettare l\'informativa sulla privacy per registrarsi' 
+        });
+    }
+
+    // Validazioni esistenti...
     if (!username || !email || !password) {
         return res.status(400).json({ error: 'Username, email e password sono obbligatori' });
     }
@@ -52,14 +59,16 @@ router.post('/register', async (req, res) => {
 
     // Hash della password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const now = new Date().toISOString();
 
-    // Inserisci utente
+    // ✅ INSERISCI CON PRIVACY
     const result = await db.runAsync(
-    `INSERT INTO users (username, email, password_hash, role, user_type, azienda_data, parent_id, parent_username, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [username, email, hashedPassword, role || 'visitatore', user_type || 'libero_professionista', 
-     azienda_data ? JSON.stringify(azienda_data) : null, parent_id || null, parent_username || null, new Date().toISOString()]
-);
+        `INSERT INTO users (username, email, password_hash, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted, privacy_accepted_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [username, email, hashedPassword, role || 'visitatore', user_type || 'libero_professionista', 
+         azienda_data ? JSON.stringify(azienda_data) : null, parent_id || null, parent_username || null, 
+         1, now, now]
+    );
 
     // Genera token JWT
     const token = jwt.sign(
@@ -162,14 +171,14 @@ router.get('/users', authenticateToken, async (req, res) => {
         // Se è il super-admin (username 'admin'), vede tutti gli utenti
         if (req.user.username === 'admin') {
             users = await db.allAsync(
-                'SELECT id, username, email, role, user_type, azienda_data, parent_id, parent_username, created_at FROM users ORDER BY created_at DESC'
-            );
+    'SELECT id, username, email, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted, privacy_accepted_at, created_at FROM users ORDER BY created_at DESC'
+);
         } else {
             // Altrimenti vede solo i suoi sottoutenti (quelli che ha creato lui)
             users = await db.allAsync(
-                'SELECT id, username, email, role, user_type, azienda_data, parent_id, parent_username, created_at FROM users WHERE parent_id = ? OR id = ? ORDER BY created_at DESC',
-                [req.user.id, req.user.id]
-            );
+    'SELECT id, username, email, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted, privacy_accepted_at, created_at FROM users WHERE parent_id = ? OR id = ? ORDER BY created_at DESC',
+    [req.user.id, req.user.id]
+);
         }
         
         res.json({ data: users });

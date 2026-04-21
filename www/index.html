@@ -2601,6 +2601,18 @@ input[type="radio"]:checked + span {
         <div class="help-text">Livello di accesso all'applicazione</div>
     </div>
     
+<!-- Consenso Privacy -->
+<div class="form-group" style="margin-top: 20px;">
+    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+        <input type="checkbox" id="privacy-consent" required style="margin-top: 3px; width: 18px; height: 18px; cursor: pointer;">
+        <span style="font-size: 14px; color: #555;">
+            Dichiaro di aver letto e accettato l'<a href="#" onclick="showPrivacyPolicy(); return false;" style="color: #4CAF50; text-decoration: underline;">Informativa sulla Privacy</a> 
+            e presto il mio consenso al trattamento dei miei dati personali per le finalità indicate.
+            <span style="color: #f44336;">*</span>
+        </span>
+    </label>
+</div>
+
     <button class="btn btn-primary" onclick="registerUserAdvanced()">
         <i class="fas fa-user-plus"></i> Registra Utente
     </button>
@@ -3566,6 +3578,13 @@ async function requestPasswordReset() {
         return;
     }
     
+// ✅ CONTROLLO CONSENSO PRIVACY
+    const privacyAccepted = document.getElementById('privacy-consent')?.checked || false;
+    if (!privacyAccepted) {
+        showNotification('È necessario accettare l\'informativa sulla privacy per registrarsi', 'error');
+        return;
+    }
+
     // Tipologia utente
     const selectedUserType = document.querySelector('input[name="user-type"]:checked');
     if (!selectedUserType) {
@@ -3631,17 +3650,11 @@ async function requestPasswordReset() {
     
       // INVECE DI allUsers.push(newUser) e saveUsers(), USA L'API:
     
-    // Verifica se è il primo utente nel sistema
-let isFirstUser = false;
-try {
-    const users = await loadUsersFromBackend();
-    isFirstUser = users.length === 0;
-} catch (error) {
-    isFirstUser = true;
-}
+    // Il backend assegnerà automaticamente il ruolo admin se è il primo utente
+    // Non serve verificarlo qui perché non siamo ancora loggati
 
 // Se è il primo utente, forza ruolo admin
-const finalRole = isFirstUser ? 'admin' : role;
+const finalRole = role; // Il backend assegnerà admin se è il primo utente
 
 const registrationData = {
     username: username,
@@ -3649,7 +3662,8 @@ const registrationData = {
     password: password,
     role: finalRole,
     user_type: userType,
-    azienda_data: aziendaData
+    azienda_data: aziendaData,
+    privacy_accepted: true
 };
     
     try {
@@ -3671,6 +3685,10 @@ const registrationData = {
         document.getElementById('register-email').value = '';
         document.getElementById('register-password').value = '';
         document.getElementById('register-role').value = 'visitatore';
+
+        // ✅ RESET PRIVACY CHECKBOX
+        const privacyCheckbox = document.getElementById('privacy-consent');
+        if (privacyCheckbox) privacyCheckbox.checked = false;
         
         // Reset campi aziendali
         document.getElementById('azienda-fields').style.display = 'none';
@@ -3686,11 +3704,7 @@ const registrationData = {
         
                 showAppInterface();
         
-        if (isFirstUser) {
-            showNotification('✅ Sei il primo utente! Registrato come Amministratore.', 'success');
-        } else {
-            showNotification(`Registrazione completata! Benvenuto ${username}!`, 'success');
-        }
+        showNotification(`Registrazione completata! Benvenuto ${username}!`, 'success');
         
     } catch (error) {
         showNotification(error.message || 'Errore nella registrazione', 'error');
@@ -7818,6 +7832,16 @@ function showDevTab(tabName) {
     event.target.classList.add('active');
 }
 
+function formatDate(dateString) {
+    if (!dateString) return 'N/D';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('it-IT');
+    } catch (e) {
+        return 'Data non valida';
+    }
+}
+
 async function loadDevUsers() {
     try {
         const token = localStorage.getItem('auth_token');
@@ -7867,6 +7891,7 @@ async function loadDevUsers() {
                             <th style="padding: 10px; text-align: left;">Tipo</th>
                             <th style="padding: 10px; text-align: left;">Data Reg.</th>
                             <th style="padding: 10px; text-align: left;">Azienda</th>
+                            <th style="padding: 10px; text-align: left;">Privacy</th>
                             <th style="padding: 10px; text-align: left;">Azioni</th>
                         </tr>
                     </thead>
@@ -7888,6 +7913,7 @@ async function loadDevUsers() {
                     <td style="padding: 8px;"><span class="role-badge role-${admin.role}">${admin.role}</span></td>
                     <td style="padding: 8px;">${admin.user_type === 'libero_professionista' ? '📋 Libero' : (admin.user_type === 'titolare' ? '👔 Titolare' : '🏢 Azienda')}</td>
                     <td style="padding: 8px;">${new Date(admin.created_at).toLocaleDateString('it-IT')}</td>
+                    <td style="padding: 8px;">${admin.privacy_accepted ? '✅ ' + formatDate(admin.privacy_accepted_at) : '❌ Non accettato'}</td>
                     <td style="padding: 8px;">-</td>
                     <td style="padding: 8px; text-align: center;">
                         <button onclick="deleteUserFromDev(${admin.id}, '${escapeHtml(admin.username)}')" 
@@ -7919,6 +7945,7 @@ async function loadDevUsers() {
                         <td style="padding: 8px;">${subUser.user_type === 'libero_professionista' ? '📋 Libero' : (subUser.user_type === 'titolare' ? '👔 Titolare' : '🏢 Azienda')}</td>
                         <td style="padding: 8px;">${new Date(subUser.created_at).toLocaleDateString('it-IT')}</td>
                         <td style="padding: 8px;">${escapeHtml(aziendaNome)}</td>
+                        <td style="padding: 8px;">${subUser.privacy_accepted ? '✅ ' + formatDate(subUser.privacy_accepted_at) : '❌ Non accettato'}</td>
                         <td style="padding: 8px; text-align: center;">
                             <button onclick="deleteUserFromDev(${subUser.id}, '${escapeHtml(subUser.username)}')" 
                                     style="background: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
@@ -8505,6 +8532,24 @@ function escapeHtml(text) {
 
 // Inizializza accesso sviluppatore
 initDeveloperAccess();
+
+function showPrivacyPolicy() {
+    document.getElementById('privacy-modal').style.display = 'flex';
+}
+
+function closePrivacyModal() {
+    document.getElementById('privacy-modal').style.display = 'none';
+}
+
+// Chiudi il modale cliccando fuori
+const privacyModal = document.getElementById('privacy-modal');
+if (privacyModal) {
+    privacyModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePrivacyModal();
+        }
+    });
+}
     </script>
 <div class="safe-area-bottom"></div>
 
@@ -8564,6 +8609,70 @@ initDeveloperAccess();
         <i class="fas fa-info-circle"></i> I file vengono esportati in formato Excel (.xlsx) con colonne formattate
     </p>
 </div>
+    </div>
+</div>
+<!-- Modale Informativa Privacy -->
+<div id="privacy-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; max-width: 700px; max-height: 80vh; border-radius: 10px; padding: 30px; overflow-y: auto; margin: 20px;">
+        <h2 style="color: #2E7D32; margin-bottom: 20px;">🔒 Informativa sulla Privacy</h2>
+        
+        <div style="font-size: 14px; line-height: 1.6; color: #333;">
+            <p><strong>Ultimo aggiornamento:</strong> 21 Aprile 2026</p>
+            
+            <h3>1. Titolare del trattamento</h3>
+            <p>AgriManager - [Inserisci nome azienda/professionista]<br>
+            Email: [inserisci email]<br>
+            P.IVA: [inserisci partita IVA]</p>
+            
+            <h3>2. Dati personali raccolti</h3>
+            <p>Raccogliamo i seguenti dati personali:</p>
+            <ul>
+                <li>Nome utente e indirizzo email</li>
+                <li>Dati aziendali (ragione sociale, partita IVA, indirizzo, settore)</li>
+                <li>Dati relativi ai lotti agricoli (coordinate GPS, tipologia prodotto, varietà)</li>
+                <li>Dati economici e di raccolta</li>
+            </ul>
+            
+            <h3>3. Finalità del trattamento</h3>
+            <p>I dati sono trattati per:</p>
+            <ul>
+                <li>Gestione dell'account e accesso alla piattaforma</li>
+                <li>Gestione dei lotti agricoli e delle attività correlate</li>
+                <li>Analisi statistiche e reportistica</li>
+                <li>Adempimenti fiscali e amministrativi</li>
+            </ul>
+            
+            <h3>4. Base giuridica</h3>
+            <p>Il trattamento si basa sul consenso dell'interessato e sull'esecuzione del contratto di utilizzo della piattaforma.</p>
+            
+            <h3>5. Conservazione dei dati</h3>
+            <p>I dati sono conservati per tutta la durata del rapporto contrattuale e per i successivi 10 anni per obblighi fiscali.</p>
+            
+            <h3>6. Diritti dell'interessato</h3>
+            <p>Hai diritto a:</p>
+            <ul>
+                <li>Accesso ai tuoi dati</li>
+                <li>Rettifica dei dati inesatti</li>
+                <li>Cancellazione dei dati (diritto all'oblio)</li>
+                <li>Limitazione del trattamento</li>
+                <li>Portabilità dei dati</li>
+                <li>Opposizione al trattamento</li>
+                <li>Revoca del consenso</li>
+            </ul>
+            <p>Per esercitare i tuoi diritti, contattaci all'email sopra indicata.</p>
+            
+            <h3>7. Cookies</h3>
+            <p>Utilizziamo solo cookie tecnici necessari al funzionamento della piattaforma. Non utilizziamo cookie di profilazione.</p>
+            
+            <h3>8. Modifiche all'informativa</h3>
+            <p>Ci riserviamo di modificare la presente informativa. Le modifiche saranno comunicate via email o tramite avviso sulla piattaforma.</p>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
+            <button onclick="closePrivacyModal()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Ho capito
+            </button>
+        </div>
     </div>
 </div>
 </body>

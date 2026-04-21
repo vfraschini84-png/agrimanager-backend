@@ -51,11 +51,13 @@ app.use(helmet({
             ],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: [
-                "'self'", 
-                "http://localhost:3000", 
-                "http://192.168.0.69:3000",
-                "http://192.168.0.69:3001"
-            ],
+    "'self'", 
+    "http://localhost:3000", 
+    "http://192.168.0.69:3000",
+    "http://192.168.0.69:3001",
+    "https://192.168.0.69:3000",
+    "https://api.ipify.org"  // ✅ AGGIUNGI QUESTA RIGA
+],
         },
     },
 }));

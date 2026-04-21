@@ -75,6 +75,8 @@ function initializeDatabase() {
     permissions TEXT,
     parent_id INTEGER,
     parent_username TEXT,
+    privacy_accepted BOOLEAN DEFAULT 0,
+    privacy_accepted_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`, (err) => {
     if (err) {
