@@ -4716,7 +4716,9 @@ document.getElementById('product-type').addEventListener('change', function() {
 
                // ==================== FUNZIONE HELPER API MIGLIORATA CON AUTENTICAZIONE ====================
 // Configurazione API - CAMBIA QUESTO IP CON IL TUO!
-const API_BASE_URL = 'http://192.168.0.69:3000/api'; // Sostituisci con il tuo IP
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000/api' 
+    : `http://${window.location.hostname}:3000/api`; // Sostituisci con il tuo IP
 
 async function apiCall(endpoint, options = {}) {
     // Ottieni il token dal localStorage

@@ -172,6 +172,60 @@ db.run(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
         console.error('❌ Errore creazione tabella password_reset_tokens:', err);
     } else {
         console.log('✅ Tabella password_reset_tokens verificata');
+            // ==================== CREAZIONE INDICI PER PERFORMANCE ====================
+    console.log('📊 Creazione indici per ottimizzazione query...');
+
+    // Indici per multi-tenant
+    db.run(`CREATE INDEX IF NOT EXISTS idx_lots_owner ON lots(owner_id)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_lots_owner:', err.message);
+        } else {
+            console.log('✅ Indice idx_lots_owner verificato');
+        }
+    });
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_activities_lot ON activities(lot_id)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_activities_lot:', err.message);
+        } else {
+            console.log('✅ Indice idx_activities_lot verificato');
+        }
+    });
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_analyses_lot ON analyses(lot_id)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_analyses_lot:', err.message);
+        } else {
+            console.log('✅ Indice idx_analyses_lot verificato');
+        }
+    });
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_economic_lot ON economic_records(lot_id)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_economic_lot:', err.message);
+        } else {
+            console.log('✅ Indice idx_economic_lot verificato');
+        }
+    });
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_lot_details_lot ON lot_details(lot_id)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_lot_details_lot:', err.message);
+        } else {
+            console.log('✅ Indice idx_lot_details_lot verificato');
+        }
+    });
+
+    // Indice per ordinamento cronologico
+    db.run(`CREATE INDEX IF NOT EXISTS idx_lots_created ON lots(created_at DESC)`, (err) => {
+        if (err && !err.message.includes('already exists')) {
+            console.error('❌ Errore creazione indice idx_lots_created:', err.message);
+        } else {
+            console.log('✅ Indice idx_lots_created verificato');
+        }
+    });
+
+    console.log('✅ Tutti gli indici verificati');
     }
 });
 

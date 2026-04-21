@@ -2,14 +2,69 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();  // ← AGGIUNGI QUESTA RIGA QUI
+require('dotenv').config();
+
+// ✅ NUOVI MIDDLEWARE DI SICUREZZA
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ✅ CONFIGURA RATE LIMITING (protezione anti-abuso)
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minuti
+    max: 100, // Limite 100 richieste per IP
+    message: { error: 'Troppe richieste. Riprova più tardi.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// ✅ APPLICA MIDDLEWARE DI SICUREZZA
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "'unsafe-eval'", 
+                "https://cdnjs.cloudflare.com", 
+                "https://kit.fontawesome.com",
+                "https://cdn.jsdelivr.net"  // ✅ AGGIUNTO per xlsx
+            ],
+            scriptSrcAttr: [
+                "'self'",
+                "'unsafe-inline'"  // ✅ AGGIUNTO per onclick negli attributi
+            ],
+            styleSrc: [
+                "'self'", 
+                "'unsafe-inline'", 
+                "https://cdnjs.cloudflare.com", 
+                "https://fonts.googleapis.com"
+            ],
+            fontSrc: [
+                "'self'", 
+                "https://cdnjs.cloudflare.com", 
+                "https://fonts.gstatic.com"
+            ],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: [
+                "'self'", 
+                "http://localhost:3000", 
+                "http://192.168.0.69:3000",
+                "http://192.168.0.69:3001"
+            ],
+        },
+    },
+}));
+app.use(compression()); // Compressione gzip per risposte più veloci
+app.use('/api/', limiter); // Rate limiting solo sulle API
+
+// Middleware esistenti
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' })); // Limita dimensione JSON
 
 // ==================== ROUTE PER IL FRONTEND ====================
 // Route per servire index.html (percorso corretto)
