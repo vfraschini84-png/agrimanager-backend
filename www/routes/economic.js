@@ -63,11 +63,15 @@ router.put('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { 
-            stagione_agricola, data_acquisto_vendita, metodo_calcolo, 
-            prezzo_kg, prezzo_totale, totale_kg, ricavi_totali, 
-            costo_mezzi_tecnici, costo_personale, beni_durevoli, 
-            costi_totali, bilancio 
-        } = req.body;
+    stagione_agricola, data_acquisto_vendita, metodo_calcolo, 
+    prezzo_kg, prezzo_totale, totale_kg, ricavi_totali, 
+    costo_mezzi_tecnici, costo_personale, beni_durevoli, 
+    costi_totali, bilancio,
+    // ✅ NUOVI CAMPI
+    anni_ammortamento,
+    quota_ammortamento,
+    ammortamento_residuo
+} = req.body;
         
         // ✅ VALIDAZIONE
         const errors = [];
@@ -105,36 +109,43 @@ router.put('/:id', authenticateToken, async (req, res) => {
         
         // Aggiorna la registrazione
         await db.runAsync(
-            `UPDATE economic_records SET 
-                stagione_agricola = ?, 
-                data_acquisto_vendita = ?, 
-                metodo_calcolo = ?, 
-                prezzo_kg = ?, 
-                prezzo_totale = ?, 
-                totale_kg = ?, 
-                ricavi_totali = ?, 
-                costo_mezzi_tecnici = ?, 
-                costo_personale = ?, 
-                beni_durevoli = ?, 
-                costi_totali = ?, 
-                bilancio = ?
-             WHERE id = ?`,
-            [
-                stagione_agricola || '', 
-                data_acquisto_vendita || '', 
-                metodo_calcolo || '',
-                prezzo_kg || 0, 
-                prezzo_totale || 0, 
-                totale_kg || 0, 
-                ricavi_totali || 0,
-                costo_mezzi_tecnici || 0, 
-                costo_personale || 0, 
-                beni_durevoli ? JSON.stringify(beni_durevoli) : '[]', 
-                costi_totali || 0, 
-                bilancio || 0,
-                id
-            ]
-        );
+    `UPDATE economic_records SET 
+        stagione_agricola = ?, 
+        data_acquisto_vendita = ?, 
+        metodo_calcolo = ?, 
+        prezzo_kg = ?, 
+        prezzo_totale = ?, 
+        totale_kg = ?, 
+        ricavi_totali = ?, 
+        costo_mezzi_tecnici = ?, 
+        costo_personale = ?, 
+        beni_durevoli = ?, 
+        costi_totali = ?, 
+        bilancio = ?,
+        anni_ammortamento = ?,
+        quota_ammortamento = ?,
+        ammortamento_residuo = ?
+     WHERE id = ?`,
+    [
+        stagione_agricola || '', 
+        data_acquisto_vendita || '', 
+        metodo_calcolo || '',
+        prezzo_kg || 0, 
+        prezzo_totale || 0, 
+        totale_kg || 0, 
+        ricavi_totali || 0,
+        costo_mezzi_tecnici || 0, 
+        costo_personale || 0, 
+        beni_durevoli ? JSON.stringify(beni_durevoli) : '[]', 
+        costi_totali || 0, 
+        bilancio || 0,
+        // ✅ NUOVI VALORI
+        anni_ammortamento || 1,
+        quota_ammortamento || 0,
+        ammortamento_residuo || 0,
+        id
+    ]
+);
         
         const updated = await db.getAsync('SELECT * FROM economic_records WHERE id = ?', [id]);
         
@@ -201,7 +212,11 @@ router.post('/', authenticateToken, async (req, res) => {
             costo_personale,
             beni_durevoli,
             costi_totali,
-            bilancio
+            bilancio,
+            // ✅ NUOVI CAMPI
+    anni_ammortamento,
+    quota_ammortamento,
+    ammortamento_residuo
         } = req.body;
         
         console.log('📥 Dati ricevuti:', { lot_id, stagione_agricola });
@@ -216,32 +231,37 @@ router.post('/', authenticateToken, async (req, res) => {
         }
         
         const result = await db.runAsync(
-            `INSERT INTO economic_records (
-                lot_id, stagione_agricola, data_acquisto_vendita, metodo_calcolo,
-                prezzo_kg, prezzo_totale, totale_kg, ricavi_totali,
-                costo_mezzi_tecnici, costo_personale, beni_durevoli, costi_totali, bilancio,
-                owner_id, owner_username, created_by, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                lot_id, 
-                stagione_agricola || '', 
-                data_acquisto_vendita || '', 
-                metodo_calcolo || '',
-                prezzo_kg || 0, 
-                prezzo_totale || 0, 
-                totale_kg || 0, 
-                ricavi_totali || 0,
-                costo_mezzi_tecnici || 0, 
-                costo_personale || 0, 
-                beni_durevoli ? JSON.stringify(beni_durevoli) : '[]', 
-                costi_totali || 0, 
-                bilancio || 0,
-                lot.owner_id, 
-                lot.owner_username, 
-                req.user.username,
-                new Date().toISOString()
-            ]
-        );
+    `INSERT INTO economic_records (
+        lot_id, stagione_agricola, data_acquisto_vendita, metodo_calcolo,
+        prezzo_kg, prezzo_totale, totale_kg, ricavi_totali,
+        costo_mezzi_tecnici, costo_personale, beni_durevoli, costi_totali, bilancio,
+        anni_ammortamento, quota_ammortamento, ammortamento_residuo,
+        owner_id, owner_username, created_by, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+        lot_id, 
+        stagione_agricola || '', 
+        data_acquisto_vendita || '', 
+        metodo_calcolo || '',
+        prezzo_kg || 0, 
+        prezzo_totale || 0, 
+        totale_kg || 0, 
+        ricavi_totali || 0,
+        costo_mezzi_tecnici || 0, 
+        costo_personale || 0, 
+        beni_durevoli ? JSON.stringify(beni_durevoli) : '[]', 
+        costi_totali || 0, 
+        bilancio || 0,
+        // ✅ NUOVI VALORI
+        anni_ammortamento || 1,
+        quota_ammortamento || 0,
+        ammortamento_residuo || 0,
+        lot.owner_id, 
+        lot.owner_username, 
+        req.user.username,
+        new Date().toISOString()
+    ]
+);
         
         console.log('✅ Record inserito con ID:', result.id);
         
