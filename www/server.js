@@ -22,6 +22,7 @@ const limiter = rateLimit({
 });
 
 // ✅ APPLICA MIDDLEWARE DI SICUREZZA
+
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
@@ -61,6 +62,7 @@ app.use(helmet({
         },
     },
 }));
+
 app.use(compression()); // Compressione gzip per risposte più veloci
 app.use('/api/', limiter); // Rate limiting solo sulle API
 
