@@ -123,15 +123,26 @@ router.post('/attivita', authenticateToken, async (req, res) => {
 router.get('/personale/:lotId/:stagione', authenticateToken, async (req, res) => {
     try {
         const { lotId, stagione } = req.params;
+        
+        // ✅ Verifica che il lotto appartenga all'utente
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
+            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+            const ownerId = user?.parent_id || req.user.id;
+            if (lot.owner_id !== ownerId) {
+                return res.status(403).json({ error: 'Accesso negato' });
+            }
+        }
+        
         const records = await db.allAsync(
-            `SELECT * FROM costi_personale 
-             WHERE lot_id = ? AND stagione_agricola = ?
-             ORDER BY data_attivita DESC`,
+            `SELECT * FROM costi_personale WHERE lot_id = ? AND stagione_agricola = ? ORDER BY data_attivita DESC`,
             [lotId, stagione]
         );
-        
         const totaleStagione = records.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
-        
         res.json({ data: records, totale: totaleStagione });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -230,6 +241,20 @@ router.put('/personale/:id', authenticateToken, async (req, res) => {
 // GET /api/costi/mezzi/:lotId/:stagione
 router.get('/mezzi/:lotId/:stagione', authenticateToken, async (req, res) => {
     try {
+        // ✅ Verifica che il lotto appartenga all'utente
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [req.params.lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+
+        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
+            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+            const ownerId = user?.parent_id || req.user.id;
+            if (lot.owner_id !== ownerId) {
+                return res.status(403).json({ error: 'Accesso negato' });
+            }
+        }
+
         const records = await db.allAsync(
             `SELECT * FROM costi_mezzi_tecnici 
              WHERE lot_id = ? AND stagione_agricola = ?

@@ -185,6 +185,21 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // GET /api/economic/:lotId - Dati economici di un lotto
 router.get('/:lotId', authenticateToken, async (req, res) => {
     try {
+        // Verifica che il lotto appartenga all'utente
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [req.params.lotId]);
+        if (!lot) {
+            return res.status(404).json({ error: 'Lotto non trovato' });
+        }
+        
+        // Verifica permessi multi-tenant
+        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
+            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+            const ownerId = user?.parent_id || req.user.id;
+            if (lot.owner_id !== ownerId) {
+                return res.status(403).json({ error: 'Accesso negato' });
+            }
+        }
+        
         const records = await db.allAsync(
             'SELECT * FROM economic_records WHERE lot_id = ? ORDER BY created_at DESC',
             [req.params.lotId]
