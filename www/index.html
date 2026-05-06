@@ -6533,6 +6533,11 @@ async function handleCambioStagione() {
                             <strong style="font-size: 1.1rem;">📅 Stagione ${stagione}</strong>
                             <br>
                             <small style="opacity: 0.9;">${regs.length} registrazione${regs.length !== 1 ? 'i' : ''}</small>
+                            <button onclick="event.stopPropagation(); eliminaStagioneEconomica('${stagione}', ${currentEconomicLotId})" 
+        style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold;"
+        title="Elimina tutte le registrazioni di questa stagione">
+    <i class="fas fa-trash-alt"></i> Elimina Stagione
+</button>
                         </div>
                     </div>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -6688,6 +6693,61 @@ function toggleGruppoStagione(header) {
     } else {
         content.style.display = 'none';
         if (chevron) chevron.style.transform = 'rotate(-90deg)';
+    }
+}
+
+async function eliminaStagioneEconomica(stagione, lotId) {
+    // Filtra le registrazioni di questa stagione
+    const registrazioniStagione = registrazioniEconomiche.filter(
+        r => r.lot_id === lotId && r.stagione_agricola === stagione
+    );
+    
+    if (registrazioniStagione.length === 0) {
+        showNotification('Nessuna registrazione da eliminare', 'warning');
+        return;
+    }
+    
+    // ✅ CONFERMA DI SICUREZZA
+    const messaggio = `⚠️ Sei sicuro di voler eliminare TUTTE le ${registrazioniStagione.length} registrazioni della stagione ${stagione}?\n\nQuesta azione è IRREVERSIBILE!`;
+    
+    if (!confirm(messaggio)) {
+        return;
+    }
+    
+    // Seconda conferma
+    if (!confirm(`⚠️ ULTIMA CONFERMA: elimino definitivamente la stagione ${stagione}?`)) {
+        return;
+    }
+    
+    try {
+        showNotification(`Eliminazione stagione ${stagione} in corso...`, 'loading');
+        
+        let eliminati = 0;
+        let errori = 0;
+        
+        for (const reg of registrazioniStagione) {
+            try {
+                await apiCall(`/economic/${reg.id}`, { method: 'DELETE' });
+                eliminati++;
+            } catch (error) {
+                errori++;
+                console.error(`Errore eliminazione record ${reg.id}:`, error);
+            }
+        }
+        
+        if (eliminati > 0) {
+            showNotification(`✅ Eliminate ${eliminati} registrazioni della stagione ${stagione}!`, 'success');
+        }
+        if (errori > 0) {
+            showNotification(`⚠️ ${errori} registrazioni non sono state eliminate`, 'warning');
+        }
+        
+        // Ricarica i dati
+        await loadRegistrazioniEconomiche(lotId);
+        
+    } catch (error) {
+        console.error('Errore eliminazione stagione:', error);
+        showNotification('Errore durante l\'eliminazione: ' + error.message, 'error');
     }
 }
 
