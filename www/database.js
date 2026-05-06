@@ -130,7 +130,7 @@ function initializeDatabase() {
             console.log('✅ Tabella analyses verificata');
         }
     });
-
+  
     // Tabella registrazioni economiche
     db.run(`CREATE TABLE IF NOT EXISTS economic_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,6 +177,95 @@ db.run(`CREATE TABLE IF NOT EXISTS password_reset_tokens (
         console.error('❌ Errore creazione tabella password_reset_tokens:', err);
     } else {
         console.log('✅ Tabella password_reset_tokens verificata');
+
+        // Tabella tariffe manodopera (una per stagione)
+db.run(`CREATE TABLE IF NOT EXISTS tariffe_manodopera (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stagione_agricola TEXT NOT NULL,
+    costo_orario_standard REAL DEFAULT 15.00,
+    costo_orario_specializzato REAL DEFAULT 22.00,
+    owner_id INTEGER,
+    owner_username TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(stagione_agricola, owner_id)
+)`, (err) => {
+    if (err && !err.message.includes('already exists')) {
+        console.error('❌ Errore creazione tabella tariffe_manodopera:', err);
+    } else {
+        console.log('✅ Tabella tariffe_manodopera verificata');
+    }
+});
+
+// Tabella attività predefinite (condivisa tra tutti gli utenti)
+db.run(`CREATE TABLE IF NOT EXISTS attivita_predefinite (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    categoria TEXT DEFAULT 'generale',
+    owner_id INTEGER,
+    owner_username TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`, (err) => {
+    if (err && !err.message.includes('already exists')) {
+        console.error('❌ Errore creazione tabella attivita_predefinite:', err);
+    } else {
+        console.log('✅ Tabella attivita_predefinite verificata');
+        // Inserisci attività predefinite di default se la tabella è vuota
+        inserisciAttivitaPredefinite();
+    }
+});
+
+// Tabella costi personale (registrazioni giornaliere)
+db.run(`CREATE TABLE IF NOT EXISTS costi_personale (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lot_id INTEGER NOT NULL,
+    stagione_agricola TEXT NOT NULL,
+    data_attivita TEXT NOT NULL,
+    numero_operatori INTEGER DEFAULT 1,
+    qualifica TEXT DEFAULT 'standard',
+    ore_lavorate REAL DEFAULT 6.5,
+    attivita TEXT,
+    costo_orario REAL,
+    costo_totale REAL,
+    note TEXT,
+    owner_id INTEGER,
+    owner_username TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
+)`, (err) => {
+    if (err && !err.message.includes('already exists')) {
+        console.error('❌ Errore creazione tabella costi_personale:', err);
+    } else {
+        console.log('✅ Tabella costi_personale verificata');
+    }
+});
+
+// Tabella costi mezzi tecnici (per lotto/stagione)
+db.run(`CREATE TABLE IF NOT EXISTS costi_mezzi_tecnici (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lot_id INTEGER NOT NULL,
+    stagione_agricola TEXT NOT NULL,
+    data_registrazione TEXT,
+    descrizione TEXT,
+    importo REAL DEFAULT 0,
+    categoria TEXT DEFAULT 'fitofarmaci',
+    owner_id INTEGER,
+    owner_username TEXT,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
+)`, (err) => {
+    if (err && !err.message.includes('already exists')) {
+        console.error('❌ Errore creazione tabella costi_mezzi_tecnici:', err);
+    } else {
+        console.log('✅ Tabella costi_mezzi_tecnici verificata');
+    }
+});
+
+// Aggiungi indici per performance
+db.run(`CREATE INDEX IF NOT EXISTS idx_costi_personale_lot ON costi_personale(lot_id)`, (err) => {});
+db.run(`CREATE INDEX IF NOT EXISTS idx_costi_personale_stagione ON costi_personale(stagione_agricola)`, (err) => {});
+db.run(`CREATE INDEX IF NOT EXISTS idx_costi_mezzi_lot ON costi_mezzi_tecnici(lot_id)`, (err) => {});
             // ==================== CREAZIONE INDICI PER PERFORMANCE ====================
     console.log('📊 Creazione indici per ottimizzazione query...');
 
@@ -263,6 +352,32 @@ async function createDefaultAdmin() {
     } catch (error) {
         console.error('❌ Errore verifica admin:', error);
     }
+}
+
+// Funzione per inserire attività predefinite di default
+function inserisciAttivitaPredefinite() {
+    const attivitaDefault = [
+        'Potatura', 'Raccolta', 'Irrigazione', 'Concimazione',
+        'Trattamento fitosanitario', 'Lavorazione terreno', 'Semina',
+        'Trapianto', 'Diradamento', 'Cimatura', 'Legatura',
+        'Sfogliatura', 'Pulizia campo', 'Manutenzione impianti',
+        'Controllo qualità', 'Selezione prodotto', 'Confezionamento',
+        'Trasporto', 'Vendemmia', 'Pigiatura'
+    ];
+    
+    attivitaDefault.forEach(nome => {
+        db.run(
+            `INSERT OR IGNORE INTO attivita_predefinite (nome, categoria, owner_id, owner_username) 
+             VALUES (?, 'generale', 1, 'admin')`,
+            [nome],
+            (err) => {
+                if (err && !err.message.includes('UNIQUE')) {
+                    console.error('Errore inserimento attività predefinita:', err);
+                }
+            }
+        );
+    });
+    console.log('✅ Attività predefinite verificate');
 }
 
 // ==================== FUNZIONI HELPER PROMISIFICATE ====================

@@ -144,6 +144,16 @@ try {
     console.log('❌ Errore caricamento routes economic:', error.message);
 }
 
+// ==================== ROUTE COSTI ====================
+try {
+    console.log('1f. Tentativo di caricamento routes/costi...');
+    const costiRoutes = require('./routes/costi');
+    app.use('/api/costi', costiRoutes);
+    console.log('✅ Routes costi montate correttamente');
+} catch (error) {
+    console.log('❌ Errore caricamento routes costi:', error.message);
+}
+
 // ==================== ROUTE DI TEST ====================
 app.put('/api/test-put', (req, res) => {
     res.json({ message: 'PUT funziona', data: req.body });

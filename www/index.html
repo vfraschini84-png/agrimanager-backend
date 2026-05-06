@@ -2425,6 +2425,30 @@ input[type="radio"]:checked + span {
 #gestione-economica-section.active .section-content.expanded {
     display: block !important;
 }
+
+/* Fix sezioni Gestione Costi e Gestione Utenti */
+#gestione-costi-section.section.active,
+#user-management-section.section.active,
+#user-management-section.user-management-section.active {
+    width: 100% !important;
+    max-width: 800px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+@media (min-width: 1200px) {
+    #gestione-costi-section.section.active,
+    #user-management-section.section.active {
+        max-width: 900px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #gestione-costi-section.section.active,
+    #user-management-section.section.active {
+        max-width: 100% !important;
+    }
+}
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -2677,10 +2701,19 @@ input[type="radio"]:checked + span {
                 <div class="menu-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3 class="menu-title">Gestione Economica</h3>
-                <p class="menu-desc">Analisi costi e ricavi per stagione agricola</p>
+                <h3 class="menu-title">Gestione Ricavi</h3>
+                <p class="menu-desc">Prezzi, vendite e ricavi per stagione agricola</p>
             </div>
             
+<!-- Menu Gestione Costi -->
+<div class="menu-item" id="costi" onclick="showSection('gestione-costi-section')" style="border-top: 5px solid #FF5722;">
+    <div class="menu-icon">
+        <i class="fas fa-calculator"></i>
+    </div>
+    <h3 class="menu-title">Gestione Costi</h3>
+    <p class="menu-desc">Personale, mezzi tecnici e ammortamenti</p>
+</div>
+
             <!-- Menu Gestione Utenti (solo per admin) -->
             <div class="menu-item" id="gestione-utenti" onclick="showSection('user-management-section')" style="display: none;">
                 <div class="menu-icon">
@@ -3096,81 +3129,14 @@ input[type="radio"]:checked + span {
         </div>
 
         <!-- QUARTA RIGA: Costi -->
-        <div class="section-grid">
-            <div class="form-group">
-                <label for="costo-mezzi-tecnici"><i class="fas fa-flask"></i> Costo Mezzi Tecnici (€)</label>
-                <input type="number" id="costo-mezzi-tecnici" step="0.01" placeholder="0.00" class="special-input">
-<div class="help-text">Fitofarmaci + Fertilizzanti</div>
-            </div>
-            
+                
             <div class="form-group">
                 <label for="costo-personale"><i class="fas fa-users"></i> Costo Personale (€)</label>
                 <input type="number" id="costo-personale" step="0.01" placeholder="0.00" class="special-input">
 <div class="help-text">Totale stagione agricola</div>
             </div>
         </div>
-
-        <!-- QUINTA SEZIONE: Ammortamenti Beni Durevoli -->
-<div class="form-group">
-    <label><i class="fas fa-tractor"></i> Ammortamento Beni Durevoli</label>
-    
-    <!-- Container Beni Durevoli con Ammortamento Individuale -->
-    <div id="beni-durevoli-container" style="margin-top: 20px;"></div>
-    
-    <button type="button" onclick="aggiungiBeneDurevole()" style="margin-top: 10px; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-        <i class="fas fa-plus"></i> Aggiungi Bene Durevole
-    </button>
-    
-    <!-- Template per singolo bene durevole (nascosto) -->
-    <template id="bene-durevole-template">
-        <div class="bene-durevole-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h5 style="margin: 0; color: #2E7D32;">Bene Durevole <span class="bene-index"></span></h5>
-                <button type="button" onclick="rimuoviBeneDurevole(this)" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                    <i class="fas fa-trash"></i> Rimuovi
-                </button>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                <div>
-                    <label>Descrizione bene</label>
-                    <input type="text" class="bene-desc" placeholder="es. Trattore, Impianto irrigazione..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <div>
-                    <label>Costo totale (€)</label>
-                    <input type="number" class="bene-costo" placeholder="0.00" step="0.01" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;" oninput="aggiornaQuotaAmmortamento(this)">
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
-                <div>
-                    <label>Anni ammortamento</label>
-                    <select class="bene-anni" onchange="aggiornaQuotaAmmortamento(this)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                        <option value="1">1 anno (nessuno)</option>
-                        <option value="2">2 anni</option>
-                        <option value="3">3 anni</option>
-                        <option value="4">4 anni</option>
-                        <option value="5" selected>5 anni</option>
-                        <option value="6">6 anni</option>
-                        <option value="7">7 anni</option>
-                        <option value="8">8 anni</option>
-                        <option value="9">9 anni</option>
-                        <option value="10">10 anni</option>
-                        <option value="15">15 anni</option>
-                        <option value="20">20 anni</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Quota annuale (€)</label>
-                    <input type="number" class="bene-quota" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #e9e9e9;">
-                </div>
-                <div>
-                    <label>Anno inizio</label>
-                    <input type="number" class="bene-anno-inizio" min="2000" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-            </div>
-        </div>
-    </template>
-</div>
-
+        
         <!-- PULSANTI AZIONE -->
         <div class="section-actions">
             <button class="btn btn-primary" onclick="salvaRegistrazioneEconomica()" style="background: #9C27B0;">
@@ -3215,6 +3181,305 @@ input[type="radio"]:checked + span {
             </div>
         </div>
         
+<!-- Sezione Gestione Costi del Lotto -->
+<div id="gestione-costi-section" class="section" style="display: none;">
+    <h2 class="section-title"><i class="fas fa-calculator"></i> Gestione Costi del Lotto</h2>
+    
+    <!-- Dropdown selezione lotto -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="costiLotDropdown" data-toggle="dropdown">
+                <i class="fas fa-list"></i> Seleziona Lotto
+            </button>
+            <div class="dropdown-menu" id="costi-lot-dropdown-menu"></div>
+        </div>
+        <div id="costi-lot-info" class="read-only-info" style="display: none;"></div>
+    </div>
+    
+    <!-- SOTTO-SEZIONI COSTI -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+        
+        <!-- 1. COSTO PERSONALE -->
+        <div class="special-section" style="border-left-color: #FF5722; background: linear-gradient(135deg, #fbe9e7 0%, #ffffff 100%);">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div class="section-icon" style="background: #FF5722;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h3 class="section-title">👥 Costo Personale</h3>
+                    <p class="section-subtitle">Registra attività e calcola costi manodopera</p>
+                </div>
+                <button class="section-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div class="section-content expanded">
+                <!-- TARIFFE MANODOPERA -->
+<div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h4 style="margin: 0;">💶 Tariffe Orarie Stagione</h4>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label style="margin: 0; white-space: nowrap;">Stagione:</label>
+            <select id="tariffe-stagione-select" onchange="cambiaStagioneTariffe()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; min-width: 100px;">
+                <!-- Popolato dinamicamente -->
+            </select>
+        </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="form-group">
+            <label>Standard (€/ora)</label>
+            <input type="number" id="tariffa-standard" value="15.00" step="0.50" min="0" class="special-input">
+        </div>
+        <div class="form-group">
+            <label>Specializzato (€/ora)</label>
+            <input type="number" id="tariffa-specializzato" value="22.00" step="0.50" min="0" class="special-input">
+        </div>
+    </div>
+    <button class="btn btn-secondary" onclick="salvaTariffeManodopera()" style="margin-top: 10px;">
+        <i class="fas fa-save"></i> Aggiorna Tariffe
+    </button>
+</div>
+                
+                <!-- FORM REGISTRAZIONE ATTIVITÀ -->
+                <h4 style="margin-bottom: 15px;">📝 Registra Attività Personale</h4>
+                <div class="section-grid">
+                    <div class="form-group">
+                        <label>Data Attività</label>
+                        <input type="date" id="costo-data-attivita" class="special-input">
+                    </div>
+                    <div class="form-group">
+                        <label>N. Operatori</label>
+                        <input type="number" id="costo-numero-operatori" value="1" min="1" max="50" class="special-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Qualifica</label>
+                        <select id="costo-qualifica" class="special-input">
+                            <option value="standard">Standard</option>
+                            <option value="specializzato">Specializzato</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ore Lavorate</label>
+                        <input type="number" id="costo-ore-lavorate" value="6.5" step="0.5" min="0.5" max="24" class="special-input">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Attività Svolta</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="costo-attivita-select" class="special-input" style="flex: 1;" onchange="handleAttivitaSelect()">
+                                <option value="">Seleziona attività predefinita...</option>
+                            </select>
+                            <input type="text" id="costo-attivita-libera" placeholder="Oppure scrivi attività libera..." class="special-input" style="flex: 1; display: none;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Note</label>
+                        <textarea id="costo-note" rows="2" class="special-input" placeholder="Note aggiuntive..."></textarea>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="salvaCostoPersonale()" style="background: #FF5722;">
+                        <i class="fas fa-save"></i> Registra Attività
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetCostoPersonaleForm()">
+                        <i class="fas fa-times"></i> Annulla
+                    </button>
+                </div>
+                
+                <!-- RIEPILOGO E REGISTRO -->
+                <div style="margin-top: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4>📊 Registro Attività Personale</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn-help" onclick="cambiaVistaRegistro('giornaliera')">📅 Giorno</button>
+                            <button class="btn-help" onclick="cambiaVistaRegistro('settimanale')">📆 Settimana</button>
+                            <button class="btn-help" onclick="cambiaVistaRegistro('mensile')">🗓️ Mese</button>
+                        </div>
+                    </div>
+                    <div id="costi-personale-registro" style="max-height: 400px; overflow-y: auto;"></div>
+                    <div style="text-align: right; margin-top: 15px; padding: 10px; background: #FF5722; color: white; border-radius: 8px;">
+                        <strong>Totale Costo Personale Stagione: <span id="totale-costo-personale">€0.00</span></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2. COSTO MEZZI TECNICI -->
+        <div class="special-section" style="border-left-color: #2196F3; background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div class="section-icon" style="background: #2196F3;">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h3 class="section-title">🧪 Costo Mezzi Tecnici</h3>
+                    <p class="section-subtitle">Fitofarmaci, fertilizzanti e altri mezzi</p>
+                </div>
+                <button class="section-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div class="section-content">
+                <div class="section-grid">
+                    <div class="form-group">
+                        <label>Data</label>
+                        <input type="date" id="mezzi-data" class="special-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="mezzi-categoria" class="special-input">
+                            <option value="fitofarmaci">Fitofarmaci</option>
+                            <option value="fertilizzanti">Fertilizzanti</option>
+                            <option value="sementi">Sementi</option>
+                            <option value="carburanti">Carburanti</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrizione</label>
+                        <input type="text" id="mezzi-descrizione" class="special-input" placeholder="Descrizione prodotto...">
+                    </div>
+                    <div class="form-group">
+                        <label>Importo (€)</label>
+                        <input type="number" id="mezzi-importo" step="0.01" min="0" class="special-input" placeholder="0.00">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="salvaCostoMezziTecnici()" style="background: #2196F3;">
+                        <i class="fas fa-save"></i> Registra Costo
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetMezziTecniciForm()">
+                        <i class="fas fa-times"></i> Annulla
+                    </button>
+                </div>
+                
+                <div style="margin-top: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h4 style="margin: 0;">📊 Registro Mezzi Tecnici</h4>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-help" onclick="cambiaVistaMezzi('giornaliera')">📅 Giorno</button>
+            <button class="btn-help" onclick="cambiaVistaMezzi('settimanale')">📆 Settimana</button>
+            <button class="btn-help" onclick="cambiaVistaMezzi('mensile')">🗓️ Mese</button>
+        </div>
+    </div>
+    <div id="mezzi-tecnici-registro" style="max-height: 300px; overflow-y: auto;"></div>
+                    <div style="text-align: right; margin-top: 15px; padding: 10px; background: #2196F3; color: white; border-radius: 8px;">
+                        <strong>Totale Mezzi Tecnici: <span id="totale-mezzi-tecnici">€0.00</span></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3. AMMORTAMENTO BENI DUREVOLI -->
+        <div class="special-section" style="border-left-color: #9C27B0; background: linear-gradient(135deg, #f3e5f5 0%, #ffffff 100%);">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div class="section-icon" style="background: #9C27B0;">
+                    <i class="fas fa-tractor"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h3 class="section-title">🚜 Ammortamento Beni Durevoli</h3>
+                    <p class="section-subtitle">Trattori, impianti e attrezzature</p>
+                </div>
+                <button class="section-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            
+            <div class="section-content">
+                <div class="form-group">
+                    <label>Beni Durevoli in Ammortamento</label>
+                    <div id="beni-durevoli-costi-container" style="margin-top: 20px;"></div>
+                    <button type="button" onclick="aggiungiBeneDurevoleCosti()" style="margin-top: 10px; padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-plus"></i> Aggiungi Bene Durevole
+                    </button>
+                    <!-- Template per singolo bene durevole -->
+<template id="bene-durevole-template">
+    <div class="bene-durevole-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h5 style="margin: 0; color: #2E7D32;">Bene Durevole <span class="bene-index"></span></h5>
+            <button type="button" onclick="rimuoviBeneDurevole(this)" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                <i class="fas fa-trash"></i> Rimuovi
+            </button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+                <label>Descrizione bene</label>
+                <input type="text" class="bene-desc" placeholder="es. Trattore, Impianto..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            <div>
+                <label>Costo totale (€)</label>
+                <input type="number" class="bene-costo" placeholder="0.00" step="0.01" min="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;" oninput="aggiornaQuotaAmmortamento(this)">
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <div>
+                <label>Anni ammortamento</label>
+                <select class="bene-anni" onchange="aggiornaQuotaAmmortamento(this)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    <option value="1">1 anno</option>
+                    <option value="2">2 anni</option>
+                    <option value="3">3 anni</option>
+                    <option value="4">4 anni</option>
+                    <option value="5" selected>5 anni</option>
+                    <option value="6">6 anni</option>
+                    <option value="7">7 anni</option>
+                    <option value="8">8 anni</option>
+                    <option value="9">9 anni</option>
+                    <option value="10">10 anni</option>
+                    <option value="15">15 anni</option>
+                    <option value="20">20 anni</option>
+                </select>
+            </div>
+            <div>
+                <label>Quota annuale (€)</label>
+                <input type="number" class="bene-quota" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #e9e9e9;">
+            </div>
+            <div>
+                <label>Anno inizio</label>
+                <input type="number" class="bene-anno-inizio" min="2000" max="2100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+        </div>
+    </div>
+</template>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+    <button class="btn btn-primary" onclick="salvaBeniDurevoliCosti()" style="background: #9C27B0;">
+        <i class="fas fa-save"></i> Salva Beni Durevoli
+    </button>
+</div>
+
+                <div style="text-align: right; margin-top: 15px; padding: 10px; background: #9C27B0; color: white; border-radius: 8px;">
+                    <strong>Quota Ammortamento Annuale: <span id="totale-ammortamento-costi">€0.00</span></strong>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIEPILOGO COSTI TOTALI -->
+        <div style="background: linear-gradient(135deg, #2c3e50, #1a1a2e); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+            <h3 style="margin-bottom: 15px;">📊 Riepilogo Costi Stagione <span id="riepilogo-stagione"></span></h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+                <div>
+                    <p style="opacity: 0.8;">👥 Personale</p>
+                    <strong style="font-size: 1.2rem;" id="riepilogo-personale">€0.00</strong>
+                </div>
+                <div>
+                    <p style="opacity: 0.8;">🧪 Mezzi Tecnici</p>
+                    <strong style="font-size: 1.2rem;" id="riepilogo-mezzi">€0.00</strong>
+                </div>
+                <div>
+                    <p style="opacity: 0.8;">🚜 Ammortamenti</p>
+                    <strong style="font-size: 1.2rem;" id="riepilogo-ammortamenti">€0.00</strong>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.3);">
+                <strong style="font-size: 1.5rem;">TOTALE COSTI: <span id="riepilogo-totale-costi">€0.00</span></strong>
+            </div>
+        </div>
+    </div>
+</div>
+
         <!-- Sezione Gestione Utenti (solo per admin) -->
         <div id="user-management-section" class="section user-management-section">
             <h2 class="section-title"><i class="fas fa-users-cog"></i> Gestione Utenti e Permessi</h2>
@@ -3297,7 +3562,8 @@ const emptyPermissions = {
     canExportData: false,
     canManageUsers: false,
     canAccessDetails: false,       // NUOVO: Accesso alla sezione Dettagli Lotti
-    canAccessEconomic: false       // NUOVO: Accesso alla sezione Gestione Economica
+    canAccessEconomic: false,       // NUOVO: Accesso alla sezione Gestione Economica
+    canAccessCosts: false
 };        
         // Inizializza il sistema di autenticazione
         async function initAuthSystem() {
@@ -3530,6 +3796,10 @@ async function requestPasswordReset() {
         section.style.display = '';
     });
     
+// ✅ AGGIUNGI QUI - Nascondi storico economico
+    const storico = document.querySelector('.section-storico-economico');
+    if (storico) storico.style.display = 'none';
+
     // Reset form
     document.getElementById('login-username').value = '';
     document.getElementById('login-password').value = '';
@@ -3540,11 +3810,15 @@ async function requestPasswordReset() {
     document.getElementById('app-header').style.display = 'block';
     document.getElementById('main-menu').style.display = 'grid';
     
-    // ✅ RIMUOVI CLASSE 'active' DA TUTTE LE SEZIONI
+    // Rimuovi classe 'active' da tutte le sezioni
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
         section.style.display = '';
     });
+    
+    // ✅ Nascondi storico (SENZA sectionId)
+    const storico = document.querySelector('.section-storico-economico');
+    if (storico) storico.style.display = 'none';
     
     // Mostra la home section di default
     const homeSection = document.getElementById('home-section');
@@ -3584,6 +3858,12 @@ async function requestPasswordReset() {
         economiaItem.style.display = permissions.canAccessEconomic ? 'block' : 'none';
     }
     
+    // Mostra/nascondi menu costi
+const costiMenuItem = document.getElementById('costi');
+if (costiMenuItem) {
+    costiMenuItem.style.display = permissions.canAccessCosts ? 'flex' : 'none';
+}
+
     // Tab Registrazione (solo admin)
     const registerTab = document.getElementById('register-tab');
     if (registerTab) {
@@ -3600,7 +3880,7 @@ async function requestPasswordReset() {
             // Questa funzione verrà chiamata ogni volta che si carica una lista di elementi
         }
         
-        function getUserPermissions() {
+       function getUserPermissions() {
     // Se è admin, ritorna tutti i permessi abilitati
     if (currentUser && currentUser.role === 'admin') {
         return {
@@ -3614,7 +3894,8 @@ async function requestPasswordReset() {
             canExportData: true,
             canManageUsers: true,
             canAccessDetails: true,
-            canAccessEconomic: true
+            canAccessEconomic: true,
+            canAccessCosts: true  // ✅ NUOVO
         };
     }
     
@@ -4276,7 +4557,8 @@ function resetToDefaultPermissions(username) {
         canExportData: 'Esportazione Dati',
         canManageUsers: 'Gestione Utenti',
         canAccessDetails: 'Accesso Dettagli Lotti',      // NUOVO
-        canAccessEconomic: 'Accesso Gestione Economica'  // NUOVO
+        canAccessEconomic: 'Accesso Gestione Economica',  // NUOVO
+        canAccessCosts: 'Accesso Gestione Costi'  // ✅ NUOVO
     };
     return names[permission] || permission;
 }
@@ -4293,7 +4575,8 @@ function resetToDefaultPermissions(username) {
         canExportData: 'Permette di esportare i dati in Excel',
         canManageUsers: 'Permette di gestire gli utenti del sistema',
         canAccessDetails: 'Permette di accedere alla sezione Dettagli Lotti',        // NUOVO
-        canAccessEconomic: 'Permette di accedere alla sezione Gestione Economica'    // NUOVO
+        canAccessEconomic: 'Permette di accedere alla sezione Gestione Economica',    // NUOVO
+        canAccessCosts: 'Permette di accedere alla sezione Gestione Costi'  // ✅ NUOVO
     };
     return descriptions[permission] || 'Descrizione non disponibile';
 }
@@ -6037,8 +6320,7 @@ async function handleCambioStagione() {
     calcolaPrezzoAutomatico();
 }
 
-        async function salvaRegistrazioneEconomica() {
-    // Controlla i permessi
+       async function salvaRegistrazioneEconomica() {
     const permissions = getUserPermissions();
     if (!permissions.canManageEconomics) {
         showNotification('Non hai i permessi per gestire i dati economici', 'error');
@@ -6051,21 +6333,17 @@ async function handleCambioStagione() {
         return;
     }
     
-    // ✅ VERIFICA SE STIAMO MODIFICANDO UNA REGISTRAZIONE ESISTENTE
     const editingIdField = document.getElementById('editing-economic-id');
     const editingId = editingIdField ? editingIdField.value : null;
     
-    // Leggi i valori dal form
     const stagioneAgricola = document.getElementById('stagione-agricola').value;
     const dataAcquistoVendita = document.getElementById('data-acquisto-vendita').value;
     const metodoKg = document.getElementById('metodo-prezzo-kg').checked;
     const prezzoKgValue = parseFloat(document.getElementById('prezzo-acquisto-vendita').value) || 0;
     const prezzoTotaleValue = parseFloat(document.getElementById('prezzo-totale').value) || 0;
     const kgRaccolti = parseFloat(document.getElementById('totale-kg-raccolti').value) || 0;
-    const costoMezziTecnici = parseFloat(document.getElementById('costo-mezzi-tecnici').value) || 0;
     const costoPersonale = parseFloat(document.getElementById('costo-personale').value) || 0;
-    const beniDurevoli = raccogliBeniDurevoli();
-        
+            
     console.log('📊 Dati form:', {
         editingId,
         stagioneAgricola,
@@ -6074,12 +6352,10 @@ async function handleCambioStagione() {
         prezzoKgValue,
         prezzoTotaleValue,
         kgRaccolti,
-        costoMezziTecnici,
-        costoPersonale,
-        beniDurevoli
+        costoPersonale
     });
     
-    // Calcola ricavi in base al metodo scelto
+    // Calcola ricavi
     let prezzoKg, prezzoTotale, ricaviTotali;
     
     if (metodoKg) {
@@ -6092,33 +6368,10 @@ async function handleCambioStagione() {
         ricaviTotali = prezzoTotale;
     }
     
-    // Calcola costi totali
-    // ✅ NUOVO CALCOLO: Somma solo le quote di competenza per l'anno corrente
-const annoCorrente = parseInt(document.getElementById('stagione-agricola')?.value) || new Date().getFullYear();
-let totaleQuotaAmmortamento = 0;
+    // ✅ CALCOLO SEMPLIFICATO (solo costo personale)
+    const costiTotali = costoPersonale;
+    const bilancio = ricaviTotali - costiTotali;
 
-beniDurevoli.forEach(bene => {
-    const annoInizio = bene.anno_inizio || annoCorrente;
-    const anniAmmortamento = bene.anni_ammortamento || 1;
-    const annoFine = annoInizio + anniAmmortamento - 1;
-    
-    // Verifica se l'anno corrente (stagione agricola) rientra nel periodo di ammortamento
-    if (annoCorrente >= annoInizio && annoCorrente <= annoFine) {
-        totaleQuotaAmmortamento += bene.quota_annuale || 0;
-    }
-});
-
-// ✅ USA LA SOMMA DELLE QUOTE DI COMPETENZA invece del costo totale
-const costiTotali = costoMezziTecnici + costoPersonale + totaleQuotaAmmortamento;
-const bilancio = ricaviTotali - costiTotali;
-
-console.log('📊 Calcoli ammortamento:', {
-    annoCorrente,
-    totaleQuotaAmmortamento,
-    costiTotali,
-    bilancio
-});
-    
     console.log('📊 Calcoli:', {
         prezzoKg,
         prezzoTotale,
@@ -6128,20 +6381,18 @@ console.log('📊 Calcoli ammortamento:', {
     });
     
     const registrazione = {
-    lot_id: parseInt(lotId),
-    stagione_agricola: stagioneAgricola,
-    data_acquisto_vendita: dataAcquistoVendita,
-    metodo_calcolo: metodoKg ? 'kg' : 'totale',
-    prezzo_kg: prezzoKg,
-    prezzo_totale: prezzoTotale,
-    totale_kg: kgRaccolti,
-    ricavi_totali: ricaviTotali,
-    costo_mezzi_tecnici: costoMezziTecnici,
-    costo_personale: costoPersonale,
-    beni_durevoli: beniDurevoli,
-    costi_totali: costiTotali,
-    bilancio: bilancio
-};
+        lot_id: parseInt(lotId),
+        stagione_agricola: stagioneAgricola,
+        data_acquisto_vendita: dataAcquistoVendita,
+        metodo_calcolo: metodoKg ? 'kg' : 'totale',
+        prezzo_kg: prezzoKg,
+        prezzo_totale: prezzoTotale,
+        totale_kg: kgRaccolti,
+        ricavi_totali: ricaviTotali,
+        costo_personale: costoPersonale,
+        costi_totali: costiTotali,
+        bilancio: bilancio
+    };
 
     console.log('🔍 Valori del form:', {
         stagione: document.getElementById('stagione-agricola').value,
@@ -6153,13 +6404,11 @@ console.log('📊 Calcoli ammortamento:', {
     try {
         showNotification(editingId ? 'Aggiornamento in corso...' : 'Salvataggio in corso...', 'loading');
         
-        // ✅ DECIDI SE USARE POST (nuovo) O PUT (modifica)
         const url = editingId ? `/economic/${editingId}` : '/economic';
         const method = editingId ? 'PUT' : 'POST';
         
         console.log(`📤 Invio ${method} a ${url}`, registrazione);
         
-        // Invia al backend
         const response = await apiCall(url, {
             method: method,
             body: registrazione
@@ -6171,17 +6420,12 @@ console.log('📊 Calcoli ammortamento:', {
                 'success'
             );
             
-            // ✅ PULISCI IL CAMPO HIDDEN DELL'ID
             if (editingIdField) editingIdField.value = '';
             
-            // ✅ RIPRISTINA IL TESTO DEL PULSANTE
             const saveBtn = document.getElementById('save-economic-btn');
             if (saveBtn) saveBtn.textContent = '💾 Salva Registrazione';
             
-            // Aggiorna la lista visualizzata
             await loadRegistrazioniEconomiche(lotId);
-            
-            // Resetta il form
             resetFormEconomico();
         } else {
             showNotification(response.error || 'Errore nel salvataggio', 'error');
@@ -6197,7 +6441,6 @@ console.log('📊 Calcoli ammortamento:', {
     document.getElementById('stagione-agricola').value = '';
     document.getElementById('data-acquisto-vendita').value = '';
     document.getElementById('totale-kg-raccolti').value = '';
-    document.getElementById('costo-mezzi-tecnici').value = '';
     document.getElementById('costo-personale').value = '';
     
     // Reset metodo calcolo
@@ -6206,17 +6449,7 @@ console.log('📊 Calcoli ammortamento:', {
     document.getElementById('prezzo-acquisto-vendita').value = '';
     document.getElementById('prezzo-totale').value = '';
     toggleMetodoCalcolo();
-    
-    // ✅ RESET BENI DUREVOLI (nuovo)
-    const container = document.getElementById('beni-durevoli-container');
-    if (container) {
-        container.innerHTML = '';
-    }
-    beniDurevoliCount = 0;
-    
-    // Aggiungi un campo vuoto per iniziare
-    aggiungiBeneDurevole();
-    
+          
     // ✅ PULISCI CAMPO HIDDEN DELL'ID
     const editingIdField = document.getElementById('editing-economic-id');
     if (editingIdField) {
@@ -7046,6 +7279,11 @@ function popolaFormEconomico(record) {
         return;
     }
     
+if (sectionId === 'gestione-costi-section' && !permissions.canAccessEconomic) {
+    showNotification('Non hai i permessi per accedere alla sezione Gestione Costi', 'error');
+    return;
+}
+
     if (sectionId === 'user-management-section' && !permissions.canManageUsers) {
         showNotification('Non hai i permessi per gestire gli utenti', 'error');
         return;
@@ -7081,6 +7319,15 @@ function popolaFormEconomico(record) {
         }
     }
     
+    // Mostra/nascondi lo storico economico
+const storico = document.querySelector('.section-storico-economico');
+if (storico) {
+    if (sectionId === 'gestione-economica-section') {
+        storico.style.display = '';
+    } else {
+        storico.style.display = 'none';
+    }
+}
     // Azioni specifiche per sezione
     handleSectionSpecificActions(sectionId);
 }
@@ -7093,8 +7340,10 @@ function handleSectionSpecificActions(sectionId) {
         case 'gestione-economica-section':
             initGestioneEconomica();
             break;
+        case 'gestione-costi-section':  // ✅ AGGIUNGI QUESTO CASO
+            initGestioneCosti();
+            break;
         case 'dettagli-section':
-            // Ricarica i dropdown quando si entra nella sezione
             setTimeout(() => {
                 if (allLots && allLots.length > 0) {
                     populateDropdownMenu();
@@ -7102,8 +7351,10 @@ function handleSectionSpecificActions(sectionId) {
             }, 100);
             break;
         case 'user-management-section':
-            // POPOLA IL SELECTOR UTENTI quando si entra in Gestione Utenti
             loadUserManagement();
+            break;
+        case 'home':
+            document.querySelector('.main-menu').style.display = 'grid';
             break;
     }
 }
@@ -7132,6 +7383,10 @@ function addHomeButton(section, sectionId) {
         homeBtn.className = 'nav-home-btn';
         homeBtn.innerHTML = '<i class="fas fa-home"></i> Torna alla Home';
         homeBtn.onclick = function() {
+            // ✅ Nascondi lo storico economico
+            const storico = document.querySelector('.section-storico-economico');
+            if (storico) storico.style.display = 'none';
+            
             showHome();
         };
         
@@ -7392,6 +7647,9 @@ if (lot.variety && lot.variety.trim() !== '') {
                 <div class="action-btn" onclick="goToEconomicManagement(${lot.id})" title="Gestione Economica" style="background: #9C27B0; color: white; border-color: #9C27B0;">
                     <i class="fas fa-euro-sign"></i>
                 </div>
+                <div class="action-btn" onclick="showSection('gestione-costi-section'); setTimeout(() => loadCostiLotDetails(${lot.id}), 300);" title="Gestione Costi" style="background: #FF5722;">
+                    <i class="fas fa-wallet"></i>
+</div>
                 ${permissions.canEditLots ? `
                 <div class="action-btn" onclick="editFieldLot(${lot.id})" title="Modifica lotto campo">
                     <i class="fas fa-edit"></i>
@@ -8965,6 +9223,960 @@ if (privacyModal) {
         }
     });
 }
+
+// ==================== VARIABILI GLOBALI SEZIONE COSTI ====================
+let currentCostiLotId = null;
+let currentCostiStagione = null;
+let beniDurevoliCostiCount = 0;
+let currentVistaMezzi = 'giornaliera';
+
+// ==================== INIZIALIZZAZIONE SEZIONE COSTI ====================
+// Funzione per inizializzare il dropdown dei lotti nella sezione costi
+function initCostiLotDropdown() {
+    const dropdownBtn = document.getElementById('costiLotDropdown');
+    const dropdownMenu = document.getElementById('costi-lot-dropdown-menu');
+    
+    if (!dropdownBtn || !dropdownMenu) return;
+    
+    // Rimuovi listener precedenti
+    dropdownBtn.removeEventListener('click', toggleCostiDropdown);
+    
+    // Aggiungi listener per toggle
+    dropdownBtn.addEventListener('click', toggleCostiDropdown);
+    
+    // Chiudi dropdown cliccando fuori
+    document.addEventListener('click', function(e) {
+        if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            dropdownMenu.classList.remove('show');
+        }
+    });
+}
+
+function toggleCostiDropdown(e) {
+    e.stopPropagation();
+    const dropdownMenu = document.getElementById('costi-lot-dropdown-menu');
+    if (dropdownMenu) {
+        dropdownMenu.classList.toggle('show');
+    }
+}
+
+function initGestioneCosti() {
+    const dropdownMenu = document.getElementById('costi-lot-dropdown-menu');
+    if (!dropdownMenu || allLots.length === 0) return;
+    
+    dropdownMenu.innerHTML = '';
+    
+    allLots.forEach(lot => {
+        const dropdownItem = document.createElement('button');
+        dropdownItem.className = 'dropdown-item';
+        dropdownItem.type = 'button';
+        dropdownItem.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    <strong>${lot.company_name}</strong><br>
+                    <small>${lot.location} - ${lot.variety || ''}</small>
+                </div>
+                <span style="background: #FF5722; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
+                    ${lot.product_type}
+                </span>
+            </div>
+        `;
+        dropdownItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            loadCostiLotDetails(lot.id);
+            dropdownMenu.classList.remove('show');
+        });
+        dropdownMenu.appendChild(dropdownItem);
+    });
+    
+    // ✅ Inizializza il toggle del dropdown
+    initCostiLotDropdown();
+    // ✅ Inizializza beni durevoli con un campo vuoto
+    initBeniDurevoliCosti();
+}
+
+// ==================== CARICAMENTO LOTTO NELLA SEZIONE COSTI ====================
+async function loadCostiLotDetails(lotId) {
+    currentCostiLotId = lotId;
+    
+    const lot = allLots.find(l => l.id === parseInt(lotId));
+    if (lot) {
+        document.getElementById('costi-lot-info').innerHTML = `
+            <h4><i class="fas fa-building"></i> ${lot.company_name}</h4>
+            <p><i class="fas fa-map-marker-alt"></i> ${lot.location}</p>
+            <p><i class="fas fa-wine-bottle"></i> ${lot.product_type} - ${lot.variety || ''}</p>
+            ${lot.field_lot ? `<p><i class="fas fa-map"></i> Lotto Campo: ${lot.field_lot}</p>` : ''}
+        `;
+        document.getElementById('costi-lot-info').style.display = 'block';
+    }
+    
+    // 1. Imposta stagione default
+    const annoCorrente = new Date().getFullYear();
+    currentCostiStagione = annoCorrente;
+    currentTariffeStagione = annoCorrente; // ✅ Sincronizza
+    
+    // 2. Popola il selettore stagione tariffe
+    popolaStagioniTariffe();
+    
+    // 3. Carica tariffe
+    await loadTariffeManodopera(annoCorrente);
+    
+    // 4. Popola dropdown attività predefinite
+    await popolaAttivitaPredefinite();
+    
+    // 5. Carica costi personale
+    await loadCostiPersonale(lotId, annoCorrente);
+    
+    // 6. Carica mezzi tecnici
+    await loadMezziTecnici(lotId, annoCorrente);
+    
+    // 7. Carica beni durevoli (usa caricaBeniDurevoliAttivi internamente)
+    await loadBeniDurevoliCosti(lotId, annoCorrente);
+    
+    // 8. Aggiorna il riepilogo totale costi
+    aggiornaRiepilogoCosti();
+}
+// ==================== TARIFFE MANODOPERA ====================
+
+async function loadTariffeManodopera(stagione) {
+    try {
+        const response = await apiCall(`/costi/tariffe/${stagione}`);
+        const tariffa = response.data;
+        document.getElementById('tariffa-standard').value = tariffa.costo_orario_standard || 15.00;
+        document.getElementById('tariffa-specializzato').value = tariffa.costo_orario_specializzato || 22.00;
+    } catch (error) {
+        console.error('Errore caricamento tariffe:', error);
+    }
+}
+
+async function salvaTariffeManodopera() {
+    const stagione = currentCostiStagione || new Date().getFullYear();
+    const standard = parseFloat(document.getElementById('tariffa-standard').value) || 15.00;
+    const specializzato = parseFloat(document.getElementById('tariffa-specializzato').value) || 22.00;
+    
+    try {
+        await apiCall(`/costi/tariffe/${stagione}`, {
+            method: 'PUT',
+            body: {
+                costo_orario_standard: standard,
+                costo_orario_specializzato: specializzato
+            }
+        });
+        showNotification('Tariffe aggiornate con successo!', 'success');
+    } catch (error) {
+        showNotification('Errore aggiornamento tariffe: ' + error.message, 'error');
+    }
+}
+
+// ==================== GESTIONE STAGIONE TARIFFE ====================
+
+// Variabile per tenere traccia della stagione selezionata per le tariffe
+let currentTariffeStagione = new Date().getFullYear();
+
+// Popola il selettore stagione per le tariffe
+function popolaStagioniTariffe() {
+    const select = document.getElementById('tariffe-stagione-select');
+    if (!select) return;
+    
+    const annoCorrente = new Date().getFullYear();
+    select.innerHTML = '';
+    
+    // Opzioni da 5 anni fa a 5 anni nel futuro
+    for (let anno = annoCorrente - 5; anno <= annoCorrente + 5; anno++) {
+        const option = document.createElement('option');
+        option.value = anno;
+        option.textContent = anno;
+        if (anno === currentTariffeStagione) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    }
+}
+
+// Cambia stagione e ricarica le tariffe
+async function cambiaStagioneTariffe() {
+    const select = document.getElementById('tariffe-stagione-select');
+    if (!select) return;
+    
+    currentTariffeStagione = parseInt(select.value);
+    currentCostiStagione = parseInt(select.value); // ✅ Aggiorna anche la stagione costi
+    
+    // Ricarica le tariffe
+    await loadTariffeManodopera(currentTariffeStagione);
+    
+    // ✅ Ricarica TUTTI i costi per la nuova stagione
+    if (currentCostiLotId) {
+        await loadCostiPersonale(currentCostiLotId, currentTariffeStagione);
+        await loadMezziTecnici(currentCostiLotId, currentTariffeStagione);
+        await loadBeniDurevoliCosti(currentCostiLotId, currentTariffeStagione);
+        aggiornaRiepilogoCosti();
+    }
+    
+    // ✅ Aggiorna badge stagione
+    const badge = document.getElementById('costi-stagione-badge');
+    if (badge) badge.textContent = `Anno ${currentTariffeStagione}`;
+}
+
+// Modifica loadTariffeManodopera per usare currentTariffeStagione
+async function loadTariffeManodopera(stagione) {
+    try {
+        currentTariffeStagione = stagione || currentTariffeStagione;
+        const response = await apiCall(`/costi/tariffe/${currentTariffeStagione}`);
+        const tariffa = response.data;
+        document.getElementById('tariffa-standard').value = tariffa.costo_orario_standard || 15.00;
+        document.getElementById('tariffa-specializzato').value = tariffa.costo_orario_specializzato || 22.00;
+        
+        // Aggiorna il selettore stagione
+        const select = document.getElementById('tariffe-stagione-select');
+        if (select) {
+            select.value = currentTariffeStagione;
+        }
+    } catch (error) {
+        console.error('Errore caricamento tariffe:', error);
+    }
+}
+
+// ==================== ATTIVITÀ PREDEFINITE ====================
+
+async function popolaAttivitaPredefinite() {
+    try {
+        const response = await apiCall('/costi/attivita');
+        const attivita = response.data || [];
+        
+        const select = document.getElementById('costo-attivita-select');
+        select.innerHTML = '<option value="">Seleziona attività predefinita...</option>' +
+            '<option value="__altra__">✏️ Altra attività (scrivi liberamente)...</option>';
+        
+        attivita.forEach(a => {
+            select.innerHTML += `<option value="${a.nome}">${a.nome}</option>`;
+        });
+    } catch (error) {
+        console.error('Errore caricamento attività:', error);
+    }
+}
+
+function handleAttivitaSelect() {
+    const select = document.getElementById('costo-attivita-select');
+    const inputLibero = document.getElementById('costo-attivita-libera');
+    
+    if (select.value === '__altra__') {
+        inputLibero.style.display = 'block';
+        inputLibero.value = '';
+        inputLibero.focus();
+    } else {
+        inputLibero.style.display = 'none';
+        inputLibero.value = select.value;
+    }
+}
+
+// ✅ NUOVA FUNZIONE: Salva attività personalizzata dopo che l'utente ha finito di scrivere
+async function salvaNuovaAttivita() {
+    const inputLibero = document.getElementById('costo-attivita-libera');
+    const nome = inputLibero?.value?.trim();
+    
+    if (!nome || nome === '__altra__') return;
+    
+    // Verifica se esiste già
+    const select = document.getElementById('costo-attivita-select');
+    const esiste = Array.from(select.options).some(opt => opt.value.toLowerCase() === nome.toLowerCase());
+    
+    if (!esiste) {
+        try {
+            await apiCall('/costi/attivita', {
+                method: 'POST',
+                body: { nome: nome, categoria: 'personalizzata' }
+            });
+            
+            // Ricarica la lista attività
+            await popolaAttivitaPredefinite();
+            
+            // Riseleziona l'attività appena creata
+            const newOption = Array.from(select.options).find(opt => opt.value === nome);
+            if (newOption) {
+                select.value = nome;
+                inputLibero.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Errore salvataggio attività:', error);
+        }
+    }
+}
+
+// ==================== COSTI PERSONALE ====================
+
+async function loadCostiPersonale(lotId, stagione) {
+    try {
+        const response = await apiCall(`/costi/personale/${lotId}/${stagione}`);
+        const records = response.data || [];
+        const totale = response.totale || 0;
+        
+        document.getElementById('totale-costo-personale').textContent = `€${totale.toFixed(2)}`;
+        aggiornaRiepilogoCosti();
+        displayRegistroPersonale(records, 'giornaliera');
+    } catch (error) {
+        console.error('Errore caricamento costi personale:', error);
+    }
+}
+
+function displayRegistroPersonale(records, vista = 'giornaliera') {
+    const container = document.getElementById('costi-personale-registro');
+
+     // Intestazione con stagione
+    const headerHtml = `
+        <div style="background: #FF5722; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - ${records.length} attività</strong>
+        </div>
+    `;
+    
+    if (records.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">Nessuna attività registrata</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    if (vista === 'giornaliera') {
+        // Raggruppa per data
+        const gruppi = {};
+        records.forEach(r => {
+            const data = r.data_attivita;
+            if (!gruppi[data]) gruppi[data] = [];
+            gruppi[data].push(r);
+        });
+        
+        html = Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs]) => {
+            const totaleGiorno = recs.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #FF5722; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>📅 ${new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})}</strong>
+                        <span>Totale: €${totaleGiorno.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px;">
+                        ${recs.map(r => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                <div>
+                                    <strong>${r.attivita || 'Attività generica'}</strong><br>
+                                    <small>${r.numero_operatori} op. ${r.qualifica} × ${r.ore_lavorate}h (€${r.costo_orario}/h)</small>
+                                </div>
+                                <div style="text-align: right;">
+                                    <strong>€${(r.costo_totale || 0).toFixed(2)}</strong><br>
+                                    <button onclick="eliminaCostoPersonale(${r.id})" style="background: none; border: none; color: #f44336; cursor: pointer; font-size: 12px;">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } else if (vista === 'settimanale') {
+        // Raggruppa per settimana
+        const gruppiSettimana = {};
+        records.forEach(r => {
+            const data = new Date(r.data_attivita);
+            const inizioSettimana = new Date(data);
+            inizioSettimana.setDate(data.getDate() - data.getDay() + 1);
+            const chiave = inizioSettimana.toISOString().split('T')[0];
+            if (!gruppiSettimana[chiave]) gruppiSettimana[chiave] = [];
+            gruppiSettimana[chiave].push(r);
+        });
+        
+        html = Object.entries(gruppiSettimana).sort((a, b) => b[0].localeCompare(a[0])).map(([settimana, recs]) => {
+            const totaleSettimana = recs.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
+            const fineSettimana = new Date(settimana);
+            fineSettimana.setDate(fineSettimana.getDate() + 6);
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #FF5722; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>📆 ${new Date(settimana).toLocaleDateString('it-IT')} - ${fineSettimana.toLocaleDateString('it-IT')}</strong>
+                        <span>Totale: €${totaleSettimana.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px;">
+                        <p style="text-align: center; color: #666;">${recs.length} attività | ${recs.reduce((sum, r) => sum + (r.ore_lavorate || 0), 0)} ore totali</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } else if (vista === 'mensile') {
+        // Raggruppa per mese
+        const gruppiMese = {};
+        records.forEach(r => {
+            const data = new Date(r.data_attivita);
+            const chiave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+            if (!gruppiMese[chiave]) gruppiMese[chiave] = [];
+            gruppiMese[chiave].push(r);
+        });
+        
+        html = Object.entries(gruppiMese).sort((a, b) => b[0].localeCompare(a[0])).map(([mese, recs]) => {
+            const totaleMese = recs.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
+            const [anno, numMese] = mese.split('-');
+            const nomeMese = new Date(anno, numMese - 1).toLocaleDateString('it-IT', {month: 'long', year: 'numeric'});
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #FF5722; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>🗓️ ${nomeMese}</strong>
+                        <span>Totale: €${totaleMese.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px;">
+                        <p style="text-align: center; color: #666;">${recs.length} attività | ${recs.reduce((sum, r) => sum + (r.ore_lavorate || 0), 0)} ore totali</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    container.innerHTML = headerHtml + html;
+}
+
+function cambiaVistaRegistro(vista) {
+    const lotId = currentCostiLotId;
+    const stagione = currentCostiStagione;
+    if (lotId && stagione) {
+        loadCostiPersonale(lotId, stagione);
+        // Modifica la funzione displayRegistroPersonale per accettare la vista
+        const originalDisplay = displayRegistroPersonale;
+        // Ricarica con la vista corretta
+        apiCall(`/costi/personale/${lotId}/${stagione}`).then(response => {
+            displayRegistroPersonale(response.data || [], vista);
+        });
+    }
+}
+
+async function salvaCostoPersonale() {
+    if (!currentCostiLotId) {
+        showNotification('Seleziona prima un lotto', 'error');
+        return;
+    }
+    
+    const dataAttivita = document.getElementById('costo-data-attivita').value;
+    if (!dataAttivita) {
+        showNotification('Inserisci la data dell\'attività', 'error');
+        return;
+    }
+    
+    // ✅ SALVA LA NUOVA ATTIVITÀ (se è stata inserita una personalizzata)
+    const select = document.getElementById('costo-attivita-select');
+    const inputLibero = document.getElementById('costo-attivita-libera');
+    let nomeAttivita = '';
+    
+    if (select.value === '__altra__' && inputLibero.value.trim()) {
+        nomeAttivita = inputLibero.value.trim();
+        // Salva la nuova attività nel database
+        try {
+            await apiCall('/costi/attivita', {
+                method: 'POST',
+                body: { nome: nomeAttivita, categoria: 'personalizzata' }
+            });
+            // Ricarica la lista per il futuro
+            await popolaAttivitaPredefinite();
+        } catch (error) {
+            console.error('Errore salvataggio attività:', error);
+        }
+    } else {
+        nomeAttivita = select.value !== '__altra__' ? select.value : '';
+    }
+    
+    const dati = {
+        lot_id: currentCostiLotId,
+        stagione_agricola: currentCostiStagione || new Date().getFullYear(),
+        data_attivita: dataAttivita,
+        numero_operatori: parseInt(document.getElementById('costo-numero-operatori').value) || 1,
+        qualifica: document.getElementById('costo-qualifica').value,
+        ore_lavorate: parseFloat(document.getElementById('costo-ore-lavorate').value) || 6.5,
+        attivita: nomeAttivita,
+        note: document.getElementById('costo-note').value
+    };
+    
+    try {
+        showNotification('Salvataggio in corso...', 'loading');
+        await apiCall('/costi/personale', {
+            method: 'POST',
+            body: dati
+        });
+        
+        showNotification('Attività registrata con successo!', 'success');
+        resetCostoPersonaleForm();
+        await loadCostiPersonale(currentCostiLotId, currentCostiStagione);
+    } catch (error) {
+        showNotification('Errore: ' + error.message, 'error');
+    }
+}
+
+async function eliminaCostoPersonale(id) {
+    if (!confirm('Eliminare questa attività?')) return;
+    
+    try {
+        await apiCall(`/costi/personale/${id}`, { method: 'DELETE' });
+        showNotification('Attività eliminata', 'success');
+        await loadCostiPersonale(currentCostiLotId, currentCostiStagione);
+    } catch (error) {
+        showNotification('Errore: ' + error.message, 'error');
+    }
+}
+
+function resetCostoPersonaleForm() {
+    document.getElementById('costo-data-attivita').value = '';
+    document.getElementById('costo-numero-operatori').value = '1';
+    document.getElementById('costo-qualifica').value = 'standard';
+    document.getElementById('costo-ore-lavorate').value = '6.5';
+    document.getElementById('costo-attivita-select').value = '';
+    document.getElementById('costo-attivita-libera').value = '';
+    document.getElementById('costo-attivita-libera').style.display = 'none';
+    document.getElementById('costo-note').value = '';
+}
+
+// ==================== MEZZI TECNICI ====================
+
+async function loadMezziTecnici(lotId, stagione) {
+    try {
+        const response = await apiCall(`/costi/mezzi/${lotId}/${stagione}`);
+        const records = response.data || [];
+        const totale = response.totale || 0;
+        
+        document.getElementById('totale-mezzi-tecnici').textContent = `€${totale.toFixed(2)}`;
+        aggiornaRiepilogoCosti();
+        displayMezziTecniciRegistro(records, currentVistaMezzi);
+    } catch (error) {
+        console.error('Errore caricamento mezzi tecnici:', error);
+    }
+}
+
+function cambiaVistaMezzi(vista) {
+    currentVistaMezzi = vista;
+    if (currentCostiLotId && currentCostiStagione) {
+        loadMezziTecnici(currentCostiLotId, currentCostiStagione);
+    }
+}
+
+function displayMezziTecniciRegistro(records, vista = 'giornaliera') {
+    const container = document.getElementById('mezzi-tecnici-registro');
+    
+    if (records.length === 0) {
+        container.innerHTML = `
+            <div style="background: #2196F3; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+                <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - 0 registrazioni</strong>
+            </div>
+            <p style="text-align: center; color: #666;">Nessun costo registrato</p>
+        `;
+        return;
+    }
+    
+    // Intestazione comune
+    let html = `
+        <div style="background: #2196F3; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+            <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - ${records.length} registrazioni | Totale: €${records.reduce((sum, r) => sum + (r.importo || 0), 0).toFixed(2)}</strong>
+        </div>
+    `;
+    
+    if (vista === 'giornaliera') {
+        // Raggruppa per data
+        const gruppi = {};
+        records.forEach(r => {
+            const data = r.data_registrazione || 'Senza data';
+            if (!gruppi[data]) gruppi[data] = [];
+            gruppi[data].push(r);
+        });
+        
+        html += Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs]) => {
+            const totaleGiorno = recs.reduce((sum, r) => sum + (r.importo || 0), 0);
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #2196F3; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>📅 ${data !== 'Senza data' ? new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'}) : 'Senza data'}</strong>
+                        <span>Totale: €${totaleGiorno.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px;">
+                        ${recs.map(r => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
+                                <div>
+                                    <strong>${r.descrizione || 'Senza descrizione'}</strong>
+                                    <small style="display: block; color: #666;">${r.categoria}</small>
+                                </div>
+                                <div style="text-align: right;">
+                                    <strong>€${(r.importo || 0).toFixed(2)}</strong>
+                                    <button onclick="eliminaMezzoTecnico(${r.id})" style="background: none; border: none; color: #f44336; cursor: pointer; font-size: 11px; display: block;">🗑️</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } else if (vista === 'settimanale') {
+        const gruppi = {};
+        records.forEach(r => {
+            if (r.data_registrazione) {
+                const data = new Date(r.data_registrazione);
+                const inizioSettimana = new Date(data);
+                inizioSettimana.setDate(data.getDate() - data.getDay() + 1);
+                const chiave = inizioSettimana.toISOString().split('T')[0];
+                if (!gruppi[chiave]) gruppi[chiave] = [];
+                gruppi[chiave].push(r);
+            }
+        });
+        
+        html += Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([settimana, recs]) => {
+            const totale = recs.reduce((sum, r) => sum + (r.importo || 0), 0);
+            const fineSettimana = new Date(settimana);
+            fineSettimana.setDate(fineSettimana.getDate() + 6);
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #2196F3; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>📆 ${new Date(settimana).toLocaleDateString('it-IT')} - ${fineSettimana.toLocaleDateString('it-IT')}</strong>
+                        <span>Totale: €${totale.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px; text-align: center;">
+                        <p style="color: #666;">${recs.length} registrazioni</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } else if (vista === 'mensile') {
+        const gruppi = {};
+        records.forEach(r => {
+            if (r.data_registrazione) {
+                const data = new Date(r.data_registrazione);
+                const chiave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`;
+                if (!gruppi[chiave]) gruppi[chiave] = [];
+                gruppi[chiave].push(r);
+            }
+        });
+        
+        html += Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([mese, recs]) => {
+            const totale = recs.reduce((sum, r) => sum + (r.importo || 0), 0);
+            const [anno, numMese] = mese.split('-');
+            const nomeMese = new Date(anno, numMese - 1).toLocaleDateString('it-IT', {month: 'long', year: 'numeric'});
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #2196F3; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
+                        <strong>🗓️ ${nomeMese}</strong>
+                        <span>Totale: €${totale.toFixed(2)}</span>
+                    </div>
+                    <div style="padding: 10px; text-align: center;">
+                        <p style="color: #666;">${recs.length} registrazioni</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    container.innerHTML = html;
+}
+
+async function salvaCostoMezziTecnici() {
+    if (!currentCostiLotId) {
+        showNotification('Seleziona prima un lotto', 'error');
+        return;
+    }
+    
+    const dati = {
+        lot_id: currentCostiLotId,
+        stagione_agricola: currentCostiStagione || new Date().getFullYear(),
+        data_registrazione: document.getElementById('mezzi-data').value,
+        descrizione: document.getElementById('mezzi-descrizione').value,
+        importo: parseFloat(document.getElementById('mezzi-importo').value) || 0,
+        categoria: document.getElementById('mezzi-categoria').value
+    };
+    
+    if (dati.importo <= 0) {
+        showNotification('Inserisci un importo valido', 'error');
+        return;
+    }
+    
+    try {
+        await apiCall('/costi/mezzi', {
+            method: 'POST',
+            body: dati
+        });
+        showNotification('Costo registrato!', 'success');
+        resetMezziTecniciForm();
+        await loadMezziTecnici(currentCostiLotId, currentCostiStagione);
+    } catch (error) {
+        showNotification('Errore: ' + error.message, 'error');
+    }
+}
+
+async function eliminaMezzoTecnico(id) {
+    if (!confirm('Eliminare questo costo?')) return;
+    try {
+        await apiCall(`/costi/mezzi/${id}`, { method: 'DELETE' });
+        showNotification('Costo eliminato', 'success');
+        await loadMezziTecnici(currentCostiLotId, currentCostiStagione);
+    } catch (error) {
+        showNotification('Errore: ' + error.message, 'error');
+    }
+}
+
+function resetMezziTecniciForm() {
+    document.getElementById('mezzi-data').value = '';
+    document.getElementById('mezzi-descrizione').value = '';
+    document.getElementById('mezzi-importo').value = '';
+    document.getElementById('mezzi-categoria').value = 'fitofarmaci';
+}
+
+// ==================== BENI DUREVOLI (VERSIONE COSTI) ====================
+
+function initBeniDurevoliCosti() {
+    const container = document.getElementById('beni-durevoli-costi-container');
+    if (container) {
+        container.innerHTML = '';
+    }
+    beniDurevoliCostiCount = 0;
+    aggiungiBeneDurevoleCosti();
+}
+
+function aggiungiBeneDurevoleCosti() {
+    const container = document.getElementById('beni-durevoli-costi-container');
+    const template = document.getElementById('bene-durevole-template');
+    
+    if (!container || !template) return;
+    
+    beniDurevoliCostiCount++;
+    
+    const clone = template.content.cloneNode(true);
+    const beneDiv = clone.querySelector('.bene-durevole-item');
+    beneDiv.dataset.index = beniDurevoliCostiCount;
+    beneDiv.querySelector('.bene-index').textContent = `#${beniDurevoliCostiCount}`;
+    
+    const annoInput = beneDiv.querySelector('.bene-anno-inizio');
+    if (annoInput) {
+        annoInput.value = new Date().getFullYear();
+    }
+    
+    // ✅ Aggiungi listener per aggiornare la quota quando cambiano costo o anni
+    const costoInput = beneDiv.querySelector('.bene-costo');
+    const anniSelect = beneDiv.querySelector('.bene-anni');
+    
+    if (costoInput) {
+        costoInput.addEventListener('input', function() {
+            aggiornaQuotaAmmortamento(this);
+        });
+    }
+    if (anniSelect) {
+        anniSelect.addEventListener('change', function() {
+            aggiornaQuotaAmmortamento(costoInput || this);
+        });
+    }
+    
+    container.appendChild(clone);
+}
+// ==================== BENI DUREVOLI COSTI (COMPLETO) ====================
+
+// Raccoglie i beni durevoli dal form costi
+function raccogliBeniDurevoliCosti() {
+    const beni = [];
+    const container = document.getElementById('beni-durevoli-costi-container');
+    if (!container) return beni;
+    
+    const beniDivs = container.querySelectorAll('.bene-durevole-item');
+    
+    beniDivs.forEach(div => {
+        const desc = div.querySelector('.bene-desc')?.value?.trim() || '';
+        const costo = parseFloat(div.querySelector('.bene-costo')?.value) || 0;
+        const anni = parseInt(div.querySelector('.bene-anni')?.value) || 1;
+        const quota = parseFloat(div.querySelector('.bene-quota')?.value) || 0;
+        const annoInizio = parseInt(div.querySelector('.bene-anno-inizio')?.value) || new Date().getFullYear();
+        
+        if (desc && costo > 0) {
+            beni.push({
+                descrizione: desc,
+                costo_totale: costo,
+                anni_ammortamento: anni,
+                quota_annuale: quota,
+                anno_inizio: annoInizio
+            });
+        }
+    });
+    
+    return beni;
+}
+
+// Salva i beni durevoli come costo (collegato alla stagione)
+// ==================== BENI DUREVOLI COSTI (VERSIONE COMPLETA CON AMMORTAMENTO) ====================
+
+// Salva i beni durevoli usando la STESSA logica della sezione Ricavi
+async function salvaBeniDurevoliCosti() {
+    if (!currentCostiLotId) {
+        showNotification('Seleziona prima un lotto', 'error');
+        return;
+    }
+    
+    // ✅ RACCOGLI I BENI E RICALCOLA LE QUOTE
+    const beni = [];
+    const container = document.getElementById('beni-durevoli-costi-container');
+    if (!container) return;
+    
+    const beniDivs = container.querySelectorAll('.bene-durevole-item');
+    
+    beniDivs.forEach(div => {
+        const desc = div.querySelector('.bene-desc')?.value?.trim() || '';
+        const costo = parseFloat(div.querySelector('.bene-costo')?.value) || 0;
+        const anni = parseInt(div.querySelector('.bene-anni')?.value) || 1;
+        const annoInizio = parseInt(div.querySelector('.bene-anno-inizio')?.value) || new Date().getFullYear();
+        
+        // ✅ RICALCOLA LA QUOTA (non leggere dal campo readonly)
+        const quota = costo / anni;
+        
+        if (desc && costo > 0) {
+            beni.push({
+                descrizione: desc,
+                costo_totale: costo,
+                anni_ammortamento: anni,
+                quota_annuale: quota,  // ✅ QUOTA RICALCOLATA
+                anno_inizio: annoInizio
+            });
+        }
+    });
+    
+    if (beni.length === 0) {
+        showNotification('Inserisci almeno un bene durevole con descrizione e costo', 'error');
+        return;
+    }
+    
+    const stagione = currentCostiStagione || new Date().getFullYear();
+    
+    // ✅ CALCOLA LA QUOTA TOTALE PER QUESTA STAGIONE
+    let totaleQuotaAmmortamento = 0;
+    
+    beni.forEach(bene => {
+        const annoInizio = bene.anno_inizio || stagione;
+        const anniAmmortamento = bene.anni_ammortamento || 1;
+        const annoFine = annoInizio + anniAmmortamento - 1;
+        
+        if (stagione >= annoInizio && stagione <= annoFine) {
+            totaleQuotaAmmortamento += bene.quota_annuale || 0;
+        }
+    });
+    
+    console.log('📊 Beni da salvare:', beni);
+    console.log('📊 Quota totale ammortamento:', totaleQuotaAmmortamento);
+    
+    try {
+        showNotification('Salvataggio beni durevoli...', 'loading');
+        
+        await apiCall('/economic', {
+            method: 'POST',
+            body: {
+                lot_id: currentCostiLotId,
+                stagione_agricola: String(stagione),
+                data_acquisto_vendita: new Date().toISOString().split('T')[0],
+                metodo_calcolo: 'totale',
+                prezzo_kg: 0,
+                prezzo_totale: 0,
+                totale_kg: 0,
+                ricavi_totali: 0,
+                costo_mezzi_tecnici: 0,
+                costo_personale: 0,
+                beni_durevoli: beni,
+                costi_totali: totaleQuotaAmmortamento,
+                bilancio: -totaleQuotaAmmortamento
+            }
+        });
+        
+        document.getElementById('totale-ammortamento-costi').textContent = `€${totaleQuotaAmmortamento.toFixed(2)}`;
+        aggiornaRiepilogoCosti();
+        
+        showNotification('Beni durevoli salvati! Quota annuale: €' + totaleQuotaAmmortamento.toFixed(2), 'success');
+        
+    } catch (error) {
+        showNotification('Errore salvataggio: ' + error.message, 'error');
+    }
+}
+
+// Carica beni durevoli da TUTTE le registrazioni (stessa logica di caricaBeniDurevoliAttivi)
+async function loadBeniDurevoliCosti(lotId, stagione) {
+    try {
+        // ✅ Usa la stessa funzione che abbiamo già creato per la sezione Ricavi!
+        // Recupera TUTTE le registrazioni del lotto
+        const response = await apiCall(`/economic/${lotId}`);
+        const allRecords = response.data || [];
+        
+        // Usa caricaBeniDurevoliAttivi per trovare quelli ancora attivi
+        const beniAttivi = caricaBeniDurevoliAttivi(allRecords, stagione);
+        
+        // Calcola il totale delle quote
+        let totaleQuote = 0;
+        beniAttivi.forEach(bene => {
+            totaleQuote += bene.quota_annuale || 0;
+        });
+        
+        // Popola il form con i beni attivi
+        const container = document.getElementById('beni-durevoli-costi-container');
+        if (container) {
+            container.innerHTML = '';
+            beniDurevoliCostiCount = 0;
+            
+            if (beniAttivi.length > 0) {
+                beniAttivi.forEach(bene => {
+                    aggiungiBeneDurevoleCosti();
+                    const lastIdx = beniDurevoliCostiCount;
+                    
+                    setTimeout(() => {
+                        const beneDiv = document.querySelector(`#beni-durevoli-costi-container .bene-durevole-item[data-index="${lastIdx}"]`);
+                        if (beneDiv) {
+                            const descInput = beneDiv.querySelector('.bene-desc');
+                            const costoInput = beneDiv.querySelector('.bene-costo');
+                            const anniSelect = beneDiv.querySelector('.bene-anni');
+                            const quotaInput = beneDiv.querySelector('.bene-quota');
+                            const annoInizioInput = beneDiv.querySelector('.bene-anno-inizio');
+                            
+                            if (descInput) descInput.value = bene.descrizione || '';
+                            if (costoInput) {
+                                costoInput.value = bene.costo_totale || 0;
+                                aggiornaQuotaAmmortamento(costoInput);
+                            }
+                            if (anniSelect) {
+                                anniSelect.value = bene.anni_ammortamento || 5;
+                                setTimeout(() => aggiornaQuotaAmmortamento(costoInput), 10);
+                            }
+                            if (quotaInput) quotaInput.value = (bene.quota_annuale || 0).toFixed(2);
+                            if (annoInizioInput) annoInizioInput.value = bene.anno_inizio || stagione;
+                        }
+                    }, 50);
+                });
+            } else {
+                // Se non ci sono beni attivi, aggiungi un campo vuoto
+                aggiungiBeneDurevoleCosti();
+            }
+        }
+        
+        // Aggiorna il totale visualizzato
+        document.getElementById('totale-ammortamento-costi').textContent = `€${totaleQuote.toFixed(2)}`;
+        aggiornaRiepilogoCosti();
+        
+    } catch (error) {
+        console.error('Errore caricamento beni durevoli costi:', error);
+    }
+}
+// ==================== RIEPILOGO COSTI ====================
+
+function aggiornaRiepilogoCosti() {
+    const personale = parseFloat(document.getElementById('totale-costo-personale').textContent.replace('€', '')) || 0;
+    const mezzi = parseFloat(document.getElementById('totale-mezzi-tecnici').textContent.replace('€', '')) || 0;
+    const ammortamenti = parseFloat(document.getElementById('totale-ammortamento-costi').textContent.replace('€', '')) || 0;
+    const totale = personale + mezzi + ammortamenti;
+    // Aggiorna la stagione nel riepilogo
+const riepilogoStagione = document.getElementById('riepilogo-stagione');
+if (riepilogoStagione) {
+    riepilogoStagione.textContent = currentCostiStagione || currentTariffeStagione || new Date().getFullYear();
+}
+    
+    document.getElementById('riepilogo-personale').textContent = `€${personale.toFixed(2)}`;
+    document.getElementById('riepilogo-mezzi').textContent = `€${mezzi.toFixed(2)}`;
+    document.getElementById('riepilogo-ammortamenti').textContent = `€${ammortamenti.toFixed(2)}`;
+    document.getElementById('riepilogo-totale-costi').textContent = `€${totale.toFixed(2)}`;
+}
+
+// ==================== AGGIORNA HANDLESECTIONSECTIONACTIONS ====================
+// Aggiungi questo caso nella funzione handleSectionSpecificActions esistente:
+// case 'gestione-costi-section':
+//     initGestioneCosti();
+//     break;
+
     </script>
 <div class="safe-area-bottom"></div>
 
