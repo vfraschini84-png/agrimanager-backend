@@ -1864,12 +1864,10 @@ footer {
 }
 
 /* ==================== STILI GESTIONE UTENTI ==================== */
-.user-management-section {
-    display: none;
-}
-
-.user-management-section.active {
-    display: block;
+/* Fix sezione gestione utenti */
+#user-management-section.section.active {
+    display: block !important;
+    min-height: 300px;
 }
 
 .user-list {
@@ -2449,6 +2447,22 @@ input[type="radio"]:checked + span {
         max-width: 100% !important;
     }
 }
+/* Fix definitivo sezione gestione utenti */
+#user-management-section.section.active {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 400px !important;
+    height: auto !important;
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* FORZA NASCONDI LA SEZIONE UTENTI QUANDO NON È ACTIVE */
+#user-management-section:not(.active) {
+    display: none !important;
+}
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -2662,13 +2676,20 @@ input[type="radio"]:checked + span {
             <h1>AgriManager</h1>
             <p class="app-description">Gestione avanzata dei lotti di produzione</p>
         </div>
-        <div class="user-info">
-            <span id="current-user-display">Utente</span>
-            <span class="user-role-badge" id="current-user-role">Ruolo</span>
-            <button class="logout-btn" onclick="logout()">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </button>
-        </div>
+        <div class="user-info" style="flex-wrap: wrap; gap: 8px;">
+    <span id="current-user-display">Utente</span>
+    <span class="user-role-badge" id="current-user-role">Ruolo</span>
+    <button id="btn-gestione-utenti" onclick="showSection('user-management-section')" 
+        style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: none; transition: all 0.3s ease;"
+        onmouseover="this.style.background='rgba(255,255,255,0.4)'" 
+        onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+        title="Gestione Utenti e Permessi">
+    <i class="fas fa-users-cog"></i> Gestione Utenti
+</button>
+    <button class="logout-btn" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Logout
+    </button>
+</div>
     </div>
 </header>
         
@@ -2704,7 +2725,7 @@ input[type="radio"]:checked + span {
                 <h3 class="menu-title">Gestione Ricavi</h3>
                 <p class="menu-desc">Prezzi, vendite e ricavi per stagione agricola</p>
             </div>
-            
+                       
 <!-- Menu Gestione Costi -->
 <div class="menu-item" id="costi" onclick="showSection('gestione-costi-section')" style="border-top: 5px solid #FF5722;">
     <div class="menu-icon">
@@ -2722,17 +2743,8 @@ input[type="radio"]:checked + span {
     <h3 class="menu-title">Bilancio & Report</h3>
     <p class="menu-desc">Grafici, riepiloghi ed esportazione dati</p>
 </div>
+       </div>
 
-            <!-- Menu Gestione Utenti (solo per admin) -->
-            <div class="menu-item" id="gestione-utenti" onclick="showSection('user-management-section')" style="display: none;">
-                <div class="menu-icon">
-                    <i class="fas fa-users-cog"></i>
-                </div>
-                <h3 class="menu-title">Gestione Utenti</h3>
-                <p class="menu-desc">Gestisci utenti e permessi del sistema</p>
-            </div>
-        </div>
-                        
         <!-- Sezione Registrazione -->
         <div id="registrazione-section" class="section">
             <h2 class="section-title"><i class="fas fa-clipboard-list"></i> Registrazione Nuovo Lotto</h2>
@@ -3494,9 +3506,9 @@ input[type="radio"]:checked + span {
         </div>
     </div>
 </div>
-
-        <!-- Sezione Gestione Utenti (solo per admin) -->
-        <div id="user-management-section" class="section user-management-section">
+  
+<!-- Sezione Gestione Utenti (solo per admin) -->
+        <div id="user-management-section" class="section" style="display: none;">
             <h2 class="section-title"><i class="fas fa-users-cog"></i> Gestione Utenti e Permessi</h2>
             
             <div class="permission-section">
@@ -3541,7 +3553,7 @@ input[type="radio"]:checked + span {
                 </div>
             </div>
         </div>
-        
+
 <!-- Sezione Bilancio & Report -->
 <div id="bilancio-section" class="section" style="display: none;">
     <h2 class="section-title"><i class="fas fa-chart-pie"></i> Bilancio & Report</h2>
@@ -3887,6 +3899,13 @@ async function requestPasswordReset() {
     const storico = document.querySelector('.section-storico-economico');
     if (storico) storico.style.display = 'none';
 
+    // Nascondi sezione utenti
+const sezioneUtenti = document.getElementById('user-management-section');
+if (sezioneUtenti) {
+    sezioneUtenti.style.display = 'none';
+    sezioneUtenti.classList.remove('active');
+}
+
     // Reset form
     document.getElementById('login-username').value = '';
     document.getElementById('login-password').value = '';
@@ -3906,6 +3925,13 @@ async function requestPasswordReset() {
     // ✅ Nascondi storico (SENZA sectionId)
     const storico = document.querySelector('.section-storico-economico');
     if (storico) storico.style.display = 'none';
+
+    // Nascondi sezione utenti
+const sezioneUtenti = document.getElementById('user-management-section');
+if (sezioneUtenti) {
+    sezioneUtenti.style.display = 'none';
+    sezioneUtenti.classList.remove('active');
+}
     
     // Mostra la home section di default
     const homeSection = document.getElementById('home-section');
@@ -3927,10 +3953,10 @@ async function requestPasswordReset() {
         function updateUIForUserRole() {
     const permissions = getUserPermissions();
     
-    // Gestione Utenti (solo con permesso)
-    const userManagementItem = document.getElementById('gestione-utenti');
-    if (userManagementItem) {
-        userManagementItem.style.display = permissions.canManageUsers ? 'block' : 'none';
+    // ✅ NUOVO: Mostra/nascondi pulsante gestione utenti nell'header
+    const btnUtenti = document.getElementById('btn-gestione-utenti');
+    if (btnUtenti) {
+        btnUtenti.style.display = permissions.canManageUsers ? 'inline-flex' : 'none';
     }
     
     // Dettagli Lotti (solo con permesso)
@@ -3939,39 +3965,39 @@ async function requestPasswordReset() {
         dettagliItem.style.display = permissions.canAccessDetails ? 'block' : 'none';
     }
     
-    // Gestione Economica (solo con permesso)
+    // Gestione Economica/Ricavi (solo con permesso)
     const economiaItem = document.getElementById('economia');
     if (economiaItem) {
         economiaItem.style.display = permissions.canAccessEconomic ? 'block' : 'none';
     }
     
-    // Mostra/nascondi menu costi
-const costiMenuItem = document.getElementById('costi');
-if (costiMenuItem) {
-    costiMenuItem.style.display = permissions.canAccessCosts ? 'flex' : 'none';
-}
+    // Gestione Costi (solo con permesso)
+    const costiMenuItem = document.getElementById('costi');
+    if (costiMenuItem) {
+        costiMenuItem.style.display = permissions.canAccessCosts ? 'flex' : 'none';
+    }
 
-// ✅ Mostra/nascondi menu bilancio
-const bilancioMenuItem = document.getElementById('bilancio');
-if (bilancioMenuItem) {
-    bilancioMenuItem.style.display = permissions.canAccessBilancio ? 'flex' : 'none';
-}
+    // Bilancio & Report (solo con permesso)
+    const bilancioMenuItem = document.getElementById('bilancio');
+    if (bilancioMenuItem) {
+        bilancioMenuItem.style.display = permissions.canAccessBilancio ? 'flex' : 'none';
+    }
 
     // Tab Registrazione (solo admin)
     const registerTab = document.getElementById('register-tab');
     if (registerTab) {
         registerTab.style.display = permissions.canManageUsers ? 'inline-block' : 'none';
     }
-            // Pulsanti di modifica/eliminazione
-            updateActionButtonsVisibility();
-        }
-        
-        function updateActionButtonsVisibility() {
-            const permissions = getUserPermissions();
-            
-            // Esempio: nascondi pulsanti di modifica se l'utente non ha i permessi
-            // Questa funzione verrà chiamata ogni volta che si carica una lista di elementi
-        }
+    
+    // Pulsanti di modifica/eliminazione
+    updateActionButtonsVisibility();
+}
+
+function updateActionButtonsVisibility() {
+    const permissions = getUserPermissions();
+    // Esempio: nascondi pulsanti di modifica se l'utente non ha i permessi
+    // Questa funzione verrà chiamata ogni volta che si carica una lista di elementi
+}
         
        function getUserPermissions() {
     // Se è admin, ritorna tutti i permessi abilitati
@@ -5203,7 +5229,9 @@ document.getElementById('product-type').addEventListener('change', function() {
 
                // ==================== FUNZIONE HELPER API MIGLIORATA CON AUTENTICAZIONE ====================
 // Configurazione API - CAMBIA QUESTO IP CON IL TUO!
-const API_BASE_URL = 'http://' + window.location.hostname + ':3000/api'; 
+const API_BASE_URL = window.location.hostname.includes('ngrok') 
+    ? window.location.origin + '/api'
+    : window.location.protocol + '//' + window.location.hostname + ':3000/api'; 
 
 async function apiCall(endpoint, options = {}) {
     // Ottieni il token dal localStorage
@@ -7456,7 +7484,6 @@ function popolaFormEconomico(record) {
 
         // ==================== FUNZIONI PRINCIPALI ====================
        function showSection(sectionId) {
-    // Controlla i permessi per sezioni specifiche
     const permissions = getUserPermissions();
     
     if (sectionId === 'registrazione-section' && !permissions.canCreateLots) {
@@ -7474,63 +7501,68 @@ function popolaFormEconomico(record) {
         return;
     }
     
-if (sectionId === 'gestione-costi-section' && !permissions.canAccessEconomic) {
-    showNotification('Non hai i permessi per accedere alla sezione Gestione Costi', 'error');
-    return;
-}
+    if (sectionId === 'gestione-costi-section' && !permissions.canAccessCosts) {
+        showNotification('Non hai i permessi per accedere alla sezione Gestione Costi', 'error');
+        return;
+    }
 
-if (sectionId === 'bilancio-section' && !permissions.canAccessBilancio) {
-    showNotification('Non hai i permessi per accedere alla sezione Bilancio & Report', 'error');
-    return;
-}
+    if (sectionId === 'bilancio-section' && !permissions.canAccessBilancio) {
+        showNotification('Non hai i permessi per accedere alla sezione Bilancio & Report', 'error');
+        return;
+    }
 
     if (sectionId === 'user-management-section' && !permissions.canManageUsers) {
         showNotification('Non hai i permessi per gestire gli utenti', 'error');
         return;
     }
     
-    // Scrolla in alto quando cambi sezione (utile su mobile)
     if (isMobileDevice()) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     
-    // ✅ CORREZIONE FONDAMENTALE: Rimuovi classe 'active' da TUTTE le sezioni
+    // Rimuovi classe 'active' da TUTTE le sezioni e pulisci stili inline
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
-        section.style.display = ''; // Rimuove eventuali stili inline
+        section.style.display = '';
     });
     
-    // ✅ Mostra la sezione richiesta
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        
-        // Aggiungi il pulsante "Torna alla Home" se non esiste già
-        addHomeButton(targetSection, sectionId);
+    // Mostra la sezione richiesta
+const targetSection = document.getElementById(sectionId);
+if (targetSection) {
+    targetSection.classList.add('active');
+    
+    // ✅ Fix sezione utenti: NON usare cssText, solo classe e display base
+    if (sectionId === 'user-management-section') {
+        targetSection.style.display = 'block';
+        targetSection.style.minHeight = '300px';
+        // ❌ RIMUOVI targetSection.style.cssText = '...'
     }
     
-    // Nascondi il menu principale quando si entra in una sezione
+    addHomeButton(targetSection, sectionId);
+}
+    
+    // Nascondi il menu principale
     const mainMenu = document.querySelector('.main-menu');
     if (mainMenu) {
-        if (sectionId === 'home') {
-            mainMenu.style.display = 'grid';
-        } else {
-            mainMenu.style.display = 'none';
-        }
+        mainMenu.style.display = (sectionId === 'home') ? 'grid' : 'none';
     }
     
-    // Mostra/nascondi lo storico economico
-const storico = document.querySelector('.section-storico-economico');
-if (storico) {
-    if (sectionId === 'gestione-economica-section') {
-        storico.style.display = '';
-    } else {
-        storico.style.display = 'none';
+    // Gestisci storico economico
+    const storico = document.querySelector('.section-storico-economico');
+    if (storico) {
+        storico.style.display = (sectionId === 'gestione-economica-section') ? '' : 'none';
     }
+
+    // ✅ Gestisci sezione utenti (nascondi quando non è attiva)
+const sezioneUtenti = document.getElementById('user-management-section');
+if (sezioneUtenti && sectionId !== 'user-management-section') {
+    sezioneUtenti.style.display = 'none';
+    sezioneUtenti.classList.remove('active');
 }
-    // Azioni specifiche per sezione
+
     handleSectionSpecificActions(sectionId);
 }
+
 // ==================== GESTIONE AZIONI SPECIFICHE SEZIONI ====================
 function handleSectionSpecificActions(sectionId) {
     switch(sectionId) {
@@ -7628,15 +7660,19 @@ function getSectionIcon(sectionId) {
 }
 
 function showHome() {
-    // Nascondi tutte le sezioni
     document.querySelectorAll('.section').forEach(section => {
-        section.style.display = 'none';
+        section.classList.remove('active');
+        section.style.display = '';
+        // ✅ Rimuovi anche minHeight residuo
+        section.style.minHeight = '';
     });
     
-    // Mostra solo il menu principale
-    const mainMenu = document.querySelector('.main-menu');
-    if (mainMenu) {
-        mainMenu.style.display = 'grid';
+    document.getElementById('main-menu').style.display = 'grid';
+    
+    const homeSection = document.getElementById('home-section');
+    if (homeSection) {
+        homeSection.style.display = 'block';
+        homeSection.classList.add('active');
     }
 }
 
