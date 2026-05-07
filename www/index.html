@@ -2714,6 +2714,15 @@ input[type="radio"]:checked + span {
     <p class="menu-desc">Personale, mezzi tecnici e ammortamenti</p>
 </div>
 
+<!-- Menu Bilancio & Report -->
+<div class="menu-item" id="bilancio" onclick="showSection('bilancio-section')" style="border-top: 5px solid #00BCD4;">
+    <div class="menu-icon">
+        <i class="fas fa-chart-pie"></i>
+    </div>
+    <h3 class="menu-title">Bilancio & Report</h3>
+    <p class="menu-desc">Grafici, riepiloghi ed esportazione dati</p>
+</div>
+
             <!-- Menu Gestione Utenti (solo per admin) -->
             <div class="menu-item" id="gestione-utenti" onclick="showSection('user-management-section')" style="display: none;">
                 <div class="menu-icon">
@@ -3131,11 +3140,17 @@ input[type="radio"]:checked + span {
         <!-- QUARTA RIGA: Costi -->
                 
             <div class="form-group">
-                <label for="costo-personale"><i class="fas fa-users"></i> Costo Personale (€)</label>
-                <input type="number" id="costo-personale" step="0.01" placeholder="0.00" class="special-input">
-<div class="help-text">Totale stagione agricola</div>
-            </div>
-        </div>
+    <label for="costo-personale"><i class="fas fa-users"></i> Costo Personale (€)</label>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="number" id="costo-personale" step="0.01" placeholder="0.00" class="special-input" style="flex: 1;">
+        <button type="button" onclick="importaCostoPersonaleDaGestioneCosti()" 
+                style="background: #FF5722; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 0.9rem;"
+                title="Importa il totale costo personale dalla sezione Gestione Costi">
+            <i class="fas fa-download"></i> Aggiorna da Costi
+        </button>
+    </div>
+    <div class="help-text">Inserisci manualmente o importa dalla sezione Gestione Costi</div>
+</div>
         
         <!-- PULSANTI AZIONE -->
         <div class="section-actions">
@@ -3527,6 +3542,77 @@ input[type="radio"]:checked + span {
             </div>
         </div>
         
+<!-- Sezione Bilancio & Report -->
+<div id="bilancio-section" class="section" style="display: none;">
+    <h2 class="section-title"><i class="fas fa-chart-pie"></i> Bilancio & Report</h2>
+    
+    <!-- Selettori -->
+    <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center;">
+        <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="bilancioLotDropdown">
+                <i class="fas fa-list"></i> Seleziona Lotto
+            </button>
+            <div class="dropdown-menu" id="bilancio-lot-dropdown-menu"></div>
+        </div>
+        <select id="bilancio-stagione" style="padding: 10px 15px; border: 2px solid #00BCD4; border-radius: 8px; font-weight: bold; cursor: pointer;">
+            <option value="">Tutte le stagioni</option>
+        </select>
+        <span id="bilancio-lot-badge" style="background: #00BCD4; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: none;"></span>
+    </div>
+
+    <!-- Card Riepilogo -->
+    <div id="bilancio-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+            <h4>💰 Ricavi Totali</h4>
+            <p style="font-size: 2rem; font-weight: bold;" id="bilancio-ricavi">€0</p>
+        </div>
+        <div style="background: linear-gradient(135deg, #f44336, #c62828); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+            <h4>💸 Costi Totali</h4>
+            <p style="font-size: 2rem; font-weight: bold;" id="bilancio-costi">€0</p>
+        </div>
+        <div style="background: linear-gradient(135deg, #2196F3, #1565C0); color: white; padding: 20px; border-radius: 12px; text-align: center;">
+            <h4>⚖️ Bilancio</h4>
+            <p style="font-size: 2rem; font-weight: bold;" id="bilancio-finale">€0</p>
+        </div>
+    </div>
+
+    <!-- Grafici -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+            <h4 style="text-align: center; color: #333;">🍩 Ricavi vs Costi</h4>
+            <canvas id="chart-ricavi-costi" width="300" height="300"></canvas>
+        </div>
+        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+            <h4 style="text-align: center; color: #333;">📊 Dettaglio Costi</h4>
+            <canvas id="chart-dettaglio-costi" width="300" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- Esportazione Excel -->
+    <div class="special-section" style="border-left-color: #00BCD4; background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);">
+        <div class="section-header">
+            <div class="section-icon" style="background: #00BCD4;">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <div style="flex: 1;">
+                <h3 class="section-title">📥 Esportazione Dati Completa</h3>
+                <p class="section-subtitle">Scarica tutti i dati del lotto in formato Excel con dettaglio completo</p>
+            </div>
+        </div>
+        <div class="section-content expanded">
+            <button class="btn btn-primary" onclick="esportaBilancioCompleto()" style="background: #00BCD4; width: 100%; padding: 15px; font-size: 1.1rem;">
+                <i class="fas fa-download"></i> Scarica Report Completo (Excel)
+            </button>
+            <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9rem;">
+                Include: riepilogo lotti, attività di raccolta, analisi, costi personale, mezzi tecnici, beni durevoli e registrazioni economiche
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
         <footer>
             <p>© 2025 AgriManager - Tutti i diritti riservati</p>
         </footer>
@@ -3563,7 +3649,8 @@ const emptyPermissions = {
     canManageUsers: false,
     canAccessDetails: false,       // NUOVO: Accesso alla sezione Dettagli Lotti
     canAccessEconomic: false,       // NUOVO: Accesso alla sezione Gestione Economica
-    canAccessCosts: false
+    canAccessCosts: false,
+    canAccessBilancio: false  // ✅ NUOVO
 };        
         // Inizializza il sistema di autenticazione
         async function initAuthSystem() {
@@ -3864,6 +3951,12 @@ if (costiMenuItem) {
     costiMenuItem.style.display = permissions.canAccessCosts ? 'flex' : 'none';
 }
 
+// ✅ Mostra/nascondi menu bilancio
+const bilancioMenuItem = document.getElementById('bilancio');
+if (bilancioMenuItem) {
+    bilancioMenuItem.style.display = permissions.canAccessBilancio ? 'flex' : 'none';
+}
+
     // Tab Registrazione (solo admin)
     const registerTab = document.getElementById('register-tab');
     if (registerTab) {
@@ -3895,7 +3988,8 @@ if (costiMenuItem) {
             canManageUsers: true,
             canAccessDetails: true,
             canAccessEconomic: true,
-            canAccessCosts: true  // ✅ NUOVO
+            canAccessCosts: true,  // ✅ NUOVO
+            canAccessBilancio: true  // ✅ NUOVO
         };
     }
     
@@ -4558,7 +4652,8 @@ function resetToDefaultPermissions(username) {
         canManageUsers: 'Gestione Utenti',
         canAccessDetails: 'Accesso Dettagli Lotti',      // NUOVO
         canAccessEconomic: 'Accesso Gestione Economica',  // NUOVO
-        canAccessCosts: 'Accesso Gestione Costi'  // ✅ NUOVO
+        canAccessCosts: 'Accesso Gestione Costi',  // ✅ NUOVO
+        canAccessBilancio: 'Accesso Bilancio & Report',  // ✅ NUOVO
     };
     return names[permission] || permission;
 }
@@ -4576,7 +4671,8 @@ function resetToDefaultPermissions(username) {
         canManageUsers: 'Permette di gestire gli utenti del sistema',
         canAccessDetails: 'Permette di accedere alla sezione Dettagli Lotti',        // NUOVO
         canAccessEconomic: 'Permette di accedere alla sezione Gestione Economica',    // NUOVO
-        canAccessCosts: 'Permette di accedere alla sezione Gestione Costi'  // ✅ NUOVO
+        canAccessCosts: 'Permette di accedere alla sezione Gestione Costi',  // ✅ NUOVO
+        canAccessBilancio: 'Permette di accedere alla sezione Bilancio & Report'  // ✅ NUOVO
     };
     return descriptions[permission] || 'Descrizione non disponibile';
 }
@@ -6436,6 +6532,45 @@ async function handleCambioStagione() {
     }
 }
 
+async function importaCostoPersonaleDaGestioneCosti() {
+    const lotId = currentEconomicLotId;
+    const stagione = document.getElementById('stagione-agricola').value;
+    
+    if (!lotId) {
+        showNotification('Seleziona prima un lotto dal dropdown', 'error');
+        return;
+    }
+    
+    if (!stagione) {
+        showNotification('Seleziona prima la stagione agricola', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Recupero costo personale dalla sezione Costi...', 'loading');
+        
+        // Chiama l'API dei costi personale
+        const response = await apiCall(`/costi/personale/${lotId}/${stagione}`);
+        const totale = response.totale || 0;
+        
+        if (totale === 0) {
+            showNotification(`⚠️ Nessun costo personale registrato per la stagione ${stagione} nella sezione Costi`, 'warning');
+        } else {
+            // Inserisci il totale nel campo
+            document.getElementById('costo-personale').value = totale.toFixed(2);
+            showNotification(`✅ Importato costo personale di €${totale.toFixed(2)} dalla sezione Costi!`, 'success');
+            
+            // Ricalcola anteprima
+            if (typeof calcolaPrezzoAutomatico === 'function') {
+                calcolaPrezzoAutomatico();
+            }
+        }
+    } catch (error) {
+        console.error('Errore importazione costo personale:', error);
+        showNotification('Errore nel recupero: ' + error.message, 'error');
+    }
+}
+
               function resetFormEconomico() {
     // Reset campi base
     document.getElementById('stagione-agricola').value = '';
@@ -7344,6 +7479,11 @@ if (sectionId === 'gestione-costi-section' && !permissions.canAccessEconomic) {
     return;
 }
 
+if (sectionId === 'bilancio-section' && !permissions.canAccessBilancio) {
+    showNotification('Non hai i permessi per accedere alla sezione Bilancio & Report', 'error');
+    return;
+}
+
     if (sectionId === 'user-management-section' && !permissions.canManageUsers) {
         showNotification('Non hai i permessi per gestire gli utenti', 'error');
         return;
@@ -7410,6 +7550,9 @@ function handleSectionSpecificActions(sectionId) {
                 }
             }, 100);
             break;
+            case 'bilancio-section':
+    initBilancioSection();
+    break;
         case 'user-management-section':
             loadUserManagement();
             break;
@@ -9353,6 +9496,391 @@ function initGestioneCosti() {
     initCostiLotDropdown();
     // ✅ Inizializza beni durevoli con un campo vuoto
     initBeniDurevoliCosti();
+}
+
+// ==================== VARIABILI BILANCIO ====================
+let currentBilancioLotId = null;
+let chartRicaviCosti = null;
+let chartDettaglioCosti = null;
+
+// ==================== INIZIALIZZAZIONE BILANCIO ====================
+function initBilancioSection() {
+    const dropdownMenu = document.getElementById('bilancio-lot-dropdown-menu');
+    if (!dropdownMenu || allLots.length === 0) return;
+    
+    dropdownMenu.innerHTML = '';
+    allLots.forEach(lot => {
+        const item = document.createElement('button');
+        item.className = 'dropdown-item';
+        item.type = 'button';
+        item.innerHTML = `<strong>${lot.company_name}</strong><br><small>${lot.location}</small>`;
+        item.addEventListener('click', () => {
+            loadBilancioData(lot.id);
+            dropdownMenu.classList.remove('show');
+        });
+        dropdownMenu.appendChild(item);
+    });
+    
+    // Inizializza dropdown click
+    const dropdownBtn = document.getElementById('bilancioLotDropdown');
+    const dropdown = document.getElementById('bilancio-lot-dropdown-menu');
+    dropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+    });
+}
+
+// ==================== CARICA DATI BILANCIO ====================
+async function loadBilancioData(lotId) {
+    currentBilancioLotId = lotId;
+    
+    const lot = allLots.find(l => l.id === parseInt(lotId));
+    const badge = document.getElementById('bilancio-lot-badge');
+    if (lot && badge) {
+        badge.textContent = `📋 ${lot.company_name} - ${lot.location}`;
+        badge.style.display = 'inline-block';
+    }
+    
+    // Popola stagioni
+    const stagioneSelect = document.getElementById('bilancio-stagione');
+    const stagioni = new Set();
+    
+    try {
+        // Carica registrazioni economiche
+        const economicResponse = await apiCall(`/economic/${lotId}`);
+        const records = economicResponse.data || [];
+        records.forEach(r => { if (r.stagione_agricola) stagioni.add(r.stagione_agricola); });
+        
+        // Carica costi personale
+        const personaleResponse = await apiCall(`/costi/personale/${lotId}/2020`);
+        (personaleResponse.data || []).forEach(r => { if (r.stagione_agricola) stagioni.add(r.stagione_agricola); });
+        
+        // Carica mezzi tecnici
+        const mezziResponse = await apiCall(`/costi/mezzi/${lotId}/2020`);
+        (mezziResponse.data || []).forEach(r => { if (r.stagione_agricola) stagioni.add(r.stagione_agricola); });
+        
+    } catch(e) {}
+    
+    stagioneSelect.innerHTML = '<option value="">Tutte le stagioni</option>';
+    [...stagioni].sort().reverse().forEach(s => {
+        stagioneSelect.innerHTML += `<option value="${s}">📅 Stagione ${s}</option>`;
+    });
+    
+    stagioneSelect.onchange = function() {
+        aggiornaDashboardBilancio(lotId, this.value);
+    };
+    
+    aggiornaDashboardBilancio(lotId, '');
+}
+
+// ==================== AGGIORNA DASHBOARD ====================
+async function aggiornaDashboardBilancio(lotId, stagione) {
+    showNotification('Caricamento dati...', 'loading');
+    
+    let ricaviTotali = 0;
+    let costiPersonale = 0;
+    let costiMezziTecnici = 0;
+    let costiAmmortamenti = 0;
+    
+    try {
+        // Ricavi dalla sezione economica
+        const economicResponse = await apiCall(`/economic/${lotId}`);
+        let records = economicResponse.data || [];
+        if (stagione) records = records.filter(r => r.stagione_agricola === stagione);
+        ricaviTotali = records.reduce((sum, r) => sum + (r.ricavi_totali || 0), 0);
+        
+        // Costi personale
+        if (stagione) {
+            const persResponse = await apiCall(`/costi/personale/${lotId}/${stagione}`);
+            costiPersonale = persResponse.totale || 0;
+        }
+        
+        // Costi mezzi tecnici
+        if (stagione) {
+            const mezziResponse = await apiCall(`/costi/mezzi/${lotId}/${stagione}`);
+            costiMezziTecnici = mezziResponse.totale || 0;
+        }
+        
+        // Ammortamenti dalle registrazioni economiche
+        records.forEach(record => {
+            if (record.beni_durevoli) {
+                try {
+                    const beni = typeof record.beni_durevoli === 'string' ? JSON.parse(record.beni_durevoli) : record.beni_durevoli;
+                    if (Array.isArray(beni)) {
+                        beni.forEach(bene => {
+                            const anno = parseInt(record.stagione_agricola) || new Date().getFullYear();
+                            const inizio = bene.anno_inizio || anno;
+                            const fine = inizio + (bene.anni_ammortamento || 1) - 1;
+                            if (anno >= inizio && anno <= fine) {
+                                costiAmmortamenti += bene.quota_annuale || 0;
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
+        });
+        
+    } catch(e) {
+        console.error('Errore caricamento bilancio:', e);
+    }
+    
+    const costiTotali = costiPersonale + costiMezziTecnici + costiAmmortamenti;
+    const bilancio = ricaviTotali - costiTotali;
+    
+    // Aggiorna card
+    document.getElementById('bilancio-ricavi').textContent = `€${ricaviTotali.toFixed(2)}`;
+    document.getElementById('bilancio-costi').textContent = `€${costiTotali.toFixed(2)}`;
+    document.getElementById('bilancio-finale').textContent = `€${bilancio.toFixed(2)}`;
+    
+    // Aggiorna grafici
+    aggiornaGrafici(ricaviTotali, costiPersonale, costiMezziTecnici, costiAmmortamenti);
+    
+    showNotification('Dati caricati!', 'success');
+}
+
+// ==================== GRAFICI CHART.JS ====================
+function aggiornaGrafici(ricavi, personale, mezzi, ammortamenti) {
+    const costiTotali = personale + mezzi + ammortamenti;
+    const totaleComplessivo = ricavi + costiTotali;
+    
+    // Funzione per calcolare la percentuale
+    const percentuale = (valore) => totaleComplessivo > 0 ? ((valore / totaleComplessivo) * 100).toFixed(1) : '0.0';
+    
+    // Grafico Ricavi vs Costi
+    const ctx1 = document.getElementById('chart-ricavi-costi')?.getContext('2d');
+    if (ctx1) {
+        if (chartRicaviCosti) chartRicaviCosti.destroy();
+        chartRicaviCosti = new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: [`Ricavi (${percentuale(ricavi)}%)`, `Costi (${percentuale(costiTotali)}%)`],
+                datasets: [{
+                    data: [ricavi || 0.01, costiTotali || 0.01],
+                    backgroundColor: ['#4CAF50', '#f44336'],
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverBorderColor: '#fff',
+                    hoverBorderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 13 },
+                            usePointStyle: true,
+                            pointStyleWidth: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const valore = ctx.raw;
+                                const perc = ((valore / totaleComplessivo) * 100).toFixed(1);
+                                return `${ctx.label.split(' (')[0]}: €${valore.toFixed(2)} (${perc}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Grafico Dettaglio Costi
+    const ctx2 = document.getElementById('chart-dettaglio-costi')?.getContext('2d');
+    if (ctx2) {
+        if (chartDettaglioCosti) chartDettaglioCosti.destroy();
+        
+        const percentualeCosti = (valore) => costiTotali > 0 ? ((valore / costiTotali) * 100).toFixed(1) : '0.0';
+        
+        chartDettaglioCosti = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: [
+                    `Personale (${percentualeCosti(personale)}%)`, 
+                    `Mezzi Tecnici (${percentualeCosti(mezzi)}%)`, 
+                    `Ammortamenti (${percentualeCosti(ammortamenti)}%)`
+                ],
+                datasets: [{
+                    data: [personale || 0.01, mezzi || 0.01, ammortamenti || 0.01],
+                    backgroundColor: ['#FF5722', '#2196F3', '#9C27B0'],
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverBorderColor: '#fff',
+                    hoverBorderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: { size: 13 },
+                            usePointStyle: true,
+                            pointStyleWidth: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const valore = ctx.raw;
+                                const perc = ((valore / costiTotali) * 100).toFixed(1);
+                                return `${ctx.label.split(' (')[0]}: €${valore.toFixed(2)} (${perc}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// ==================== ESPORTAZIONE EXCEL COMPLETA ====================
+async function esportaBilancioCompleto() {
+    if (!currentBilancioLotId) {
+        showNotification('Seleziona prima un lotto', 'warning');
+        return;
+    }
+    
+    showNotification('Generazione report Excel...', 'loading');
+    
+    try {
+        const workbook = XLSX.utils.book_new();
+        const lot = allLots.find(l => l.id === parseInt(currentBilancioLotId));
+        
+        // 1. Foglio Lotto
+        const lotSheet = XLSX.utils.json_to_sheet([{
+            'ID Lotto': lot?.id || '',
+            'Azienda': lot?.company_name || '',
+            'Luogo': lot?.location || '',
+            'Prodotto': lot?.product_type || '',
+            'Categoria': lot?.product_category || '',
+            'Varietà': lot?.variety || '',
+            'Lotto Campo': lot?.field_lot || '',
+            'Superficie (ha)': lot?.field_size || '',
+            'GPS': lot?.gps_coordinates || ''
+        }]);
+        XLSX.utils.book_append_sheet(workbook, lotSheet, 'Lotto');
+        
+        // 2. Foglio Ricavi
+        try {
+            const economicRes = await apiCall(`/economic/${currentBilancioLotId}`);
+            if (economicRes.data?.length > 0) {
+                const ricaviSheet = XLSX.utils.json_to_sheet(economicRes.data.map(r => ({
+                    'Stagione': r.stagione_agricola || '',
+                    'Data': r.data_acquisto_vendita || '',
+                    'Metodo': r.metodo_calcolo || '',
+                    'Prezzo/kg': r.prezzo_kg || 0,
+                    'Prezzo Totale': r.prezzo_totale || 0,
+                    'Kg Raccolti': r.totale_kg || 0,
+                    'Ricavi Totali': r.ricavi_totali || 0,
+                    'Costo Personale': r.costo_personale || 0
+                })));
+                XLSX.utils.book_append_sheet(workbook, ricaviSheet, 'Ricavi');
+            }
+        } catch(e) {}
+        
+        // 3. Foglio Attività Raccolta
+        try {
+            const activitiesRes = await apiCall(`/activities/${currentBilancioLotId}`);
+            if (activitiesRes.data?.length > 0) {
+                const activitiesSheet = XLSX.utils.json_to_sheet(activitiesRes.data.map(a => ({
+                    'Data': a.date || '',
+                    'Kg': a.kg || 0,
+                    'Note': a.notes || ''
+                })));
+                XLSX.utils.book_append_sheet(workbook, activitiesSheet, 'Raccolta');
+            }
+        } catch(e) {}
+        
+        // 4. Foglio Analisi
+        try {
+            const analysesRes = await apiCall(`/analyses/${currentBilancioLotId}`);
+            if (analysesRes.data?.length > 0) {
+                const analysesSheet = XLSX.utils.json_to_sheet(analysesRes.data.map(a => ({
+                    'Anno': a.year || '',
+                    'Nome File': a.original_name || '',
+                    'Data Caricamento': a.created_at || '',
+                    'Note': a.notes || ''
+                })));
+                XLSX.utils.book_append_sheet(workbook, analysesSheet, 'Analisi');
+            }
+        } catch(e) {}
+        
+        // 5. Foglio Costi Personale (tutte le stagioni)
+        try {
+            const stagioni = new Set();
+            const economicData = await apiCall(`/economic/${currentBilancioLotId}`);
+            (economicData.data || []).forEach(r => { if (r.stagione_agricola) stagioni.add(r.stagione_agricola); });
+            
+            let tuttiCostiPersonale = [];
+            for (const stagione of stagioni) {
+                try {
+                    const persRes = await apiCall(`/costi/personale/${currentBilancioLotId}/${stagione}`);
+                    if (persRes.data?.length > 0) {
+                        tuttiCostiPersonale = tuttiCostiPersonale.concat(persRes.data);
+                    }
+                } catch(e) {}
+            }
+            
+            if (tuttiCostiPersonale.length > 0) {
+                const costiPersSheet = XLSX.utils.json_to_sheet(tuttiCostiPersonale.map(c => ({
+                    'Stagione': c.stagione_agricola || '',
+                    'Data': c.data_attivita || '',
+                    'Operatori': c.numero_operatori || 0,
+                    'Qualifica': c.qualifica || '',
+                    'Ore': c.ore_lavorate || 0,
+                    'Attività': c.attivita || '',
+                    'Costo Orario': c.costo_orario || 0,
+                    'Costo Totale': c.costo_totale || 0,
+                    'Note': c.note || ''
+                })));
+                XLSX.utils.book_append_sheet(workbook, costiPersSheet, 'Costi Personale');
+            }
+        } catch(e) {}
+        
+        // 6. Foglio Mezzi Tecnici
+        try {
+            const stagioni = new Set();
+            const economicData = await apiCall(`/economic/${currentBilancioLotId}`);
+            (economicData.data || []).forEach(r => { if (r.stagione_agricola) stagioni.add(r.stagione_agricola); });
+            
+            let tuttiMezzi = [];
+            for (const stagione of stagioni) {
+                try {
+                    const mezziRes = await apiCall(`/costi/mezzi/${currentBilancioLotId}/${stagione}`);
+                    if (mezziRes.data?.length > 0) tuttiMezzi = tuttiMezzi.concat(mezziRes.data);
+                } catch(e) {}
+            }
+            
+            if (tuttiMezzi.length > 0) {
+                const mezziSheet = XLSX.utils.json_to_sheet(tuttiMezzi.map(m => ({
+                    'Stagione': m.stagione_agricola || '',
+                    'Data': m.data_registrazione || '',
+                    'Categoria': m.categoria || '',
+                    'Descrizione': m.descrizione || '',
+                    'Importo': m.importo || 0
+                })));
+                XLSX.utils.book_append_sheet(workbook, mezziSheet, 'Mezzi Tecnici');
+            }
+        } catch(e) {}
+        
+        // Salva file
+        const nomeFile = `AgriManager_Report_${lot?.company_name || 'Lotto'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(workbook, nomeFile);
+        
+        showNotification('Report Excel generato con successo!', 'success');
+    } catch(error) {
+        console.error('Errore esportazione:', error);
+        showNotification('Errore nella generazione del report: ' + error.message, 'error');
+    }
 }
 
 // ==================== CARICAMENTO LOTTO NELLA SEZIONE COSTI ====================
