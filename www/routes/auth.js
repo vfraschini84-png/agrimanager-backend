@@ -25,6 +25,60 @@ function authenticateToken(req, res, next) {
     });
 }
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Registra un nuovo utente
+ *     description: Crea un nuovo account utente con email, password e ruolo. Richiede accettazione privacy.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - password
+ *               - privacy_accepted
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Nome utente univoco (3+ caratteri)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 description: Password (6+ caratteri)
+ *               role:
+ *                 type: string
+ *                 enum: [admin, manager, operator, viewer]
+ *                 default: operator
+ *               privacy_accepted:
+ *                 type: boolean
+ *                 description: Accettazione della privacy (richiesto)
+ *     responses:
+ *       201:
+ *         description: Utente registrato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                   description: JWT token (7 giorni expiry)
+ *       400:
+ *         description: Dati invalidi o utente già esistente
+ *       500:
+ *         description: Errore del server
+ */
 // POST /api/auth/register - Registrazione utente
 router.post('/register', async (req, res) => {
     const { username, email, password, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted } = req.body;
@@ -85,6 +139,57 @@ router.post('/register', async (req, res) => {
     });
 });
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Login utente
+ *     description: Autentica un utente e ritorna un JWT token valido per 7 giorni.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login riuscito
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                   description: JWT bearer token (7 giorni expiry)
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *       401:
+ *         description: Credenziali non valide
+ *       500:
+ *         description: Errore del server
+ */
 // POST /api/auth/login - Login utente
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
@@ -131,6 +236,32 @@ router.post('/login', async (req, res) => {
     });
 });
 
+/**
+ * @swagger
+ * /api/auth/verify:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Verifica validità del token
+ *     description: Controlla se un JWT token è ancora valido e ritorna i dati dell'utente.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token valido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   example: true
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Token non valido o scaduto
+ */
 // POST /api/auth/verify - Verifica token (per frontend)
 router.post('/verify', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -156,6 +287,36 @@ router.post('/verify', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/auth/users:
+ *   get:
+ *     tags:
+ *       - Authentication
+ *     summary: Elenca gli utenti
+ *     description: |
+ *       Ritorna la lista degli utenti. Solo admin possono accedere.
+ *       - Super-admin (username: 'admin') vede tutti gli utenti
+ *       - Admin normali vedono solo i loro sottoutenti (creati da loro)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista utenti
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Accesso negato. Solo admin.
+ *       500:
+ *         description: Errore del server
+ */
 // GET /api/auth/users - Lista utenti (solo admin)
 // Se admin normale, vede solo i suoi sottoutenti (parent_id = suo id)
 // Se super-admin (username 'admin') vede tutti

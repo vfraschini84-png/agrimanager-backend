@@ -1532,14 +1532,13 @@ footer {
     
     /* Bottone home fisso in basso a destra */
     .nav-home-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        width: auto;
-        min-height: 50px;
-    }
+    position: static !important;
+    bottom: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    margin: 10px 0 !important;
+    justify-content: center !important;
+}
     
     /* Miglioramenti Touch */
     .btn {
@@ -1864,12 +1863,6 @@ footer {
 }
 
 /* ==================== STILI GESTIONE UTENTI ==================== */
-/* Fix sezione gestione utenti */
-#user-management-section.section.active {
-    display: block !important;
-    min-height: 300px;
-}
-
 .user-list {
     margin-top: 20px;
 }
@@ -2411,6 +2404,48 @@ input[type="radio"]:checked + span {
     color: var(--primary);
 }
 
+/* ==================== SPINNER DI CARICAMENTO ==================== */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner-box {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #e0e0e0;
+    border-top: 5px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner-text {
+    color: #666;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
 /* FORZA NASCONDI LO STORICO QUANDO IL GENITORE NON È ACTIVE */
 #gestione-economica-section:not(.active) .section-storico-economico,
 #gestione-economica-section:not(.active) #registrazioni-economiche-list,
@@ -2463,10 +2498,89 @@ input[type="radio"]:checked + span {
 #user-management-section:not(.active) {
     display: none !important;
 }
+
+/* Su mobile, i grafici in colonna */
+@media (max-width: 768px) {
+    #bilancio-section > div[style*="display: grid; grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+    
+    #bilancio-section canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+}
+
+/* Su mobile, pulsanti a tutta larghezza */
+@media (max-width: 480px) {
+    #user-management-section .btn {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    #user-management-section .permission-section .btn {
+        width: 100%;
+    }
+    
+    #user-management-section .user-actions {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dropdown-menu {
+        position: fixed;
+        top: 50% !important;
+        left: 5% !important;
+        width: 90% !important;
+        max-height: 60vh; /* Ridotto da 70vh */
+        transform: translateY(-50%);
+        z-index: 10000;
+        border-radius: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 0; /* Già presente, verifica */
+        padding-top: calc(5px + var(--safe-area-top)); /* Ridotto da 10px */
+        padding-bottom: calc(5px + var(--safe-area-bottom)); /* Ridotto */
+    }
+}
+
+@media (max-width: 480px) {
+    #bilancio-section #bilancio-cards {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+    
+    #bilancio-section .dropdown,
+    #bilancio-section select {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    #bilancio-lot-badge {
+        display: block;
+        text-align: center;
+        margin-top: 10px;
+    }
+}
+
+
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Spinner di caricamento globale -->
+<div id="loading-spinner" class="spinner-overlay" style="display: none;">
+    <div class="spinner-box">
+        <div class="spinner"></div>
+        <p class="spinner-text" id="spinner-message">Caricamento in corso...</p>
+    </div>
+</div>
 <div class="safe-area-top"></div>
     <div class="container mobile-optimized">
         <!-- Sezione Autenticazione -->
@@ -3751,6 +3865,7 @@ const emptyPermissions = {
     }
     
     try {
+        showSpinner('Login in corso...');
         showNotification('Login in corso...', 'loading');
         
         const response = await apiCall('/auth/login', {
@@ -3776,8 +3891,9 @@ const emptyPermissions = {
         currentUser = response.user;
         showAppInterface();
         showNotification(`Benvenuto ${response.user.username}!`, 'success');
-        
+       hideSpinner(); 
     } catch (error) {
+        hideSpinner();
         showNotification(error.message || 'Credenziali non valide', 'error');
     }
 }
@@ -4138,6 +4254,7 @@ const registrationData = {
 };
     
     try {
+        showSpinner('Registrazione in corso...');
         showNotification('Registrazione in corso...', 'loading');
         
         const response = await apiCall('/auth/register', {
@@ -4176,8 +4293,9 @@ const registrationData = {
                 showAppInterface();
         
         showNotification(`Registrazione completata! Benvenuto ${username}!`, 'success');
-        
+        hideSpinner();
     } catch (error) {
+        hideSpinner();
         showNotification(error.message || 'Errore nella registrazione', 'error');
     }
 }
@@ -6526,6 +6644,7 @@ async function handleCambioStagione() {
     });    
 
     try {
+        showSpinner('Salvataggio registrazione...');
         showNotification(editingId ? 'Aggiornamento in corso...' : 'Salvataggio in corso...', 'loading');
         
         const url = editingId ? `/economic/${editingId}` : '/economic';
@@ -6554,9 +6673,11 @@ async function handleCambioStagione() {
         } else {
             showNotification(response.error || 'Errore nel salvataggio', 'error');
         }
+         hideSpinner();
     } catch (error) {
         console.error('Errore salvataggio:', error);
         showNotification('Errore nel salvataggio: ' + error.message, 'error');
+        hideSpinner();
     }
 }
 
@@ -6883,6 +7004,7 @@ async function eliminaStagioneEconomica(stagione, lotId) {
     }
     
     try {
+        showSpinner('Eliminazione stagione...');
         showNotification(`Eliminazione stagione ${stagione} in corso...`, 'loading');
         
         let eliminati = 0;
@@ -6904,13 +7026,14 @@ async function eliminaStagioneEconomica(stagione, lotId) {
         if (errori > 0) {
             showNotification(`⚠️ ${errori} registrazioni non sono state eliminate`, 'warning');
         }
-        
+        hideSpinner();
         // Ricarica i dati
         await loadRegistrazioniEconomiche(lotId);
         
     } catch (error) {
         console.error('Errore eliminazione stagione:', error);
         showNotification('Errore durante l\'eliminazione: ' + error.message, 'error');
+        hideSpinner();
     }
 }
 
@@ -7625,6 +7748,13 @@ function addHomeButton(section, sectionId) {
             showHome();
         };
         
+// In addHomeButton(), dopo aver creato homeBtn:
+if (isMobileDevice()) {
+    homeBtn.style.position = 'static';
+    homeBtn.style.width = '100%';
+    homeBtn.style.margin = '10px 0';
+}
+
         navControls.appendChild(homeBtn);
         
         // Migliora l'header della sezione
@@ -7678,7 +7808,7 @@ function showHome() {
 
         async function loadLots(page = 1) {
     try {
-        showNotification('Caricamento lotti...', 'loading');
+        showSpinner('Caricamento lotti...');  // ✅ MOSTRA SPINNER
         
         const url = `${API_BASE_URL}/lots?page=${page}&limit=${itemsPerPage}`;
         const response = await apiCall(url);
@@ -7702,9 +7832,10 @@ function showHome() {
         // Mostra i lotti
         displayLots(allLots);
         
-        showNotification(`Caricati ${allLots.length} lotti`, 'success');
+         hideSpinner();  // ✅ NASCONDI SPINNER
                        
     } catch (error) {
+        hideSpinner();  // ✅ NASCONDI ANCHE IN CASO DI ERRORE
         console.error('Errore caricamento lotti:', error);
         showNotification('Errore nel caricamento lotti', 'error');
     }
@@ -8085,6 +8216,89 @@ if (lot.variety && lot.variety.trim() !== '') {
             
             return notification;
         }
+
+// ==================== SPINNER FUNCTIONS ====================
+function showSpinner(message = 'Caricamento in corso...') {
+    const spinner = document.getElementById('loading-spinner');
+    const spinnerMessage = document.getElementById('spinner-message');
+    if (spinner) {
+        spinner.style.display = 'flex';
+        if (spinnerMessage) spinnerMessage.textContent = message;
+    }
+}
+
+function hideSpinner() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+        spinner.style.display = 'none';
+    }
+}
+
+// ==================== FUNZIONI DI VALIDAZIONE ====================
+
+function validateField(fieldId, minLength) {
+    const field = document.getElementById(fieldId);
+    if (!field) return true;
+    
+    const value = field.value.trim();
+    
+    if (minLength && value.length < minLength) {
+        field.style.borderColor = 'var(--danger)';
+        field.style.boxShadow = '0 0 0 3px rgba(244, 67, 54, 0.1)';
+        
+        // Mostra messaggio di errore
+        const errorDiv = field.parentElement.querySelector('.field-error');
+        if (errorDiv) {
+            errorDiv.textContent = `Inserisci almeno ${minLength} caratteri`;
+            errorDiv.style.display = 'block';
+        }
+        return false;
+    }
+    
+    // Valido
+    field.style.borderColor = 'var(--success)';
+    field.style.boxShadow = 'none';
+    const errorDiv = field.parentElement.querySelector('.field-error');
+    if (errorDiv) errorDiv.style.display = 'none';
+    return true;
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    
+    field.style.borderColor = '#ddd';
+    field.style.boxShadow = 'none';
+    
+    const errorDiv = field.parentElement.querySelector('.field-error');
+    if (errorDiv) errorDiv.style.display = 'none';
+}
+
+function validateOptionalField(fieldId, minLength) {
+    const field = document.getElementById(fieldId);
+    if (!field || !field.value.trim()) return true; // Campo vuoto = ok (opzionale)
+    return validateField(fieldId, minLength);
+}
+
+function validateOptionalGoogleMapsUrl() {
+    const field = document.getElementById('gps-coordinates');
+    if (!field || !field.value.trim()) {
+        clearFieldError('gps-coordinates');
+        return true; // Opzionale
+    }
+    
+    const url = field.value.trim();
+    const isValid = url.includes('google.') && url.includes('/maps');
+    
+    if (!isValid) {
+        field.style.borderColor = 'var(--danger)';
+        showNotification('Inserisci un link Google Maps valido', 'warning');
+        return false;
+    }
+    
+    clearFieldError('gps-coordinates');
+    return true;
+}
 
         // ==================== GESTIONE UNIFICATA DEI DROPDOWN ====================
         function initAllDropdowns() {
@@ -9788,6 +10002,7 @@ async function esportaBilancioCompleto() {
     showNotification('Generazione report Excel...', 'loading');
     
     try {
+        showSpinner('Generazione report Excel...');
         const workbook = XLSX.utils.book_new();
         const lot = allLots.find(l => l.id === parseInt(currentBilancioLotId));
         
@@ -9913,9 +10128,11 @@ async function esportaBilancioCompleto() {
         XLSX.writeFile(workbook, nomeFile);
         
         showNotification('Report Excel generato con successo!', 'success');
+        hideSpinner();
     } catch(error) {
         console.error('Errore esportazione:', error);
         showNotification('Errore nella generazione del report: ' + error.message, 'error');
+        hideSpinner();
     }
 }
 
@@ -10289,14 +10506,17 @@ async function salvaCostoPersonale() {
         nomeAttivita = inputLibero.value.trim();
         // Salva la nuova attività nel database
         try {
+            showSpinner('Salvataggio attività...');
             await apiCall('/costi/attivita', {
                 method: 'POST',
                 body: { nome: nomeAttivita, categoria: 'personalizzata' }
             });
             // Ricarica la lista per il futuro
             await popolaAttivitaPredefinite();
+            hideSpinner();
         } catch (error) {
             console.error('Errore salvataggio attività:', error);
+            hideSpinner();
         }
     } else {
         nomeAttivita = select.value !== '__altra__' ? select.value : '';
@@ -10512,6 +10732,7 @@ async function salvaCostoMezziTecnici() {
     }
     
     try {
+        showSpinner('Salvataggio costo...');
         await apiCall('/costi/mezzi', {
             method: 'POST',
             body: dati
@@ -10519,8 +10740,10 @@ async function salvaCostoMezziTecnici() {
         showNotification('Costo registrato!', 'success');
         resetMezziTecniciForm();
         await loadMezziTecnici(currentCostiLotId, currentCostiStagione);
+        hideSpinner();
     } catch (error) {
         showNotification('Errore: ' + error.message, 'error');
+        hideSpinner();
     }
 }
 

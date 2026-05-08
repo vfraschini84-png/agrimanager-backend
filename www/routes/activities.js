@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../database');
+const { requirePermission } = require('../middleware/rbac');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -21,8 +22,51 @@ function authenticateToken(req, res, next) {
     }
 }
 
+/**
+ * @swagger
+ * /api/activities/{lotId}:
+ *   get:
+ *     tags:
+ *       - Activities
+ *     summary: Ottiene le attività di un lotto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: lotId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: page
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - name: limit
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: Lista attività paginata
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Activity'
+ *       401:
+ *         description: Autenticazione richiesta
+ *       500:
+ *         description: Errore del server
+ */
 // GET /api/activities/:lotId - Attività di un lotto con paginazione
-router.get('/:lotId', authenticateToken, async (req, res) => {
+router.get('/:lotId', authenticateToken, requirePermission('activities:read'), async (req, res) => {
     try {
         const lotId = req.params.lotId;
         
@@ -86,8 +130,51 @@ router.get('/:lotId', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/activities:
+ *   post:
+ *     tags:
+ *       - Activities
+ *     summary: Crea una nuova attività
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lot_id
+ *               - date
+ *             properties:
+ *               lot_id:
+ *                 type: integer
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               kg:
+ *                 type: number
+ *               notes:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Attività creata
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 id: { type: integer }
+ *       404:
+ *         description: Lotto non trovato
+ *       500:
+ *         description: Errore del server
+ */
 // POST /api/activities - Nuova attività
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, requirePermission('activities:create'), async (req, res) => {
     try {
         const { lot_id, date, kg, notes } = req.body;
         
@@ -109,8 +196,31 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/activities/{id}:
+ *   delete:
+ *     tags:
+ *       - Activities
+ *     summary: Elimina un'attività
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Attività eliminata
+ *       404:
+ *         description: Attività non trovata
+ *       500:
+ *         description: Errore del server
+ */
 // DELETE /api/activities/:id - Elimina attività
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, requirePermission('activities:delete'), async (req, res) => {
     try {
         const activity = await db.getAsync('SELECT * FROM activities WHERE id = ?', [req.params.id]);
         if (!activity) {

@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../database');
+const { requirePermission } = require('../middleware/rbac');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -20,8 +21,31 @@ function authenticateToken(req, res, next) {
 
 // ==================== ROUTE SPECIFICHE (PRIMA!) ====================
 
+/**
+ * @swagger
+ * /api/economic/record/{id}:
+ *   get:
+ *     tags:
+ *       - Economic
+ *     summary: Ottiene una registrazione economica
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Registrazione economica
+ *       404:
+ *         description: Record non trovato
+ *       500:
+ *         description: Errore del server
+ */
 // GET /api/economic/record/:id - Recupera UNA singola registrazione (per modifica)
-router.get('/record/:id', authenticateToken, async (req, res) => {
+router.get('/record/:id', authenticateToken, requirePermission('economic:read'), async (req, res) => {
     try {
         const record = await db.getAsync(
             'SELECT * FROM economic_records WHERE id = ?',
@@ -58,8 +82,41 @@ router.get('/record/:id', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/economic/{id}:
+ *   put:
+ *     tags:
+ *       - Economic
+ *     summary: Aggiorna una registrazione economica
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               stagione_agricola: { type: string }
+ *               prezzo_kg: { type: number }
+ *               ricavi_totali: { type: number }
+ *     responses:
+ *       200:
+ *         description: Registrazione aggiornata
+ *       403:
+ *         description: Accesso negato
+ *       500:
+ *         description: Errore del server
+ */
 // PUT /api/economic/:id - Aggiorna registrazione economica
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, requirePermission('economic:update'), async (req, res) => {
     try {
         const { id } = req.params;
         const { 
@@ -165,8 +222,31 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/economic/{id}:
+ *   delete:
+ *     tags:
+ *       - Economic
+ *     summary: Elimina una registrazione economica
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Registrazione eliminata
+ *       404:
+ *         description: Record non trovato
+ *       500:
+ *         description: Errore del server
+ */
 // DELETE /api/economic/:id - Elimina record economico
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, requirePermission('economic:delete'), async (req, res) => {
     try {
         const result = await db.runAsync('DELETE FROM economic_records WHERE id = ?', [req.params.id]);
         if (result.changes === 0) {

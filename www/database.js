@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcrypt');
+const logger = require('./logger');
 
 // Percorso assoluto del database
 const dbPath = path.join(__dirname, 'agrimanager.db');
@@ -9,9 +10,9 @@ const dbPath = path.join(__dirname, 'agrimanager.db');
 // Crea connessione al database
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
-        console.error('❌ Errore connessione database:', err.message);
+        logger.error('Errore connessione database', { error: err.message, dbPath });
     } else {
-        console.log('✅ Connesso al database SQLite:', dbPath);
+        logger.info('✅ Connesso al database SQLite', { dbPath });
         initializeDatabase();
     }
 });
@@ -36,9 +37,9 @@ function initializeDatabase() {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`, (err) => {
         if (err) {
-            console.error('❌ Errore creazione tabella lots:', err);
+            logger.error('Errore creazione tabella lots', { error: err });
         } else {
-            console.log('✅ Tabella lots verificata');
+            logger.info('✅ Tabella lots verificata');
         }
     });
 

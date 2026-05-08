@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../database');
+const { requirePermission, requireAuth } = require('../middleware/rbac');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -46,6 +47,52 @@ const validateLot = (lotData, isUpdate = false) => {
     return errors;
 };
 
+/**
+ * @swagger
+ * /api/lots:
+ *   get:
+ *     tags:
+ *       - Lots
+ *     summary: Elenca i lotti
+ *     description: Ritorna la lista paginata dei lotti. Gli utenti normali vedono solo i loro lotti, gli admin vedono i lotti dei loro sottoutenti.
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - name: limit
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *     responses:
+ *       200:
+ *         description: Lista lotti con paginazione
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Lot'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     currentPage: { type: integer }
+ *                     itemsPerPage: { type: integer }
+ *                     totalItems: { type: integer }
+ *                     totalPages: { type: integer }
+ *       400:
+ *         description: Parametri di paginazione non validi
+ *       500:
+ *         description: Errore del server
+ */
 // ==================== GET / CON PAGINAZIONE ====================
 router.get('/', async (req, res) => {
     try {
@@ -160,6 +207,36 @@ router.get('/', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/lots/{id}:
+ *   get:
+ *     tags:
+ *       - Lots
+ *     summary: Ottiene un lotto specifico
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Dettagli del lotto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Lot'
+ *       404:
+ *         description: Lotto non trovato
+ *       500:
+ *         description: Errore del server
+ */
 // GET /api/lots/:id - Lotto specifico
 router.get('/:id', async (req, res) => {
     try {
@@ -171,8 +248,56 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/lots:
+ *   post:
+ *     tags:
+ *       - Lots
+ *     summary: Crea un nuovo lotto
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - company_name
+ *               - location
+ *               - product_type
+ *             properties:
+ *               company_name:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *               gps_coordinates:
+ *                 type: string
+ *                 description: Link Google Maps valido
+ *               product_type:
+ *                 type: string
+ *               field_size:
+ *                 type: number
+ *     responses:
+ *       201:
+ *         description: Lotto creato
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string }
+ *                 data: { $ref: '#/components/schemas/Lot' }
+ *       400:
+ *         description: Dati non validi
+ *       401:
+ *         description: Autenticazione richiesta
+ *       500:
+ *         description: Errore del server
+ */
 // POST /api/lots - Crea nuovo lotto
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requirePermission('lots:create'), async (req, res) => {
     try {
         const { company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, createdBy } = req.body;
         
@@ -218,8 +343,44 @@ router.post('/', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/lots/{id}:
+ *   put:
+ *     tags:
+ *       - Lots
+ *     summary: Aggiorna un lotto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               company_name: { type: string }
+ *               location: { type: string }
+ *               product_type: { type: string }
+ *               field_size: { type: number }
+ *     responses:
+ *       200:
+ *         description: Lotto aggiornato
+ *       404:
+ *         description: Lotto non trovato
+ *       403:
+ *         description: Accesso negato
+ *       500:
+ *         description: Errore del server
+ */
 // PUT /api/lots/:id - Aggiorna lotto
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, requirePermission('lots:update'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
@@ -254,8 +415,33 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/lots/{id}:
+ *   delete:
+ *     tags:
+ *       - Lots
+ *     summary: Elimina un lotto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lotto eliminato
+ *       404:
+ *         description: Lotto non trovato
+ *       403:
+ *         description: Accesso negato
+ *       500:
+ *         description: Errore del server
+ */
 // DELETE /api/lots/:id - Elimina lotto
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, requirePermission('lots:delete'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
@@ -272,8 +458,42 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/lots/{id}:
+ *   patch:
+ *     tags:
+ *       - Lots
+ *     summary: Aggiornamento parziale di un lotto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               company_name: { type: string }
+ *               location: { type: string }
+ *     responses:
+ *       200:
+ *         description: Lotto aggiornato
+ *       404:
+ *         description: Lotto non trovato
+ *       403:
+ *         description: Accesso negato
+ *       500:
+ *         description: Errore del server
+ */
 // PATCH /api/lots/:id - Aggiorna parziale
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireAuth, requirePermission('lots:update'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });

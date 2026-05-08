@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../database');
+const { requirePermission } = require('../middleware/rbac');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -18,8 +19,36 @@ function authenticateToken(req, res, next) {
     }
 }
 
+/**
+ * @swagger
+ * /api/analyses/{lotId}:
+ *   get:
+ *     tags:
+ *       - Analyses
+ *     summary: Ottiene le analisi di un lotto
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: lotId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - name: page
+ *         in: query
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *     responses:
+ *       200:
+ *         description: Lista analisi paginata
+ *       401:
+ *         description: Autenticazione richiesta
+ *       500:
+ *         description: Errore del server
+ */
 // GET /api/analyses/:lotId - Analisi di un lotto con paginazione
-router.get('/:lotId', authenticateToken, async (req, res) => {
+router.get('/:lotId', authenticateToken, requirePermission('analyses:read'), async (req, res) => {
     try {
         const lotId = req.params.lotId;
         
@@ -83,8 +112,39 @@ router.get('/:lotId', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/analyses:
+ *   post:
+ *     tags:
+ *       - Analyses
+ *     summary: Crea una nuova analisi
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lot_id
+ *             properties:
+ *               lot_id: { type: integer }
+ *               year: { type: integer }
+ *               filename: { type: string }
+ *               fileUrl: { type: string }
+ *               notes: { type: string }
+ *     responses:
+ *       201:
+ *         description: Analisi creata
+ *       404:
+ *         description: Lotto non trovato
+ *       500:
+ *         description: Errore del server
+ */
 // POST /api/analyses - Nuova analisi
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, requirePermission('analyses:create'), async (req, res) => {
     try {
         const { lot_id, year, filename, originalName, fileUrl, notes, fileSize } = req.body;
         
@@ -105,8 +165,29 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /api/analyses/{id}:
+ *   delete:
+ *     tags:
+ *       - Analyses
+ *     summary: Elimina un'analisi
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Analisi eliminata
+ *       500:
+ *         description: Errore del server
+ */
 // DELETE /api/analyses/:id - Elimina analisi
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, requirePermission('analyses:delete'), async (req, res) => {
     try {
         await db.runAsync('DELETE FROM analyses WHERE id = ?', [req.params.id]);
         res.json({ success: true });
