@@ -5346,10 +5346,16 @@ document.getElementById('product-type').addEventListener('change', function() {
         }
 
                // ==================== FUNZIONE HELPER API MIGLIORATA CON AUTENTICAZIONE ====================
-// Configurazione API - CAMBIA QUESTO IP CON IL TUO!
-const API_BASE_URL = window.location.hostname.includes('ngrok') 
-    ? window.location.origin + '/api'
-    : window.location.protocol + '//' + window.location.hostname + ':3000/api'; 
+// API base URL: stesso origin (preview Emergent / produzione) o porta locale 3000 (dev locale)
+const API_BASE_URL = (() => {
+    const host = window.location.hostname;
+    // Dev locale (file://, localhost, IP LAN): mantieni :3000 esplicito
+    if (host === '' || host === 'localhost' || host === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+        return window.location.protocol + '//' + host + ':3000/api';
+    }
+    // Tutti gli altri ambienti (Emergent preview, ngrok, prod): usa stesso origin → /api
+    return window.location.origin + '/api';
+})();
 
 async function apiCall(endpoint, options = {}) {
     // Ottieni il token dal localStorage

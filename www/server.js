@@ -198,25 +198,32 @@ app.use((err, req, res, next) => {
 });
 
 // ==================== AVVIO SERVER ====================
-const server = app.listen(PORT, '0.0.0.0', () => {
-    logger.info('🚀 Server AgriManager avviato', { port: PORT, nodeEnv: NODE_ENV, allowedOrigins });
+// In ambiente Emergent il routing pubblico manda /api/* alla porta 8001 e tutto il resto a 3000.
+// Per servire sia il frontend (index.html) sia le API dallo stesso processo, ascoltiamo su entrambe.
+const PORTS = [PORT];
+const EXTRA = parseInt(process.env.EXTRA_PORT || '8001', 10);
+if (EXTRA && EXTRA !== PORT) PORTS.push(EXTRA);
+
+const servers = PORTS.map(p => app.listen(p, '0.0.0.0', () => {
+    logger.info('🚀 Server AgriManager in ascolto', { port: p, nodeEnv: NODE_ENV });
     if (NODE_ENV !== 'production') {
-        console.log('==================================');
-        console.log('🚀 AgriManager pronto');
-        console.log(`📍 http://localhost:${PORT}`);
-        console.log(`📚 http://localhost:${PORT}/api-docs`);
-        console.log(`🩺 http://localhost:${PORT}/api/health`);
-        console.log('==================================');
+        console.log(`==================================`);
+        console.log(`🚀 AgriManager pronto su porta ${p}`);
+        console.log(`📍 http://localhost:${p}`);
+        console.log(`📚 http://localhost:${p}/api-docs`);
+        console.log(`🩺 http://localhost:${p}/api/health`);
+        console.log(`==================================`);
     }
-});
+}));
 
 // ==================== GRACEFUL SHUTDOWN ====================
 const shutdown = (signal) => {
     logger.info(`${signal} ricevuto, chiusura server...`);
-    server.close(() => {
-        logger.info('Server chiuso');
-        process.exit(0);
-    });
+    Promise.all(servers.map(s => new Promise(resolve => s.close(resolve))))
+        .then(() => {
+            logger.info('Server chiusi');
+            process.exit(0);
+        });
     setTimeout(() => {
         logger.error('Timeout chiusura, forzo exit');
         process.exit(1);
