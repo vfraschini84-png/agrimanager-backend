@@ -1,209 +1,168 @@
+// ✅ Carica .env PRIMA di qualunque modulo che lo usi
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
-
-// ✅ LOGGING
-const logger = require('./logger');
-
-// ✅ SWAGGER DOCUMENTATION
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./swagger');
-
-// ✅ NUOVI MIDDLEWARE DI SICUREZZA
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 
+const logger = require('./logger');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./swagger');
+
+// ==================== FAIL-FAST SU CONFIG MANCANTE ====================
+const REQUIRED_ENV = ['JWT_SECRET'];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+    logger.error('❌ Variabili .env mancanti', { missing });
+    console.error(`\n❌ Configurazione mancante: ${missing.join(', ')}\n   Crea il file www/.env (vedi www/.env.example)\n`);
+    process.exit(1);
+}
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// ✅ CONFIGURA RATE LIMITING (protezione anti-abuso)
-// Disabilitato in test/development se NODE_ENV === 'test'
-const limiter = process.env.NODE_ENV === 'test' 
-    ? (req, res, next) => next() // Bypass rate limit nei test
-    : rateLimit({
-        windowMs: 15 * 60 * 1000, // 15 minuti
-        max: 100, // Limite 100 richieste per IP
-        message: { error: 'Troppe richieste. Riprova più tardi.' },
-        standardHeaders: true,
-        legacyHeaders: false,
-    });
+// trust proxy (rate-limit corretto dietro reverse proxy)
+app.set('trust proxy', 1);
 
-// ✅ APPLICA MIDDLEWARE DI SICUREZZA
+// ==================== RATE LIMITING ====================
+const isTest = NODE_ENV === 'test';
+const passthrough = (req, res, next) => next();
+
+const generalLimiter = isTest ? passthrough : rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Troppe richieste. Riprova più tardi.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
+const loginLimiter = isTest ? passthrough : rateLimit({
+    windowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS || '900000', 10),
+    max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '10', 10),
+    message: { error: 'Troppi tentativi di accesso. Riprova fra qualche minuto.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: true
+});
+
+// ==================== SICUREZZA HTTP ====================
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: [
-                "'self'", 
-                "'unsafe-inline'", 
-                "'unsafe-eval'", 
-                "https://cdnjs.cloudflare.com", 
-                "https://kit.fontawesome.com",
-                "https://cdn.jsdelivr.net",  // ✅ AGGIUNTO per xlsx
-                "https://cdn.jsdelivr.net"
-            ],
-            scriptSrcAttr: [
                 "'self'",
-                "'unsafe-inline'"  // ✅ AGGIUNTO per onclick negli attributi
+                "'unsafe-inline'",
+                "'unsafe-eval'",
+                'https://cdnjs.cloudflare.com',
+                'https://kit.fontawesome.com',
+                'https://cdn.jsdelivr.net'
             ],
+            scriptSrcAttr: ["'self'", "'unsafe-inline'"],
             styleSrc: [
-                "'self'", 
-                "'unsafe-inline'", 
-                "https://cdnjs.cloudflare.com", 
-                "https://fonts.googleapis.com"
+                "'self'",
+                "'unsafe-inline'",
+                'https://cdnjs.cloudflare.com',
+                'https://fonts.googleapis.com'
             ],
-            fontSrc: [
-                "'self'", 
-                "https://cdnjs.cloudflare.com", 
-                "https://fonts.gstatic.com"
-            ],
-            imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: [
-    "'self'", 
-    "http://localhost:3000", 
-    "http://192.168.0.69:3000",
-    "http://192.168.0.69:3001",
-    "https://192.168.0.69:3000",
-    "https://api.ipify.org",
-    "https://cdn.jsdelivr.net"  // ✅ AGGIUNGI  
-],
-        },
+            fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'", 'https://api.ipify.org', 'https://cdn.jsdelivr.net'],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'self'"]
+        }
     },
+    crossOriginEmbedderPolicy: false
 }));
 
-app.use(compression()); // Compressione gzip per risposte più veloci
-app.use('/api/', limiter); // Rate limiting solo sulle API
+app.use(compression());
 
-// ✅ CONFIGURAZIONE CORS WHITELIST
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 
-    'http://localhost:3000,http://127.0.0.1:3000,http://192.168.0.69:3000').split(',');
+// ==================== CORS WHITELIST ====================
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
+    'http://localhost:3000,http://127.0.0.1:3000,capacitor://localhost')
+    .split(',').map(o => o.trim()).filter(Boolean);
 
 const corsOptions = {
     origin: (origin, callback) => {
+        // Permetti richieste server-to-server / curl / mobile webview senza origin
         if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            logger.warn('CORS blocked request', { origin, allowedOrigins });
-            callback(new Error('Not allowed by CORS'));
+            return callback(null, true);
         }
+        logger.warn('CORS bloccato', { origin, allowedOrigins });
+        return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 600
 };
-
-// Middleware esistenti
 app.use(cors(corsOptions));
-app.use(bodyParser.json({ limit: '10mb' })); // Limita dimensione JSON
 
-// ==================== ROUTE PER IL FRONTEND ====================
-// Route per servire index.html (percorso corretto)
+app.use(bodyParser.json({ limit: '10mb' }));
+
+// ==================== STATIC SICURO ====================
+// ⚠️ Esponiamo SOLO file statici sicuri, NON l'intera directory www/ (che contiene .db / .env / .js).
+const PUBLIC_FILES = [
+    'index.html',
+    'reset-password.html'
+];
+PUBLIC_FILES.forEach(file => {
+    app.get(`/${file}`, (req, res) => res.sendFile(path.join(__dirname, file)));
+});
 app.get('/', (req, res) => {
     logger.info('GET /', { ip: req.ip });
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Serve file statici dalla cartella www
-app.use(express.static(__dirname));
+// ==================== HEALTH ====================
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        env: NODE_ENV,
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
 
-// ✅ SWAGGER DOCUMENTATION
+// ==================== SWAGGER ====================
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-    swaggerOptions: {
-        url: '/api-docs.json',
-    },
-    customCss: '.swagger-ui .topbar { display: none }',
+    customCss: '.swagger-ui .topbar { display: none }'
 }));
 app.get('/api-docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpecs);
 });
 
-// DEBUG: Test delle routes prima del caricamento
-logger.info('🧪 Inizio caricamento routes');
+// ==================== RATE-LIMIT MIRATI ====================
+// Login DEVE precedere il mount delle route /api/auth
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/forgot-password', loginLimiter);
+app.use('/api/', generalLimiter);
 
-// ==================== ROUTE LOTS ====================
-let lotsRoutes;
-try {
-    console.log('1. Tentativo di caricamento routes/lots...');
-    lotsRoutes = require('./routes/lots');
-    console.log('2. Routes caricate, verifico i metodi...');
-
-    if (lotsRoutes && lotsRoutes.stack) {
-        console.log('3. Metodi routes disponibili:');
-        lotsRoutes.stack.forEach(layer => {
-            if (layer.route) {
-                console.log(`   ${Object.keys(layer.route.methods).join(', ').toUpperCase()} ${layer.route.path}`);
-            }
-        });
+// ==================== ROUTES ====================
+const mountRoute = (mountPath, modulePath) => {
+    try {
+        const router = require(modulePath);
+        app.use(mountPath, router);
+        logger.info(`✅ Route ${mountPath} montata`);
+    } catch (err) {
+        logger.error(`❌ Errore caricamento route ${mountPath}`, { error: err.message, stack: err.stack });
     }
+};
 
-    app.use('/api/lots', lotsRoutes);
-    console.log('✅ Routes lots montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes lots:', error.message);
-}
+mountRoute('/api/auth', './routes/auth');
+mountRoute('/api/lots', './routes/lots');
+mountRoute('/api/activities', './routes/activities');
+mountRoute('/api/analyses', './routes/analyses');
+mountRoute('/api/economic', './routes/economic');
+mountRoute('/api/costi', './routes/costi');
 
-// ==================== ROUTE AUTH ====================
-try {
-    console.log('1b. Tentativo di caricamento routes/auth...');
-    const authRoutes = require('./routes/auth');
-    app.use('/api/auth', authRoutes);
-    console.log('✅ Routes auth montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes auth:', error.message);
-}
-
-// ==================== ROUTE ACTIVITIES ====================
-try {
-    console.log('1c. Tentativo di caricamento routes/activities...');
-    const activitiesRoutes = require('./routes/activities');
-    app.use('/api/activities', activitiesRoutes);
-    console.log('✅ Routes activities montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes activities:', error.message);
-}
-
-// ==================== ROUTE ANALYSES ====================
-try {
-    console.log('1d. Tentativo di caricamento routes/analyses...');
-    const analysesRoutes = require('./routes/analyses');
-    app.use('/api/analyses', analysesRoutes);
-    console.log('✅ Routes analyses montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes analyses:', error.message);
-}
-
-// ==================== ROUTE ECONOMIC ====================
-try {
-    console.log('1e. Tentativo di caricamento routes/economic...');
-    const economicRoutes = require('./routes/economic');
-    app.use('/api/economic', economicRoutes);
-    console.log('✅ Routes economic montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes economic:', error.message);
-}
-
-// ==================== ROUTE COSTI ====================
-try {
-    console.log('1f. Tentativo di caricamento routes/costi...');
-    const costiRoutes = require('./routes/costi');
-    app.use('/api/costi', costiRoutes);
-    console.log('✅ Routes costi montate correttamente');
-} catch (error) {
-    console.log('❌ Errore caricamento routes costi:', error.message);
-}
-
-// ==================== ROUTE DI TEST ====================
-app.put('/api/test-put', (req, res) => {
-    res.json({ message: 'PUT funziona', data: req.body });
-});
-
-// ==================== GESTIONE ERRORI ====================
-// 404 Handler (DEVE venire prima di error handler)
+// ==================== 404 ====================
 app.use((req, res) => {
     logger.warn('404 Not Found', { method: req.method, url: req.originalUrl, ip: req.ip });
     res.status(404).json({
@@ -213,10 +172,11 @@ app.use((req, res) => {
     });
 });
 
-// Global Error Handler (DEVE essere ultimo!)
+// ==================== ERROR HANDLER ====================
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
     const statusCode = err.statusCode || err.status || 500;
-    
+
     logger.error('Unhandled Error', {
         message: err.message,
         statusCode,
@@ -226,34 +186,43 @@ app.use((err, req, res, next) => {
         user: req.user?.username || 'anonymous',
         ip: req.ip
     });
-    
-    // Non esporre stack trace in produzione
+
     const response = {
-        error: statusCode === 500 && process.env.NODE_ENV === 'production' 
-            ? 'Internal server error' 
+        error: statusCode === 500 && NODE_ENV === 'production'
+            ? 'Internal server error'
             : err.message || 'Unknown error'
     };
-    
-    if (process.env.NODE_ENV === 'development') {
-        response.stack = err.stack;
-    }
-    
+    if (NODE_ENV === 'development') response.stack = err.stack;
+
     res.status(statusCode).json(response);
 });
 
 // ==================== AVVIO SERVER ====================
-app.listen(PORT, '0.0.0.0', () => {
-    logger.info('🚀 Server AgriManager avviato!', {
-        port: PORT,
-        nodeEnv: process.env.NODE_ENV || 'development',
-        allowedOrigins
-    });
-    console.log('==================================');
-    console.log('🚀 Server AgriManager avviato!');
-    console.log(`📍 Porta: ${PORT}`);
-    console.log('🌐 ACCESSIBILE DA:');
-    console.log(`   - Frontend: http://localhost:${PORT}`);
-    console.log(`   - API: http://localhost:${PORT}/api`);
-    console.log(`   - IP Locale: http://192.168.0.69:${PORT}`);
-    console.log('==================================');
+const server = app.listen(PORT, '0.0.0.0', () => {
+    logger.info('🚀 Server AgriManager avviato', { port: PORT, nodeEnv: NODE_ENV, allowedOrigins });
+    if (NODE_ENV !== 'production') {
+        console.log('==================================');
+        console.log('🚀 AgriManager pronto');
+        console.log(`📍 http://localhost:${PORT}`);
+        console.log(`📚 http://localhost:${PORT}/api-docs`);
+        console.log(`🩺 http://localhost:${PORT}/api/health`);
+        console.log('==================================');
+    }
 });
+
+// ==================== GRACEFUL SHUTDOWN ====================
+const shutdown = (signal) => {
+    logger.info(`${signal} ricevuto, chiusura server...`);
+    server.close(() => {
+        logger.info('Server chiuso');
+        process.exit(0);
+    });
+    setTimeout(() => {
+        logger.error('Timeout chiusura, forzo exit');
+        process.exit(1);
+    }, 10000).unref();
+};
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+module.exports = app;

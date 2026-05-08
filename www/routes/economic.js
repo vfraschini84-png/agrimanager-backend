@@ -263,7 +263,7 @@ router.delete('/:id', authenticateToken, requirePermission('economic:delete'), a
 // ==================== ROUTE GENERICHE (DOPO) ====================
 
 // GET /api/economic/:lotId - Dati economici di un lotto
-router.get('/:lotId', authenticateToken, async (req, res) => {
+router.get('/:lotId', authenticateToken, requirePermission('economic:read'), async (req, res) => {
     try {
         // Verifica che il lotto appartenga all'utente
         const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [req.params.lotId]);
@@ -292,7 +292,7 @@ router.get('/:lotId', authenticateToken, async (req, res) => {
 });
 
 // POST /api/economic - Nuovo record economico
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, requirePermission('economic:create'), async (req, res) => {
     try {
         const { 
             lot_id, 

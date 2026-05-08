@@ -1,9 +1,40 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const db = require('../database');
+const logger = require('../logger');
 const { requirePermission, requireAuth } = require('../middleware/rbac');
 const router = express.Router();
-require('dotenv').config();
+
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Middleware locale di autenticazione (riusato dai dettagli lotto)
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token non fornito' });
+    try {
+        req.user = jwt.verify(token, JWT_SECRET);
+        next();
+    } catch (err) {
+        return res.status(403).json({ error: 'Token non valido' });
+    }
+}
+
+// Verifica che l'utente abbia accesso al lotto richiesto (super-admin/admin OR proprietario tenant)
+async function assertLotAccess(req, lotId) {
+    const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
+    if (!lot) return { error: 404, message: 'Lotto non trovato' };
+
+    if (req.user.username === 'admin' || req.user.role === 'admin') {
+        return { lot };
+    }
+    const u = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+    const tenantOwnerId = u?.parent_id || req.user.id;
+    if (lot.owner_id !== tenantOwnerId) {
+        return { error: 403, message: 'Accesso negato' };
+    }
+    return { lot };
+}
 
 // Validazione avanzata URL Google Maps
 const isValidGoogleMapsUrl = (url) => {
@@ -94,7 +125,7 @@ const validateLot = (lotData, isUpdate = false) => {
  *         description: Errore del server
  */
 // ==================== GET / CON PAGINAZIONE ====================
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, requirePermission('lots:read'), async (req, res) => {
     try {
         // ==================== PAGINAZIONE ====================
         const page = parseInt(req.query.page) || 1;
@@ -108,31 +139,13 @@ router.get('/', async (req, res) => {
         }
         
         // ==================== AUTENTICAZIONE ====================
-        const token = req.headers.authorization?.split(' ')[1];
-        let currentUserId = null;
-        let currentUserRole = null;
-        let currentUsername = null;
+        const currentUserId = req.user.id;
+        const currentUserRole = req.user.role;
+        const currentUsername = req.user.username;
         let parentId = null;
-        
-        if (token) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const decoded = jwt.verify(token, JWT_SECRET);
-                currentUserId = decoded.id;
-                currentUserRole = decoded.role;
-                currentUsername = decoded.username;
-                
-                const user = await db.getAsync(
-                    'SELECT parent_id FROM users WHERE id = ?', 
-                    [currentUserId]
-                );
-                if (user && user.parent_id) {
-                    parentId = user.parent_id;
-                }
-            } catch(e) {
-                console.log('Token non valido:', e.message);
-            }
-        }
+
+        const userRow = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [currentUserId]);
+        if (userRow && userRow.parent_id) parentId = userRow.parent_id;
         
         // ==================== COSTRUZIONE QUERY ====================
         let whereClause = '';
@@ -202,7 +215,18 @@ router.get('/', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('Errore GET lots:', error);
+        logger.error('Errore GET lots', { error: error.message });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/lots/:id - Lotto specifico
+router.get('/:id', authenticateToken, requirePermission('lots:read'), async (req, res) => {
+    try {
+        const access = await assertLotAccess(req, req.params.id);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+        res.json({ message: 'success', data: access.lot });
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
@@ -237,16 +261,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         description: Errore del server
  */
-// GET /api/lots/:id - Lotto specifico
-router.get('/:id', async (req, res) => {
-    try {
-        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
-        if (!lot) return res.status(404).json({ error: 'Lotto non trovato' });
-        res.json({ message: 'success', data: lot });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// GET /api/lots/:id - vedi sopra (autenticato)
 
 /**
  * @swagger
@@ -297,33 +312,23 @@ router.get('/:id', async (req, res) => {
  *         description: Errore del server
  */
 // POST /api/lots - Crea nuovo lotto
-router.post('/', requireAuth, requirePermission('lots:create'), async (req, res) => {
+router.post('/', authenticateToken, requirePermission('lots:create'), async (req, res) => {
     try {
         const { company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, createdBy } = req.body;
-        
-        const token = req.headers.authorization?.split(' ')[1];
-        let ownerId = null;
-        let ownerUsername = null;
+
+        const ownerId = req.user.id;
+        let ownerUsername = req.user.username;
         let parentId = null;
-        
-        if (token) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const decoded = jwt.verify(token, JWT_SECRET);
-                ownerId = decoded.id;
-                ownerUsername = decoded.username;
-                
-                const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [ownerId]);
-                if (user && user.parent_id) {
-                    parentId = user.parent_id;
-                    const parent = await db.getAsync('SELECT username FROM users WHERE id = ?', [parentId]);
-                    ownerUsername = parent ? parent.username : ownerUsername;
-                }
-            } catch(e) {}
+
+        const u = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [ownerId]);
+        if (u && u.parent_id) {
+            parentId = u.parent_id;
+            const parent = await db.getAsync('SELECT username FROM users WHERE id = ?', [parentId]);
+            ownerUsername = parent ? parent.username : ownerUsername;
         }
-        
+
         const finalOwnerId = parentId || ownerId;
-        
+
         const errors = validateLot(req.body);
         if (errors.length > 0) {
             return res.status(400).json({ error: 'Dati non validi', details: errors });
@@ -338,7 +343,7 @@ router.post('/', requireAuth, requirePermission('lots:create'), async (req, res)
         const newLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [result.id]);
         res.status(201).json({ message: 'Lotto creato con successo', data: newLot });
     } catch (error) {
-        console.error('Errore POST lotto:', error);
+        logger.error('Errore POST lotto', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
@@ -380,7 +385,7 @@ router.post('/', requireAuth, requirePermission('lots:create'), async (req, res)
  *         description: Errore del server
  */
 // PUT /api/lots/:id - Aggiorna lotto
-router.put('/:id', requireAuth, requirePermission('lots:update'), async (req, res) => {
+router.put('/:id', authenticateToken, requirePermission('lots:update'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
@@ -441,19 +446,22 @@ router.put('/:id', requireAuth, requirePermission('lots:update'), async (req, re
  *         description: Errore del server
  */
 // DELETE /api/lots/:id - Elimina lotto
-router.delete('/:id', requireAuth, requirePermission('lots:delete'), async (req, res) => {
+router.delete('/:id', authenticateToken, requirePermission('lots:delete'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
-        
-        await db.runAsync('DELETE FROM lot_details WHERE lot_id = ?', [req.params.id]);
-        await db.runAsync('DELETE FROM activities WHERE lot_id = ?', [req.params.id]);
-        await db.runAsync('DELETE FROM analyses WHERE lot_id = ?', [req.params.id]);
-        await db.runAsync('DELETE FROM economic_records WHERE lot_id = ?', [req.params.id]);
-        await db.runAsync('DELETE FROM lots WHERE id = ?', [req.params.id]);
-        
+
+        await db.withTransaction(async () => {
+            await db.runAsync('DELETE FROM lot_details WHERE lot_id = ?', [req.params.id]);
+            await db.runAsync('DELETE FROM activities WHERE lot_id = ?', [req.params.id]);
+            await db.runAsync('DELETE FROM analyses WHERE lot_id = ?', [req.params.id]);
+            await db.runAsync('DELETE FROM economic_records WHERE lot_id = ?', [req.params.id]);
+            await db.runAsync('DELETE FROM lots WHERE id = ?', [req.params.id]);
+        });
+
         res.json({ message: 'Lotto eliminato con successo', deleted_id: req.params.id });
     } catch (error) {
+        logger.error('Errore DELETE lotto', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
@@ -493,7 +501,7 @@ router.delete('/:id', requireAuth, requirePermission('lots:delete'), async (req,
  *         description: Errore del server
  */
 // PATCH /api/lots/:id - Aggiorna parziale
-router.patch('/:id', requireAuth, requirePermission('lots:update'), async (req, res) => {
+router.patch('/:id', authenticateToken, requirePermission('lots:update'), async (req, res) => {
     try {
         const existingLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [req.params.id]);
         if (!existingLot) return res.status(404).json({ error: 'Lotto non trovato' });
@@ -523,166 +531,110 @@ router.patch('/:id', requireAuth, requirePermission('lots:update'), async (req, 
 // ==================== GESTIONE DETTAGLI LOTTO ====================
 
 // GET /api/lots/:id/details/all - Tutti i dettagli del lotto
-router.get('/:id/details/all', async (req, res) => {
+router.get('/:id/details/all', authenticateToken, requirePermission('lots:read'), async (req, res) => {
     try {
-        const lotId = req.params.id;
-        
-        // Verifica che il lotto esista
-        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
+        const access = await assertLotAccess(req, req.params.id);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+
         const details = await db.allAsync(
             `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC`,
-            [lotId]
+            [req.params.id]
         );
-        
-        res.json({
-            message: 'success',
-            data: details
-        });
+        res.json({ message: 'success', data: details });
     } catch (error) {
-        console.error('Errore GET all details:', error);
+        logger.error('Errore GET all details', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
 
 // GET /api/lots/:id/details - Ultimo dettaglio del lotto
-router.get('/:id/details', async (req, res) => {
+router.get('/:id/details', authenticateToken, requirePermission('lots:read'), async (req, res) => {
     try {
-        const lotId = req.params.id;
-        
-        // Verifica che il lotto esista
-        const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
+        const access = await assertLotAccess(req, req.params.id);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+
         const details = await db.getAsync(
             `SELECT * FROM lot_details WHERE lot_id = ? ORDER BY created_at DESC LIMIT 1`,
-            [lotId]
+            [req.params.id]
         );
-        
-        res.json({
-            message: 'success',
-            data: details || {}
-        });
+        res.json({ message: 'success', data: details || {} });
     } catch (error) {
-        console.error('Errore GET details:', error);
+        logger.error('Errore GET details', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
 
 // POST /api/lots/:id/details - Aggiungi dettagli
-router.post('/:id/details', async (req, res) => {
+router.post('/:id/details', authenticateToken, requirePermission('lots:update'), async (req, res) => {
     try {
-        const lotId = req.params.id;
+        const access = await assertLotAccess(req, req.params.id);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+
         const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
-        
-        // Verifica che il lotto esista
-        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lotId]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        // Verifica permessi
-        const token = req.headers.authorization?.split(' ')[1];
-        if (token) {
-            try {
-                const jwt = require('jsonwebtoken');
-                const decoded = jwt.verify(token, JWT_SECRET);
-                
-                if (decoded.username !== 'admin' && decoded.role !== 'admin') {
-                    const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [decoded.id]);
-                    const ownerId = user?.parent_id || decoded.id;
-                    
-                    if (lot.owner_id !== ownerId) {
-                        return res.status(403).json({ error: 'Accesso negato' });
-                    }
-                }
-            } catch(e) {}
-        }
-        
+        const lot = access.lot;
+
         const result = await db.runAsync(
-            `INSERT INTO lot_details (lot_id, cost_per_kg, estimated_kg, purchase_date, harvested_kg, owner_id, owner_username) 
+            `INSERT INTO lot_details (lot_id, cost_per_kg, estimated_kg, purchase_date, harvested_kg, owner_id, owner_username)
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [lotId, cost_per_kg || null, estimated_kg || null, purchase_date || null, harvested_kg || null, lot.owner_id, lot.owner_username]
+            [req.params.id, cost_per_kg || null, estimated_kg || null, purchase_date || null, harvested_kg || null, lot.owner_id, lot.owner_username]
         );
-        
+
         const newDetail = await db.getAsync('SELECT * FROM lot_details WHERE id = ?', [result.id]);
-        
-        res.status(201).json({
-            message: 'Dettagli aggiunti con successo',
-            data: newDetail
-        });
+        res.status(201).json({ message: 'Dettagli aggiunti con successo', data: newDetail });
     } catch (error) {
-        console.error('Errore POST details:', error);
+        logger.error('Errore POST details', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
 
 // PUT /api/lots/:lotId/details/:detailId - Aggiorna dettaglio
-router.put('/:lotId/details/:detailId', async (req, res) => {
+router.put('/:lotId/details/:detailId', authenticateToken, requirePermission('lots:update'), async (req, res) => {
     try {
-        const { lotId, detailId } = req.params;
+        const access = await assertLotAccess(req, req.params.lotId);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+
+        const { detailId, lotId } = req.params;
         const { cost_per_kg, estimated_kg, purchase_date, harvested_kg } = req.body;
-        
-        // Verifica che il dettaglio esista e appartenga al lotto
+
         const detail = await db.getAsync(
             'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
             [detailId, lotId]
         );
-        
-        if (!detail) {
-            return res.status(404).json({ error: 'Dettaglio non trovato' });
-        }
-        
+        if (!detail) return res.status(404).json({ error: 'Dettaglio non trovato' });
+
         await db.runAsync(
-            `UPDATE lot_details SET 
-                cost_per_kg = ?, 
-                estimated_kg = ?, 
-                purchase_date = ?, 
-                harvested_kg = ?,
+            `UPDATE lot_details SET
+                cost_per_kg = ?, estimated_kg = ?, purchase_date = ?, harvested_kg = ?,
                 updated_at = CURRENT_TIMESTAMP
              WHERE id = ?`,
             [cost_per_kg || null, estimated_kg || null, purchase_date || null, harvested_kg || null, detailId]
         );
-        
+
         const updated = await db.getAsync('SELECT * FROM lot_details WHERE id = ?', [detailId]);
-        
-        res.json({
-            message: 'Dettaglio aggiornato con successo',
-            data: updated
-        });
+        res.json({ message: 'Dettaglio aggiornato con successo', data: updated });
     } catch (error) {
-        console.error('Errore PUT detail:', error);
+        logger.error('Errore PUT detail', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
 
 // DELETE /api/lots/:lotId/details/:detailId - Elimina dettaglio
-router.delete('/:lotId/details/:detailId', async (req, res) => {
+router.delete('/:lotId/details/:detailId', authenticateToken, requirePermission('lots:delete'), async (req, res) => {
     try {
-        const { lotId, detailId } = req.params;
-        
+        const access = await assertLotAccess(req, req.params.lotId);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+
+        const { detailId, lotId } = req.params;
         const detail = await db.getAsync(
             'SELECT * FROM lot_details WHERE id = ? AND lot_id = ?',
             [detailId, lotId]
         );
-        
-        if (!detail) {
-            return res.status(404).json({ error: 'Dettaglio non trovato' });
-        }
-        
+        if (!detail) return res.status(404).json({ error: 'Dettaglio non trovato' });
+
         await db.runAsync('DELETE FROM lot_details WHERE id = ?', [detailId]);
-        
-        res.json({
-            message: 'Dettaglio eliminato con successo',
-            deleted_id: detailId
-        });
+        res.json({ message: 'Dettaglio eliminato con successo', deleted_id: detailId });
     } catch (error) {
-        console.error('Errore DELETE detail:', error);
+        logger.error('Errore DELETE detail', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });

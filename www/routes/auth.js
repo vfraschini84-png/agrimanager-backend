@@ -2,10 +2,12 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
+const logger = require('../logger');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const SALT_ROUNDS = 10;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
 
 // ==================== MIDDLEWARE DI AUTENTICAZIONE ====================
 function authenticateToken(req, res, next) {
@@ -128,7 +130,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign(
         { id: result.id, username, email, role: role || 'visitatore' },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -218,7 +220,7 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign(
         { id: user.id, username: user.username, email: user.email, role: user.role },
         JWT_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: JWT_EXPIRES_IN }
     );
 
     res.json({
@@ -398,46 +400,6 @@ router.put('/users/:id/role', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/auth/users/:id - Elimina utente (solo admin)
-router.delete('/users/:id', authenticateToken, async (req, res) => {
-    // Solo admin può farlo
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ error: 'Accesso negato. Solo gli amministratori possono eliminare utenti.' });
-    }
-    
-    const { id } = req.params;
-    
-    // Non permettere di eliminare se stesso
-    if (parseInt(id) === req.user.id) {
-        return res.status(400).json({ error: 'Non puoi eliminare il tuo account' });
-    }
-    
-    try {
-        // Verifica che l'utente esista e ottieni parent_id
-        const user = await db.getAsync('SELECT id, username, parent_id FROM users WHERE id = ?', [id]);
-        if (!user) {
-            return res.status(404).json({ error: 'Utente non trovato' });
-        }
-        
-        // ✅ CONTROLLO: Se non è super-admin (username 'admin'), può eliminare solo i suoi sottoutenti
-        if (req.user.username !== 'admin' && user.parent_id !== req.user.id) {
-            return res.status(403).json({ error: 'Non puoi eliminare utenti creati da altri amministratori' });
-        }
-        
-        // Elimina l'utente
-        await db.runAsync('DELETE FROM users WHERE id = ?', [id]);
-        
-        res.json({ 
-            success: true, 
-            message: `Utente ${user.username} eliminato con successo`,
-            deleted_id: id
-        });
-    } catch (error) {
-        console.error('Errore eliminazione utente:', error);
-        res.status(500).json({ error: 'Errore interno del server' });
-    }
-});
-
 // DELETE /api/auth/users/:id - Elimina utente e tutti i dati associati (solo admin/sviluppatore)
 router.delete('/users/:id', authenticateToken, async (req, res) => {
     // Solo admin o sviluppatore può farlo
@@ -455,145 +417,132 @@ router.delete('/users/:id', authenticateToken, async (req, res) => {
     
     try {
         // Verifica che l'utente esista
-        const user = await db.getAsync('SELECT id, username, role FROM users WHERE id = ?', [userId]);
+        const user = await db.getAsync('SELECT id, username, role, parent_id FROM users WHERE id = ?', [userId]);
         if (!user) {
             return res.status(404).json({ error: 'Utente non trovato' });
         }
-        
-        console.log(`🗑️ Eliminazione utente: ${user.username} (ID: ${userId})`);
-        
-        // 1. Elimina i lotti dell'utente e dati correlati
-        // 1a. Elimina attività di raccolta dei lotti dell'utente
-        await db.runAsync(`
-            DELETE FROM activities 
-            WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-        `, [userId, user.username]);
-        
-        // 1b. Elimina analisi dei lotti dell'utente
-        await db.runAsync(`
-            DELETE FROM analyses 
-            WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-        `, [userId, user.username]);
-        
-        // 1c. Elimina registrazioni economiche dei lotti dell'utente
-        await db.runAsync(`
-            DELETE FROM economic_records 
-            WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-        `, [userId, user.username]);
-        
-        // 1d. Elimina dettagli lotti
-        await db.runAsync(`
-            DELETE FROM lot_details 
-            WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-        `, [userId, user.username]);
-        
-        // 1e. Elimina i lotti dell'utente
-        const lotsDeleted = await db.runAsync(`
-            DELETE FROM lots WHERE owner_id = ? OR owner_username = ?
-        `, [userId, user.username]);
-        
-        console.log(`📦 Eliminati ${lotsDeleted.changes} lotti per l'utente ${user.username}`);
-        
-        // 2. Elimina i sotto-utenti (quelli che hanno questo utente come parent)
-        const subUsers = await db.allAsync('SELECT id, username FROM users WHERE parent_id = ?', [userId]);
-        
-        for (const subUser of subUsers) {
-            // Elimina dati dei sotto-utenti
-            await db.runAsync(`
-                DELETE FROM activities 
-                WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-            `, [subUser.id, subUser.username]);
-            await db.runAsync(`
-                DELETE FROM analyses 
-                WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-            `, [subUser.id, subUser.username]);
-            await db.runAsync(`
-                DELETE FROM economic_records 
-                WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)
-            `, [subUser.id, subUser.username]);
-            await db.runAsync(`
-                DELETE FROM lots WHERE owner_id = ? OR owner_username = ?
-            `, [subUser.id, subUser.username]);
+
+        // ✅ CONTROLLO scope: super-admin può cancellare chiunque, admin "normale" solo i propri sotto-utenti
+        if (req.user.username !== 'admin' && user.parent_id !== req.user.id) {
+            return res.status(403).json({ error: 'Non puoi eliminare utenti creati da altri amministratori' });
         }
-        
-        // Elimina i sotto-utenti
-        const subUsersDeleted = await db.runAsync('DELETE FROM users WHERE parent_id = ?', [userId]);
-        console.log(`👥 Eliminati ${subUsersDeleted.changes} sotto-utenti di ${user.username}`);
-        
-        // 3. Elimina l'utente principale
-        await db.runAsync('DELETE FROM users WHERE id = ?', [userId]);
-        
-        res.json({ 
-            success: true, 
+
+        logger.info('Eliminazione utente', { username: user.username, userId });
+
+        const result = await db.withTransaction(async () => {
+            // 1. Elimina dati dei lotti dell'utente
+            await db.runAsync(`DELETE FROM activities WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [userId, user.username]);
+            await db.runAsync(`DELETE FROM analyses WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [userId, user.username]);
+            await db.runAsync(`DELETE FROM economic_records WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [userId, user.username]);
+            await db.runAsync(`DELETE FROM lot_details WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [userId, user.username]);
+            const lotsDeleted = await db.runAsync(`DELETE FROM lots WHERE owner_id = ? OR owner_username = ?`, [userId, user.username]);
+
+            // 2. Elimina i sotto-utenti e i loro dati
+            const subUsers = await db.allAsync('SELECT id, username FROM users WHERE parent_id = ?', [userId]);
+            for (const subUser of subUsers) {
+                await db.runAsync(`DELETE FROM activities WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [subUser.id, subUser.username]);
+                await db.runAsync(`DELETE FROM analyses WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [subUser.id, subUser.username]);
+                await db.runAsync(`DELETE FROM economic_records WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [subUser.id, subUser.username]);
+                await db.runAsync(`DELETE FROM lot_details WHERE lot_id IN (SELECT id FROM lots WHERE owner_id = ? OR owner_username = ?)`, [subUser.id, subUser.username]);
+                await db.runAsync(`DELETE FROM lots WHERE owner_id = ? OR owner_username = ?`, [subUser.id, subUser.username]);
+            }
+            const subUsersDeleted = await db.runAsync('DELETE FROM users WHERE parent_id = ?', [userId]);
+
+            // 3. Elimina l'utente principale
+            await db.runAsync('DELETE FROM users WHERE id = ?', [userId]);
+
+            return { lotsDeleted: lotsDeleted.changes, subUsersDeleted: subUsersDeleted.changes };
+        });
+
+        logger.info('Utente eliminato', { username: user.username, ...result });
+
+        res.json({
+            success: true,
             message: `Utente ${user.username} eliminato con successo`,
             deleted_id: userId,
-            deleted_lots: lotsDeleted.changes,
-            deleted_subusers: subUsersDeleted.changes
+            deleted_lots: result.lotsDeleted,
+            deleted_subusers: result.subUsersDeleted
         });
-        
+
     } catch (error) {
-        console.error('Errore eliminazione utente:', error);
-        res.status(500).json({ error: 'Errore interno del server: ' + error.message });
+        logger.error('Errore eliminazione utente', { error: error.message, stack: error.stack });
+        res.status(500).json({ error: 'Errore interno del server' });
     }
 });
 
 const crypto = require('crypto');
-const nodemailer = require('nodemailer'); // Da installare
+const nodemailer = require('nodemailer');
 
-// Configurazione email (per sviluppo usa Ethereal)
-const transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false,
-    auth: {
-        user: 'verlie34@ethereal.email', // Da configurare
-        pass: 'Hx2uaaKs2BFFzwaRqC'
-    }
-});
+// ✅ Configurazione SMTP da ENV (no credenziali in chiaro nel codice)
+let transporter = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+        }
+    });
+}
 
 // POST /api/auth/forgot-password - Richiede reset password
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    
+
     if (!email) {
         return res.status(400).json({ error: 'Email obbligatoria' });
     }
-    
+
     try {
         // Cerca utente per email
         const user = await db.getAsync(
             'SELECT id, username, email FROM users WHERE email = ?',
             [email]
         );
-        
-        if (!user) {
-            // Per sicurezza, non rivelare se l'email esiste o no
-            return res.json({ success: true, message: 'Se l\'email esiste, riceverai un link di reset' });
-        }
-        
+
+        // Per sicurezza, rispondiamo sempre uguale (non rivelare se l'email esiste)
+        const genericResponse = { success: true, message: "Se l'email è registrata riceverai un link di reset" };
+
+        if (!user) return res.json(genericResponse);
+
         // Genera token unico
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 3600000); // 1 ora
-        
-        // Salva token nel database
+
         await db.runAsync(
-            `INSERT INTO password_reset_tokens (user_id, token, expires_at)
-             VALUES (?, ?, ?)`,
+            `INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)`,
             [user.id, token, expiresAt.toISOString()]
         );
-        
-        // Invia email (in sviluppo, stampa il link in console)
-        const resetLink = `http://localhost:3000/reset-password.html?token=${token}`;
-        console.log('==================================');
-        console.log('🔐 LINK RESET PASSWORD:');
-        console.log(resetLink);
-        console.log('==================================');
-        
-        // TODO: Invia email reale quando in produzione
-        
-        res.json({ success: true, message: 'Link di reset inviato (controlla console)' });
+
+        const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+        const resetLink = `${publicUrl}/reset-password.html?token=${token}`;
+
+        // Invio email se SMTP configurato
+        if (transporter) {
+            try {
+                await transporter.sendMail({
+                    from: process.env.SMTP_FROM || 'no-reply@agrimanager.local',
+                    to: user.email,
+                    subject: 'AgriManager — Reset password',
+                    text: `Ciao ${user.username},\n\nApri questo link per impostare una nuova password (valido 1 ora):\n${resetLink}\n\nSe non hai richiesto il reset, ignora questa email.`,
+                    html: `<p>Ciao <b>${user.username}</b>,</p><p>Apri questo link per impostare una nuova password (valido 1 ora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se non hai richiesto il reset, ignora questa email.</p>`
+                });
+                logger.info('Email reset password inviata', { userId: user.id });
+            } catch (mailErr) {
+                logger.error('Errore invio email reset', { error: mailErr.message });
+            }
+        }
+
+        // ⚠️ Stampa link in console SOLO in dev
+        if (process.env.NODE_ENV !== 'production') {
+            logger.warn('🔐 RESET PASSWORD LINK (dev only)', { resetLink });
+        }
+
+        res.json(genericResponse);
     } catch (error) {
-        console.error('Errore forgot-password:', error);
+        logger.error('Errore forgot-password', { error: error.message });
         res.status(500).json({ error: 'Errore interno del server' });
     }
 });

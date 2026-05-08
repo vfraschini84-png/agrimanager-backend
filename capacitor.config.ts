@@ -1,11 +1,14 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.myapp',
-  appName: 'myApp',
+  appId: 'com.agrimanager.app',
+  appName: 'AgriManager',
   webDir: 'www',
   android: {
     path: 'android'
+  },
+  server: {
+    androidScheme: 'https'
   }
 };
 

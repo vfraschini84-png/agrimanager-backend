@@ -10,19 +10,19 @@ const ROLES = {
         name: 'Manager',
         permissions: [
             'lots:read', 'lots:create', 'lots:update', 'lots:delete',
-            'activities:read', 'activities:create', 'activities:update',
-            'analyses:read', 'analyses:upload', 'analyses:delete',
+            'activities:read', 'activities:create', 'activities:update', 'activities:delete',
+            'analyses:read', 'analyses:upload', 'analyses:create', 'analyses:delete',
             'users:read', 'users:create', 'users:update',
-            'economic:read', 'economic:create', 'economic:update'
+            'economic:read', 'economic:create', 'economic:update', 'economic:delete'
         ]
     },
     operator: {
         name: 'Operator',
         permissions: [
-            'lots:read',
+            'lots:read', 'lots:create', 'lots:update',
             'activities:read', 'activities:create', 'activities:update',
-            'analyses:read', 'analyses:upload',
-            'economic:read'
+            'analyses:read', 'analyses:upload', 'analyses:create',
+            'economic:read', 'economic:create', 'economic:update'
         ]
     },
     viewer: {
@@ -36,6 +36,21 @@ const ROLES = {
     }
 };
 
+// Alias per supportare i ruoli storici in italiano salvati nel DB
+const ROLE_ALIASES = {
+    operatore: 'operator',
+    visitatore: 'viewer'
+};
+
+/**
+ * Risolve un ruolo (italiano o inglese) verso la chiave canonica di ROLES
+ */
+function resolveRole(role) {
+    if (!role) return null;
+    if (ROLES[role]) return role;
+    return ROLE_ALIASES[role] || null;
+}
+
 /**
  * Check if user has permission
  * @param {Object} user - User object with role property
@@ -44,12 +59,15 @@ const ROLES = {
  */
 function hasPermission(user, requiredPermission) {
     if (!user || !user.role) return false;
-    
-    const rolePermissions = ROLES[user.role]?.permissions || [];
-    
+
+    const canonicalRole = resolveRole(user.role);
+    if (!canonicalRole) return false;
+
+    const rolePermissions = ROLES[canonicalRole]?.permissions || [];
+
     // Admin ha accesso a tutto
     if (rolePermissions.includes('*')) return true;
-    
+
     // Controlliamo la permission specifica
     return rolePermissions.includes(requiredPermission);
 }
@@ -73,6 +91,7 @@ function requirePermission(permission) {
         }
         
         if (!hasPermission(req.user, permission)) {
+            const canonical = resolveRole(req.user.role);
             logger.warn('Accesso negato: permission insufficiente', {
                 user: req.user.username,
                 role: req.user.role,
@@ -83,7 +102,7 @@ function requirePermission(permission) {
                 error: 'Permessi insufficienti',
                 required: permission,
                 userRole: req.user.role,
-                availablePermissions: ROLES[req.user.role]?.permissions || []
+                availablePermissions: ROLES[canonical]?.permissions || []
             });
         }
         
@@ -153,6 +172,8 @@ function requireOwnerOrAdmin(ownerField = 'owner_id') {
 
 module.exports = {
     ROLES,
+    ROLE_ALIASES,
+    resolveRole,
     hasPermission,
     requirePermission,
     requireAuth,
