@@ -294,7 +294,21 @@ async function initializeDatabase() {
 
     // Seed admin + attività predefinite (idempotenti)
     await createDefaultAdmin();
+    await migrateAdminPrivacy();
     await inserisciAttivitaPredefinite();
+}
+
+// Migrazione: assicura che il super-admin abbia privacy_accepted=1
+// (così può creare sotto-utenti senza dover ri-accettare la privacy)
+async function migrateAdminPrivacy() {
+    try {
+        await db.runAsync(
+            `UPDATE users SET privacy_accepted = 1, privacy_accepted_at = COALESCE(privacy_accepted_at, datetime('now'))
+             WHERE username = 'admin' AND (privacy_accepted IS NULL OR privacy_accepted = 0)`
+        );
+    } catch (err) {
+        logger.error('Errore migrateAdminPrivacy', { error: err.message });
+    }
 }
 
 // Funzione per creare admin di default (idempotente)
@@ -309,8 +323,8 @@ async function createDefaultAdmin() {
         const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
 
         await db.runAsync(
-            `INSERT INTO users (username, email, password_hash, role, user_type)
-             VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO users (username, email, password_hash, role, user_type, privacy_accepted, privacy_accepted_at)
+             VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
             ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista']
         );
 

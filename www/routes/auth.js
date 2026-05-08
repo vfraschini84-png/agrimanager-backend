@@ -83,12 +83,37 @@ function authenticateToken(req, res, next) {
  */
 // POST /api/auth/register - Registrazione utente
 router.post('/register', async (req, res) => {
-    const { username, email, password, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted } = req.body;
+    const { username, email, password, role, user_type, azienda_data, parent_username, privacy_accepted } = req.body;
+    let { parent_id } = req.body;
 
-    // ✅ VALIDAZIONE PRIVACY
-    if (!privacy_accepted) {
-        return res.status(400).json({ 
-            error: 'È necessario accettare l\'informativa sulla privacy per registrarsi' 
+    // ✅ Se la richiesta arriva da un utente già autenticato (creazione sotto-utente),
+    //    eredita parent_id e privacy dal genitore (che ha già accettato la privacy).
+    let inheritedPrivacy = false;
+    let inheritedFromParent = null;
+    const authHeader = req.headers['authorization'];
+    const bearerToken = authHeader && authHeader.split(' ')[1];
+    if (bearerToken) {
+        try {
+            const decoded = jwt.verify(bearerToken, JWT_SECRET);
+            const parentUser = await db.getAsync(
+                'SELECT id, username, privacy_accepted FROM users WHERE id = ?',
+                [decoded.id]
+            );
+            if (parentUser && parentUser.privacy_accepted) {
+                inheritedPrivacy = true;
+                inheritedFromParent = parentUser;
+                // Forza parent_id a quello del creatore (il client non può falsificarlo)
+                parent_id = parentUser.id;
+            }
+        } catch (e) {
+            // Token invalido → trattiamo come registrazione pubblica (verrà richiesta privacy)
+        }
+    }
+
+    // ✅ VALIDAZIONE PRIVACY (solo se NON ereditata dal genitore già autenticato)
+    if (!inheritedPrivacy && !privacy_accepted) {
+        return res.status(400).json({
+            error: 'È necessario accettare l\'informativa sulla privacy per registrarsi'
         });
     }
 
@@ -117,12 +142,16 @@ router.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     const now = new Date().toISOString();
 
+    const finalParentUsername = inheritedFromParent
+        ? inheritedFromParent.username
+        : (parent_username || null);
+
     // ✅ INSERISCI CON PRIVACY
     const result = await db.runAsync(
         `INSERT INTO users (username, email, password_hash, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted, privacy_accepted_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [username, email, hashedPassword, role || 'visitatore', user_type || 'libero_professionista', 
-         azienda_data ? JSON.stringify(azienda_data) : null, parent_id || null, parent_username || null, 
+        [username, email, hashedPassword, role || 'visitatore', user_type || 'libero_professionista',
+         azienda_data ? JSON.stringify(azienda_data) : null, parent_id || null, finalParentUsername,
          1, now, now]
     );
 
@@ -137,7 +166,8 @@ router.post('/register', async (req, res) => {
         success: true,
         message: 'Utente registrato con successo',
         token,
-        user: { id: result.id, username, email, role: role || 'visitatore' }
+        user: { id: result.id, username, email, role: role || 'visitatore', parent_id: parent_id || null },
+        inherited_privacy: inheritedPrivacy
     });
 });
 
