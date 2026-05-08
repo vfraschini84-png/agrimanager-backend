@@ -61,7 +61,8 @@ app.use(helmet({
                 "'unsafe-eval'",
                 'https://cdnjs.cloudflare.com',
                 'https://kit.fontawesome.com',
-                'https://cdn.jsdelivr.net'
+                'https://cdn.jsdelivr.net',
+                'https://static.cloudflareinsights.com'
             ],
             scriptSrcAttr: ["'self'", "'unsafe-inline'"],
             styleSrc: [
@@ -87,13 +88,22 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     'http://localhost:3000,http://127.0.0.1:3000,capacitor://localhost')
     .split(',').map(o => o.trim()).filter(Boolean);
 
+// Pattern aggiuntivi: sottodomini Emergent preview e localhost dev
+const ORIGIN_PATTERNS = [
+    /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentagent\.com$/i,
+    /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentcf\.cloud$/i,
+    /^https?:\/\/([a-z0-9-]+\.)*emergentagent\.com$/i,
+    /^http:\/\/localhost(:\d+)?$/i,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/i
+];
+
 const corsOptions = {
     origin: (origin, callback) => {
         // Permetti richieste server-to-server / curl / mobile webview senza origin
-        if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        logger.warn('CORS bloccato', { origin, allowedOrigins });
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        if (ORIGIN_PATTERNS.some(re => re.test(origin))) return callback(null, true);
+        logger.warn('CORS bloccato', { origin });
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -175,6 +185,11 @@ app.use((req, res) => {
 // ==================== ERROR HANDLER ====================
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
+    // CORS error → 403 (non 500)
+    if (err && err.message === 'Not allowed by CORS') {
+        return res.status(403).json({ error: 'Origine non consentita (CORS)' });
+    }
+
     const statusCode = err.statusCode || err.status || 500;
 
     logger.error('Unhandled Error', {
