@@ -278,6 +278,37 @@ h1 {
     transform: translateY(-2px);
 }
 
+/* ✅ Fix scroll mobile: nascondi pulsante "Torna alla home" in-section (ora c'è l'icona nell'header).
+   Manteniamo la classe per backward-compat nel codice ma nascondiamo visivamente */
+.nav-home-btn {
+    display: none !important;
+}
+.section-nav-controls {
+    display: none !important;
+}
+
+/* Header home button (icona nell'header) hover */
+#header-home-btn:hover {
+    background: rgba(255,255,255,0.32) !important;
+}
+#header-home-btn:active {
+    transform: scale(0.95);
+}
+
+/* Smooth scroll body (evita salti bruschi su mobile) */
+html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+body { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+
+@media (max-width: 600px) {
+    #app-header > div { gap: 8px !important; }
+    #app-header h1 { font-size: 1.3rem !important; }
+    #app-header .app-description { font-size: 0.75rem !important; }
+    #header-home-btn { width: 40px !important; height: 40px !important; font-size: 1rem !important; }
+    .export-buttons-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 .section-header-enhanced {
     display: flex;
     align-items: center;
@@ -1867,6 +1898,158 @@ footer {
     margin-top: 20px;
 }
 
+/* === User Cards (versione compatta + responsive) === */
+.user-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    transition: box-shadow .15s ease, transform .15s ease;
+    color: #1a1a1a;
+}
+.user-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+}
+.user-card-super {
+    background: linear-gradient(135deg, #1a1a2e, #2c3e50);
+    border-color: #1a1a2e;
+    color: #ffffff;
+}
+.user-card-super .user-card-meta,
+.user-card-super .user-card-name {
+    color: #ffffff !important;
+}
+.user-card-sub {
+    margin-left: 24px;
+    border-left: 4px solid #4CAF50;
+    background: #f8fff8;
+}
+.user-card-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+.user-card-avatar {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    background: #4CAF50;
+}
+.user-card-avatar.role-admin { background: #d32f2f; }
+.user-card-avatar.role-operatore { background: #1976d2; }
+.user-card-avatar.role-visitatore { background: #f57c00; }
+.user-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.user-card-row1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.user-card-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #1a1a1a;
+    word-break: break-word;
+}
+.user-card-row2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    font-size: 0.85rem;
+    color: #444;
+}
+.user-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #444;
+}
+.user-card-meta i { color: #666; }
+.user-card-super .user-card-meta i { color: #cfe; }
+.badge-super {
+    background: #ffd700;
+    color: #1a1a2e;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.badge-admin {
+    background: #ffe0b2;
+    color: #b85c00;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.badge-count {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.user-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.user-card-self {
+    color: #888;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+.user-card-super .user-card-self { color: #ffd700; }
+
+/* Mobile: lista utenti verticale */
+@media (max-width: 600px) {
+    .user-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+    }
+    .user-card-main { width: 100%; }
+    .user-card-actions {
+        width: 100%;
+        justify-content: flex-end;
+        border-top: 1px solid #eee;
+        padding-top: 8px;
+        margin-top: 4px;
+    }
+    .user-card-super .user-card-actions { border-top-color: rgba(255,255,255,0.15); }
+    .user-card-actions .btn-label { display: none; }
+    .user-card-row2 { font-size: 0.8rem; }
+    .user-card-sub { margin-left: 12px; }
+}
+
+/* Form gestione utenti — grid responsive */
+.user-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
 .user-item {
     background: var(--light);
     border-radius: var(--border-radius);
@@ -2627,13 +2810,6 @@ input[type="radio"]:checked + span {
         Password dimenticata?
     </a>
 </div>
-
-    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-        <h4 style="margin-bottom: 10px;">Credenziali di test:</h4>
-        <p><strong>Admin:</strong> admin / admin123 (accesso completo)</p>
-        <p><strong>Operatore:</strong> operatore / opera123 (può aggiungere attività ma non modificare lotti)</p>
-        <p><strong>Visitatore:</strong> visitatore / visita123 (solo visualizzazione)</p>
-    </div>
 </div>
             
 <!-- Form Password Dimenticata -->
@@ -2756,14 +2932,11 @@ input[type="radio"]:checked + span {
         </div>
     </div>
     
-    <div class="form-group">
-        <label for="register-role">Ruolo nell'App</label>
-        <select id="register-role">
-            <option value="visitatore">Visitatore (solo visualizzazione)</option>
-            <option value="operatore">Operatore (può aggiungere attività)</option>
-            <option value="admin">Amministratore (accesso completo)</option>
-        </select>
-        <div class="help-text">Livello di accesso all'applicazione</div>
+    <div class="form-group" style="background: #e8f5e9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50; margin-top: 10px;">
+        <p style="margin: 0; font-size: 14px; color: #2e7d32;">
+            <i class="fas fa-info-circle"></i> <strong>Primo accesso?</strong> Verrai registrato come <b>Amministratore</b> con accesso completo. Potrai poi creare i tuoi sotto-utenti (operatori, visitatori) dalla sezione "Gestione Utenti".
+        </p>
+        <input type="hidden" id="register-role" value="">
     </div>
     
 <!-- Consenso Privacy -->
@@ -2785,10 +2958,16 @@ input[type="radio"]:checked + span {
         </div>
         
         <header id="app-header" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1>AgriManager</h1>
-            <p class="app-description">Gestione avanzata dei lotti di produzione</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="header-home-btn" onclick="goHome()" title="Torna alla home"
+                    style="background: rgba(255,255,255,0.18); color: white; border: 2px solid rgba(255,255,255,0.4); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: none; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s;">
+                <i class="fas fa-home"></i>
+            </button>
+            <div>
+                <h1 style="margin: 0;">AgriManager</h1>
+                <p class="app-description" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
+            </div>
         </div>
         <div class="user-info" style="flex-wrap: wrap; gap: 8px;">
     <span id="current-user-display">Utente</span>
@@ -3627,27 +3806,51 @@ input[type="radio"]:checked + span {
             
             <div class="permission-section">
                 <h3 style="margin-bottom: 15px;">Registra Nuovo Utente</h3>
-                <div class="section-grid">
+                <div class="user-form-grid">
                     <div class="form-group">
-                        <label for="new-user-username">Username</label>
-                        <input type="text" id="new-user-username" placeholder="Inserisci username">
+                        <label for="new-user-username">Username *</label>
+                        <input type="text" id="new-user-username" placeholder="es. mario_rossi">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="new-user-password">Password</label>
-                        <input type="password" id="new-user-password" placeholder="Inserisci password">
+                        <label for="new-user-email">Email <small style="color:#888">(opzionale, per invio credenziali)</small></label>
+                        <input type="email" id="new-user-email" placeholder="es. mario@azienda.it">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="new-user-role">Ruolo</label>
+                        <label for="new-user-password">Password *</label>
+                        <div style="position: relative;">
+                            <input type="password" id="new-user-password" placeholder="Minimo 6 caratteri" style="padding-right: 75px;">
+                            <button type="button" onclick="togglePasswordVisibility('new-user-password', this)"
+                                    title="Mostra/Nascondi password"
+                                    style="position: absolute; right: 38px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: #555; padding: 6px;">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" onclick="generateRandomPassword('new-user-password')"
+                                    title="Genera password casuale"
+                                    style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: #4CAF50; padding: 6px;">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-user-role">Ruolo *</label>
                         <select id="new-user-role">
-                            <option value="visitatore">Visitatore</option>
-                            <option value="operatore">Operatore</option>
-                            <option value="admin">Amministratore</option>
+                            <option value="visitatore">Visitatore (solo lettura)</option>
+                            <option value="operatore" selected>Operatore (può aggiungere/modificare)</option>
+                            <option value="admin">Amministratore (accesso completo)</option>
                         </select>
                     </div>
                 </div>
-                
+
+                <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 10px; background: #f1f8e9; border-radius: 8px;">
+                    <input type="checkbox" id="send-credentials-email" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    <label for="send-credentials-email" style="margin: 0; cursor: pointer; font-size: 0.95rem; color: #2e7d32;">
+                        <i class="fas fa-paper-plane"></i> Invia automaticamente le credenziali via email al sotto-utente (richiede campo Email)
+                    </label>
+                </div>
+
                 <button class="btn btn-primary" onclick="registerNewUser()">
                     <i class="fas fa-user-plus"></i> Registra Utente
                 </button>
@@ -3714,23 +3917,28 @@ input[type="radio"]:checked + span {
         </div>
     </div>
 
-    <!-- Esportazione Excel -->
+    <!-- Esportazione: Excel + PDF -->
     <div class="special-section" style="border-left-color: #00BCD4; background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%);">
         <div class="section-header">
             <div class="section-icon" style="background: #00BCD4;">
-                <i class="fas fa-file-excel"></i>
+                <i class="fas fa-file-export"></i>
             </div>
             <div style="flex: 1;">
-                <h3 class="section-title">📥 Esportazione Dati Completa</h3>
-                <p class="section-subtitle">Scarica tutti i dati del lotto in formato Excel con dettaglio completo</p>
+                <h3 class="section-title">📥 Esportazione Dati</h3>
+                <p class="section-subtitle">Scarica il bilancio in Excel completo o PDF stampabile</p>
             </div>
         </div>
         <div class="section-content expanded">
-            <button class="btn btn-primary" onclick="esportaBilancioCompleto()" style="background: #00BCD4; width: 100%; padding: 15px; font-size: 1.1rem;">
-                <i class="fas fa-download"></i> Scarica Report Completo (Excel)
-            </button>
-            <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9rem;">
-                Include: riepilogo lotti, attività di raccolta, analisi, costi personale, mezzi tecnici, beni durevoli e registrazioni economiche
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" class="export-buttons-grid">
+                <button class="btn btn-primary" onclick="esportaBilancioCompleto()" style="background: #00BCD4; padding: 14px; font-size: 1rem;">
+                    <i class="fas fa-file-excel"></i> Excel Completo
+                </button>
+                <button class="btn btn-primary" onclick="esportaBilancioPDF()" style="background: #d32f2f; padding: 14px; font-size: 1rem;">
+                    <i class="fas fa-file-pdf"></i> Report PDF Stagione
+                </button>
+            </div>
+            <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.85rem;">
+                <strong>Excel:</strong> dati grezzi (raccolta, costi, mezzi tecnici, beni durevoli) — <strong>PDF:</strong> bilancio sintetico con grafici e tabella riepilogativa
             </p>
         </div>
     </div>
@@ -4147,7 +4355,8 @@ function updateActionButtonsVisibility() {
     const username = document.getElementById('register-username').value.trim();
     const email = document.getElementById('register-email').value.trim();
     const password = document.getElementById('register-password').value;
-    const role = document.getElementById('register-role').value;
+    // Il backend assegna automaticamente il ruolo: primo utente → admin, gli altri → visitatore
+    const role = '';
     
     // Validazioni base
     if (!username || username.length < 3) {
@@ -4272,7 +4481,7 @@ const registrationData = {
         document.getElementById('register-username').value = '';
         document.getElementById('register-email').value = '';
         document.getElementById('register-password').value = '';
-        document.getElementById('register-role').value = 'visitatore';
+        // (campo "register-role" rimosso: ruolo deciso dal backend)
 
         // ✅ RESET PRIVACY CHECKBOX
         const privacyCheckbox = document.getElementById('privacy-consent');
@@ -4507,75 +4716,59 @@ async function sendRegistrationNotification(userData) {
     }
 }
 
-// Funzione helper per creare un elemento utente
+// Funzione helper per creare un elemento utente (versione compatta + responsive)
 function createUserItem(user, isSuperAdmin = false, subUsers = [], isSubUser = false) {
     const userItem = document.createElement('div');
-    userItem.className = 'user-item';
-    
-    // Stile per indentazione sottoutenti
-    if (isSubUser) {
-        userItem.style.marginLeft = '30px';
-        userItem.style.borderLeft = '3px solid #4CAF50';
-        userItem.style.borderRadius = '0 16px 16px 0';
-    }
-    
-    if (isSuperAdmin) {
-        userItem.style.background = 'linear-gradient(135deg, #2c3e50, #1a1a2e)';
-        userItem.style.color = 'white';
-    }
-    
-    // Gestisci i dati aziendali se presenti
+    userItem.className = 'user-card' + (isSuperAdmin ? ' user-card-super' : '') + (isSubUser ? ' user-card-sub' : '');
+
+    let userTypeIcon = '📋', userTypeText = 'Lib. Prof.';
+    if (user.user_type === 'titolare') { userTypeIcon = '👔'; userTypeText = 'Titolare'; }
+    else if (user.user_type === 'azienda') { userTypeIcon = '🏢'; userTypeText = 'Azienda'; }
+
     let aziendaInfo = '';
-    let userTypeIcon = '';
-    let userTypeText = '';
-    
-    if (user.user_type === 'libero_professionista') {
-        userTypeIcon = '📋';
-        userTypeText = 'Libero Professionista';
-    } else if (user.user_type === 'titolare') {
-        userTypeIcon = '👔';
-        userTypeText = 'Titolare';
-    } else if (user.user_type === 'azienda') {
-        userTypeIcon = '🏢';
-        userTypeText = 'Azienda';
-    }
-    
     if (user.azienda_data) {
         try {
             const azienda = typeof user.azienda_data === 'string' ? JSON.parse(user.azienda_data) : user.azienda_data;
-            aziendaInfo = `<p><small>🏢 Azienda: ${azienda.ragione_sociale || 'N/D'}</small></p>`;
-        } catch(e) { aziendaInfo = ''; }
+            if (azienda.ragione_sociale) {
+                aziendaInfo = `<span class="user-card-meta"><i class="fas fa-building"></i> ${escapeHtml(azienda.ragione_sociale)}</span>`;
+            }
+        } catch(e) {}
     }
-    
-    // Icona admin per i sottoutenti
-    const adminIcon = isSuperAdmin ? '👑 ' : (user.role === 'admin' ? '👨‍💼 ' : '');
-    const hierarchyIcon = isSubUser ? '└─ 📄 ' : (user.role === 'admin' ? '📁 ' : '');
-    
+
+    const adminBadge = isSuperAdmin ? '<span class="badge-super">👑 SUPER ADMIN</span>' : (user.role === 'admin' ? '<span class="badge-admin">👨‍💼 ADMIN</span>' : '');
+    const subBadge = subUsers.length > 0 ? `<span class="badge-count" title="${subUsers.length} sotto-utenti"><i class="fas fa-users"></i> ${subUsers.length}</span>` : '';
+    const dateStr = user.created_at ? new Date(user.created_at).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '-';
+
     userItem.innerHTML = `
-        <div class="user-info" style="${isSuperAdmin ? 'color: white;' : ''}">
-            <h3>${hierarchyIcon}${adminIcon}${user.username} ${isSuperAdmin ? '(SUPER ADMIN)' : (user.role === 'admin' ? '(ADMIN)' : '')}</h3>
-            <p>Email: ${user.email || 'N/D'}</p>
-            <p>Ruolo: <span class="role-badge role-${user.role}">${user.role}</span></p>
-            <p>Tipo: ${userTypeIcon} ${userTypeText}</p>
-            ${aziendaInfo}
-            <small>ID: ${user.id} - Registrato: ${new Date(user.created_at).toLocaleDateString()}</small>
-            ${user.parent_username ? `<small>Creato da: ${user.parent_username}</small>` : ''}
-            ${subUsers.length > 0 ? `<small><strong>📋 Sottoutenti: ${subUsers.length}</strong></small>` : ''}
+        <div class="user-card-main">
+            <div class="user-card-avatar role-${user.role}">${(user.username || '?').charAt(0).toUpperCase()}</div>
+            <div class="user-card-body">
+                <div class="user-card-row1">
+                    <span class="user-card-name">${escapeHtml(user.username)}</span>
+                    ${adminBadge}
+                    <span class="role-badge role-${user.role}">${user.role}</span>
+                    ${subBadge}
+                </div>
+                <div class="user-card-row2">
+                    <span class="user-card-meta"><i class="fas fa-envelope"></i> ${escapeHtml(user.email || '—')}</span>
+                    <span class="user-card-meta">${userTypeIcon} ${userTypeText}</span>
+                    ${aziendaInfo}
+                    ${user.parent_username ? `<span class="user-card-meta"><i class="fas fa-link"></i> ${escapeHtml(user.parent_username)}</span>` : ''}
+                    <span class="user-card-meta"><i class="fas fa-calendar"></i> ${dateStr}</span>
+                </div>
+            </div>
         </div>
-        <div class="user-actions">
+        <div class="user-card-actions">
             ${user.id !== currentUser.id ? `
-                <button class="btn-edit-small" onclick="editUserViaAPI(${user.id}, '${escapeHtml(user.username)}', '${user.role}')">
-                    <i class="fas fa-edit"></i> Modifica Ruolo
+                <button class="btn-edit-small" onclick="editUserViaAPI(${user.id}, '${escapeHtml(user.username)}', '${user.role}')" title="Modifica ruolo">
+                    <i class="fas fa-edit"></i><span class="btn-label"> Modifica</span>
                 </button>
-                <button class="btn-delete-small" onclick="deleteUserViaAPI(${user.id}, '${escapeHtml(user.username)}')">
-                    <i class="fas fa-trash"></i> Elimina
+                <button class="btn-delete-small" onclick="deleteUserViaAPI(${user.id}, '${escapeHtml(user.username)}')" title="Elimina utente">
+                    <i class="fas fa-trash"></i><span class="btn-label"> Elimina</span>
                 </button>
-            ` : `
-                <span style="color: #666;">Utente corrente</span>
-            `}
+            ` : '<span class="user-card-self"><i class="fas fa-user-check"></i> Tu</span>'}
         </div>
     `;
-    
     return userItem;
 }
         
@@ -4902,49 +5095,76 @@ async function deleteUserViaAPI(userId, username) {
     const username = document.getElementById('new-user-username').value.trim();
     const password = document.getElementById('new-user-password').value;
     const role = document.getElementById('new-user-role').value;
-    const email = `${username}@temp.com`;
-    
+    const emailInput = document.getElementById('new-user-email').value.trim();
+    const sendEmail = document.getElementById('send-credentials-email').checked;
+    // Email obbligatoria solo se invio credenziali, altrimenti generata fittiziamente
+    const email = emailInput || `${username}@temp.local`;
+
     if (!username || !password) {
         showNotification('Inserisci username e password', 'error');
         return;
     }
-    
+
     if (password.length < 6) {
         showNotification('La password deve avere almeno 6 caratteri', 'error');
         return;
     }
-    
+
+    if (sendEmail && !emailInput) {
+        showNotification('Per inviare le credenziali via email è necessario inserire l\'indirizzo email', 'error');
+        return;
+    }
+
     try {
         showNotification('Registrazione utente in corso...', 'loading');
-        
+
         const registrationData = {
-            username: username,
-            email: email,
-            password: password,
-            role: role,
+            username,
+            email,
+            password,
+            role,
             user_type: 'libero_professionista',
             azienda_data: null,
-            parent_id: currentUser?.id,
-            parent_username: currentUser?.username
+            send_credentials_email: sendEmail && !!emailInput
         };
-        
-        await apiCall('/auth/register', {
+
+        const response = await apiCall('/auth/register', {
             method: 'POST',
             body: registrationData
         });
-        
+
         // Reset form
         document.getElementById('new-user-username').value = '';
+        document.getElementById('new-user-email').value = '';
         document.getElementById('new-user-password').value = '';
-        document.getElementById('new-user-role').value = 'visitatore';
-        
+        document.getElementById('new-user-role').value = 'operatore';
+
         await loadUserManagement();
         await populateUserSelector();
-        
-        showNotification(`Utente ${username} registrato con successo`, 'success');
-        
+
+        let msg = `Utente ${username} registrato con successo`;
+        if (response?.email_sent) msg += ' — credenziali inviate via email ✉️';
+        else if (sendEmail && emailInput) msg += ' (⚠️ email non inviata: SMTP non configurato sul server)';
+        showNotification(msg, 'success');
+
     } catch (error) {
         showNotification(error.message || 'Errore nella registrazione', 'error');
+    }
+}
+
+// Genera password casuale leggibile (10 char alfanumerici)
+function generateRandomPassword(targetId) {
+    const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    const input = document.getElementById(targetId);
+    if (input) {
+        input.value = pwd;
+        input.type = 'text'; // mostra subito
+        // ripristina icona occhio se serve
+        const eyeBtn = input.parentElement.querySelector('button[title*="Mostra"] i');
+        if (eyeBtn) { eyeBtn.classList.remove('fa-eye'); eyeBtn.classList.add('fa-eye-slash'); }
+        showNotification('Password casuale generata', 'info');
     }
 }
         
@@ -7724,48 +7944,28 @@ function handleSectionSpecificActions(sectionId) {
 }
 
 function addHomeButton(section, sectionId) {
-    // Non aggiungere il pulsante alla home
+    // ✅ Pulsante home ora è nell'header (icona). Niente più bottone in-section.
+    // Manteniamo questa funzione solo per compatibilità + miglioria del header sezione.
+    const headerHomeBtn = document.getElementById('header-home-btn');
+    if (headerHomeBtn) {
+        headerHomeBtn.style.display = (sectionId === 'home') ? 'none' : 'inline-flex';
+    }
     if (sectionId === 'home') return;
-    
-    // Controlla se il pulsante esiste già
-    let homeBtn = section.querySelector('.nav-home-btn');
-    let navControls = section.querySelector('.section-nav-controls');
-    
-    if (!homeBtn) {
-        // Crea i controlli di navigazione se non esistono
-        if (!navControls) {
-            navControls = document.createElement('div');
-            navControls.className = 'section-nav-controls';
-            
-            // Inserisci prima del primo elemento della sezione
-            const firstChild = section.firstChild;
-            section.insertBefore(navControls, firstChild);
-        }
-        
-        // Crea il pulsante Home
-        homeBtn = document.createElement('button');
-        homeBtn.className = 'nav-home-btn';
-        homeBtn.innerHTML = '<i class="fas fa-home"></i> Torna alla Home';
-        homeBtn.onclick = function() {
-            // ✅ Nascondi lo storico economico
-            const storico = document.querySelector('.section-storico-economico');
-            if (storico) storico.style.display = 'none';
-            
-            showHome();
-        };
-        
-// In addHomeButton(), dopo aver creato homeBtn:
-if (isMobileDevice()) {
-    homeBtn.style.position = 'static';
-    homeBtn.style.width = '100%';
-    homeBtn.style.margin = '10px 0';
+
+    // Rimuovi eventuali vecchi bottoni "Torna alla home" creati in precedenza
+    const oldBtn = section.querySelector('.nav-home-btn');
+    if (oldBtn) oldBtn.remove();
+    const oldNav = section.querySelector('.section-nav-controls');
+    if (oldNav && !oldNav.children.length) oldNav.remove();
+
+    enhanceSectionHeader(section, sectionId);
 }
 
-        navControls.appendChild(homeBtn);
-        
-        // Migliora l'header della sezione
-        enhanceSectionHeader(section, sectionId);
-    }
+// Wrapper goHome per il bottone nell'header
+function goHome() {
+    const storico = document.querySelector('.section-storico-economico');
+    if (storico) storico.style.display = 'none';
+    showHome();
 }
 
 function enhanceSectionHeader(section, sectionId) {
@@ -9997,6 +10197,51 @@ function aggiornaGrafici(ricavi, personale, mezzi, ammortamenti) {
         });
     }
 }
+
+// ==================== ESPORTAZIONE PDF (Report Bilancio) ====================
+async function esportaBilancioPDF() {
+    if (!currentBilancioLotId) {
+        showNotification('Seleziona prima un lotto', 'warning');
+        return;
+    }
+    showNotification('Generazione PDF in corso...', 'loading');
+    showSpinner('Generazione PDF...');
+    try {
+        const stagione = document.getElementById('bilancio-stagione')?.value || '';
+        const token = localStorage.getItem('auth_token');
+        const url = `${API_BASE_URL}/reports/bilancio/${currentBilancioLotId}` +
+                    (stagione ? `?stagione=${encodeURIComponent(stagione)}` : '');
+
+        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!res.ok) {
+            let msg = 'Errore generazione PDF';
+            try { msg = (await res.json()).error || msg; } catch(_) {}
+            throw new Error(msg);
+        }
+
+        const blob = await res.blob();
+        const lot = allLots.find(l => l.id === parseInt(currentBilancioLotId));
+        const lotName = (lot?.company_name || 'lotto').replace(/[^a-z0-9]/gi, '_');
+        const filename = `bilancio_${lotName}_${stagione || 'tutte'}.pdf`;
+
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+        hideSpinner();
+        showNotification('Report PDF scaricato 📄', 'success');
+    } catch (error) {
+        hideSpinner();
+        console.error('Errore PDF:', error);
+        showNotification(error.message || 'Errore nella generazione PDF', 'error');
+    }
+}
+
 
 // ==================== ESPORTAZIONE EXCEL COMPLETA ====================
 async function esportaBilancioCompleto() {

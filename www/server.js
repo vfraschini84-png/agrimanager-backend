@@ -171,6 +171,7 @@ mountRoute('/api/activities', './routes/activities');
 mountRoute('/api/analyses', './routes/analyses');
 mountRoute('/api/economic', './routes/economic');
 mountRoute('/api/costi', './routes/costi');
+mountRoute('/api/reports', './routes/reports');
 
 // ==================== 404 ====================
 app.use((req, res) => {
@@ -219,7 +220,8 @@ const PORTS = [PORT];
 const EXTRA = parseInt(process.env.EXTRA_PORT || '8001', 10);
 if (EXTRA && EXTRA !== PORT) PORTS.push(EXTRA);
 
-const servers = PORTS.map(p => app.listen(p, '0.0.0.0', () => {
+// In modalità test NON aprire le porte (Supertest usa l'app in-process)
+const servers = NODE_ENV === 'test' ? [] : PORTS.map(p => app.listen(p, '0.0.0.0', () => {
     logger.info('🚀 Server AgriManager in ascolto', { port: p, nodeEnv: NODE_ENV });
     if (NODE_ENV !== 'production') {
         console.log(`==================================`);

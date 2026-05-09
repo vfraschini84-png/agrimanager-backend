@@ -1,28 +1,31 @@
 # PRD — AgriManager
 
-**Ultimo aggiornamento**: 2026-05-08
-**Versione**: 1.1.0 (post hardening)
+**Ultimo aggiornamento**: 2026-05-09
+**Versione**: 1.3.0
 
 ---
 
 ## Problem statement
-"Analizza la mia app" → analisi completa + applicazione di tutti i fix critici e importanti identificati su un'app Capacitor Android (Node/Express + SQLite + HTML monolitico) per la gestione di lotti agricoli.
+"Analizza la mia app" → analisi completa + applicazione di tutti i fix critici e poi una serie di feature improvements su un'app Capacitor Android (Node/Express + SQLite + HTML monolitico) per la gestione di lotti agricoli.
 
 ## Stack
-- Backend: Node.js 20 + Express 4 + SQLite3
+- Backend: Node.js 20 + Express 4 + SQLite3 (file `/app/data/agrimanager.db`, fuori da www/)
 - Auth: JWT + bcrypt
-- Sicurezza: helmet, cors whitelist, express-rate-limit, compression
+- Sicurezza: helmet, cors whitelist con regex, express-rate-limit, compression
 - Logging: Winston (file rotation + console dev)
 - Docs: Swagger / OpenAPI 3.0 su `/api-docs`
 - Mobile: Capacitor 7 + Geolocation + Preferences
-- Test: Jest + Supertest (33 test attivi)
+- Test: Jest + Supertest (36 test attivi)
+- PDF: pdfkit + chartjs-node-canvas (per report bilancio)
+- Email: nodemailer (SMTP da env)
+- Process manager: supervisor (program `agrimanager`)
 
 ## Personas
 - **Super-admin** (`username='admin'`): vede e gestisce tutto, può resettare password.
 - **Admin azienda** (`role='admin'`): gestisce solo i propri sotto-utenti e i loro dati.
-- **Operatore** (`role='operatore'` → mappato a `operator`): legge/crea/aggiorna lotti, attività, analisi, dati economici.
-- **Visitatore** (`role='visitatore'` → mappato a `viewer`): solo lettura.
-- **Manager** (`role='manager'`): tutti i permessi business escluso seed admin.
+- **Operator** (`role='operatore'` → mappato a `operator`): legge/crea/aggiorna lotti, attività, analisi, dati economici.
+- **Viewer** (`role='visitatore'` → mappato a `viewer`): solo lettura.
+- **Manager** (`role='manager'`): tutti i permessi business.
 
 ## Core requirements
 - Multi-tenant via `parent_id` / `owner_id`.
@@ -32,85 +35,80 @@
 - Registrazioni economiche (ricavi, costi, ammortamenti).
 - Costi mezzi tecnici e personale.
 - Reset password via email (token 1h).
+- Report PDF "Bilancio Stagione".
 
-## Architettura tasks completate (sessione 2026-05-08)
+---
 
-### 🔴 Fix critici applicati
-| # | Fix | File |
+## Cronologia implementazioni
+
+### Sessione 1 (2026-05-08): hardening security
+21 fix critici applicati: .env + JWT_SECRET, RBAC alias IT/EN, dedup DELETE users cascade, DB fuori da www/, static restrittivo, SMTP da env, transazioni, init DB sequenziale, CORS pattern, rate-limit login, /api/health, graceful shutdown.
+
+### Sessione 2 (2026-05-08): privacy ereditata sotto-utenti
+- Backend: `POST /api/auth/register` se token Bearer valido + creator ha privacy → eredita su sotto-utente
+- DB: super-admin di seed con `privacy_accepted=1` + migrazione per admin esistenti
+
+### Sessione 3 (2026-05-09): UX & feature improvements
+| # | Modifica | File |
 |---|---|---|
-| 1 | Creato `.env` + `.env.example` con `JWT_SECRET` e fail-fast all'avvio | `www/.env`, `www/.env.example`, `www/server.js` |
-| 2 | DB spostato fuori da `www/` in `/app/data/agrimanager.db` (configurabile via `DATABASE_PATH`) | `www/database.js` |
-| 3 | Rimosso static serving dell'intera `www/` → solo `index.html` e `reset-password.html` | `www/server.js` |
-| 4 | RBAC allineato: aggiunti alias `operatore→operator`, `visitatore→viewer`; `operator` ora ha anche `lots:create/update`, `economic:create/update` | `www/middleware/rbac.js` |
-| 5 | Rimossa rotta `DELETE /api/auth/users/:id` duplicata che bypassava cascade-delete | `www/routes/auth.js` |
-| 6 | Cascade delete ora in transazione `BEGIN/COMMIT/ROLLBACK` | `www/routes/auth.js`, `www/database.js` |
-| 7 | SMTP credenziali spostate da hardcoded a env; mail di reset davvero inviata se SMTP configurato | `www/routes/auth.js`, `www/.env.example` |
-| 8 | Forgot-password non logga più il link in produzione (solo NODE_ENV≠production) | `www/routes/auth.js` |
-| 9 | Endpoint pubblici di `lots.js` ora richiedono auth+permission (GET /:id, /:id/details, /:id/details/all, POST/PUT/DELETE details) | `www/routes/lots.js` |
-| 10 | `GET /api/lots` non accetta più anonymous con token invalido — risponde 401/403 | `www/routes/lots.js` |
-| 11 | Init DB non più annidato (era dentro callback di `password_reset_tokens`) | `www/database.js` |
-| 12 | Indici DB sempre creati, anche se prima callback fallisce | `www/database.js` |
-| 13 | Aggiunti `requirePermission('economic:read'/'economic:create')` mancanti | `www/routes/economic.js` |
-| 14 | Capacitor `appId` da `com.example.myapp` a `com.agrimanager.app` | `capacitor.config.ts` |
-| 15 | Rate-limit specifico `/api/auth/login` e `/api/auth/forgot-password` (10 tentativi / 15 min) | `www/server.js` |
-| 16 | Endpoint `/api/health` aggiunto | `www/server.js` |
-| 17 | Graceful shutdown su SIGTERM/SIGINT con timeout 10s | `www/server.js` |
-| 18 | `JWT_EXPIRES_IN` e `BCRYPT_SALT_ROUNDS` ora da env | `www/.env`, `www/routes/auth.js` |
-| 19 | `PRAGMA foreign_keys = ON` su connessione SQLite | `www/database.js` |
-| 20 | `app.set('trust proxy', 1)` per rate-limit dietro reverse proxy | `www/server.js` |
-| 21 | CORS/CSP/`PUBLIC_URL` configurabili da env (rimosso IP hardcoded `192.168.0.69`) | `www/server.js` |
+| 1 | **Auto-promozione** primo utente registrato pubblicamente → admin (se DB vuoto, esclusi seed). Eliminato il selettore ruolo dalla registrazione pubblica → input nascosto + box info verde | `routes/auth.js`, `index.html` |
+| 2 | Form gestione utenti rinnovato: campo **Email**, **show/hide password**, generatore **password casuale**, checkbox **invio credenziali via email** | `index.html` |
+| 3 | Endpoint `POST /api/auth/register` ora invia automaticamente le credenziali via SMTP se `send_credentials_email: true` e SMTP configurato | `routes/auth.js` |
+| 4 | **Lista utenti compatta + responsive** con avatar circolare, badge ruolo colorati, contrasti corretti (testo scuro su sfondo chiaro / bianco su scuro). Su mobile: layout verticale con azioni in fondo, label nascoste | `index.html` (CSS .user-card*) |
+| 5 | **Icona home nell'header** (sostituisce i pulsanti "Torna alla home" in-section che causavano scroll-jump). Visibile su tutte le sezioni eccetto home. Mobile-friendly con touch-target 40px | `index.html` (CSS + addHomeButton + goHome) |
+| 6 | **Smooth scroll** + `overscroll-behavior-y: contain` per evitare scroll-jump mobile | `index.html` (CSS body/html) |
+| 7 | Nuovo endpoint **`GET /api/reports/bilancio/:lotId?stagione=YYYY`** con pdfkit + chartjs-node-canvas → genera PDF A4 con KPI, 2 grafici (donut ricavi/costi + bar costi breakdown), tabella registrazioni economiche, footer con paginazione | `routes/reports.js` (nuovo) |
+| 8 | Bottone "Report PDF Stagione" affianco a "Excel Completo" nella sezione Bilancio (grid 2-col responsive) | `index.html` |
+| 9 | **Rimosso box "Credenziali di test"** dalla schermata di login | `index.html` |
+| 10 | Server NON ascolta in test mode (per Supertest in-process) | `server.js` |
+| 11 | Server ora gestito da **supervisor** (`agrimanager` program) → autostart + autorestart | `/etc/supervisor/conf.d/supervisord_agrimanager.conf` |
 
-### 🧪 Test coverage
-- Da 10 test passanti a **33 test passanti** in 4 suite:
+### Test coverage
+- **36 test passanti** in 5 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
-  - `rbac.test.js` (7): alias ruoli IT/EN, hasPermission
-  - `lots.test.js` (8): protezione 401/403 sugli endpoint precedentemente pubblici
-  - `server.test.js` (8): health, swagger, file `.db/.env/.js` non esposti, 404
+  - `rbac.test.js` (7): alias ruoli IT/EN
+  - `lots.test.js` (8): protezione 401/403 endpoint
+  - `server.test.js` (8): health, swagger, file safety
+  - `sub-user-registration.test.js` (3): privacy ereditata
+
+### Validazione live
+- ✅ Login admin via URL pubblico → 200
+- ✅ Registrazione pubblica primo utente → role=admin (auto_promoted=true)
+- ✅ Registrazione secondo utente pubblico → role=visitatore
+- ✅ Admin crea sotto-utente senza privacy → inherited_privacy=true, parent_id corretto
+- ✅ Sotto-utente con email + send_credentials_email → email_sent=true (SMTP Ethereal)
+- ✅ PDF download `/api/reports/bilancio/:lotId` → 29.6 KB, content-type application/pdf, valido
+- ✅ Server sotto supervisor → autorestart funzionante
 
 ## Test credentials
-- Vedi `/app/memory/test_credentials.md`
-
-## Cosa è già implementato dal team prima di questa sessione
-- JWT auth con bcrypt
-- Multi-tenant via parent_id
-- Helmet con CSP custom
-- CORS whitelist
-- Rate-limit globale 100/15min
-- Swagger API docs
-- Winston logger con file rotation
-- Backup script
-- Reset password con token
+- Vedi `/app/memory/test_credentials.md`. Admin: `admin` / `96a0761f3943`.
 
 ## Backlog / Next steps
 
-### P0 (blocking se va in produzione)
-- [ ] Disabilitare `'unsafe-inline'` e `'unsafe-eval'` in CSP (richiede refactor del frontend monolitico)
-- [ ] Aggiungere `helmet` HSTS attivo in produzione (force HTTPS)
-
 ### P1 (importanti)
-- [ ] Refactor frontend `index.html` (11.152 righe / 423 KB) → bundling con Vite + componenti separati
-- [ ] Sostituire residui `console.log` con `logger.*` in `economic.js`, `activities.js`, `analyses.js`, `costi.js`
-- [ ] Validazione password più robusta (zxcvbn)
-- [ ] Refresh token + endpoint `/api/auth/logout` con blacklist
-- [ ] CI con GitHub Actions (test + lint)
+- [ ] CSP: rimuovere `'unsafe-inline'`/`'unsafe-eval'` (richiede refactor frontend monolitico)
+- [ ] Refactor `index.html` (11k+ righe) → Vite + componenti
+- [ ] HSTS in produzione
+- [ ] Validazione password con zxcvbn
+- [ ] Refresh token + endpoint logout
+- [ ] CI con GitHub Actions
+- [ ] Sostituire `console.log` residui con `logger.*` in routes minori
 - [ ] CSRF protection se passi a cookie auth
-- [ ] Sanitizzazione HTML su campi `notes`/`description` per evitare XSS stored
-- [ ] Test integration con DB in-memory `:memory:`
 
-### P2 (miglioramenti)
-- [ ] Docker multi-stage + docker-compose
-- [ ] Migrazioni DB con Knex/Drizzle al posto del bootstrap manuale
+### P2 (nice-to-have)
+- [ ] Docker / docker-compose
+- [ ] Migrazioni DB (Knex/Drizzle)
 - [ ] Monitoring (Sentry / OpenTelemetry)
-- [ ] Cache Redis per query lente
-- [ ] **Report PDF "Bilancio Stagione" per lotto** (suggerimento smart per upgrade Pro)
-- [ ] Versionamento API `/api/v1/`
 - [ ] TypeScript migration
+- [ ] Reset password admin con UI dedicata
+- [ ] Selettore tema chiaro/scuro
+- [ ] Ricerca/filtri nella lista utenti
 
-## Avvio rapido
+## Avvio
+Server gestito da supervisor:
 ```bash
-cd /app/www
-npm install                 # già fatto
-node server.js              # http://localhost:3000
-# Test:
-cd /app && npx jest --forceExit
+sudo supervisorctl status agrimanager
+sudo supervisorctl restart agrimanager
+sudo supervisorctl tail -f agrimanager
 ```
+URL pubblico: https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com/

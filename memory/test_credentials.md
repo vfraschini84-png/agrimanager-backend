@@ -1,33 +1,40 @@
 # Test credentials — AgriManager
 
-## ⚠️ ATTENZIONE
-Le credenziali admin vengono **rigenerate automaticamente** ad ogni reset del DB (cancellazione di `/app/data/agrimanager.db`). La password viene stampata nel log al primo avvio.
-
-## Super-admin corrente
+## Super-admin (auto-creato al primo avvio)
 - **Username**: `admin`
 - **Email**: `admin@agrimanager.com`
-- **Password attuale**: `14faa1dc30d2` (valida finché non viene cancellato il DB)
-- **Ruolo**: `admin`
-- `privacy_accepted = 1` (auto-impostato dal seed)
+- **Password attuale**: `96a0761f3943` (valida finché non viene cancellato il DB `/app/data/agrimanager.db`)
+- **Ruolo**: `admin` (super-admin se username === 'admin')
+- **privacy_accepted**: 1 (auto-impostato dal seed)
 
 Per recuperare la password admin se la dimentichi:
 ```bash
-grep "Password:" /tmp/agri.log | tail -1 | awk '{print $NF}'
+grep "Password:" /var/log/supervisor/agrimanager.out.log | tail -1 | awk '{print $NF}'
 ```
 
-## Sotto-utenti di test creati
-- `mario_op` (operatore, parent=admin) — può creare/modificare lotti
-- `operatore1` (operatore, parent=admin)
+## Auto-promozione primo utente
+Se non ci sono altri utenti nel DB (oltre al super-admin di seed), il primo utente che si registra
+pubblicamente viene **promosso automaticamente ad amministratore** dal backend, indipendentemente
+dal ruolo passato nel body.
+
+## Privacy ereditata sui sotto-utenti
+Quando un utente già autenticato (`Authorization: Bearer <token>`) crea un sotto-utente via
+`POST /api/auth/register`, il backend:
+- imposta `parent_id` automaticamente al creatore (non falsificabile dal client)
+- eredita la privacy (non serve `privacy_accepted: true` nel body)
+- restituisce `inherited_privacy: true` nella risposta
+
+## Invio credenziali via email (sotto-utenti)
+Body opzionale: `send_credentials_email: true` + `email` valida.
+- Funziona solo se SMTP è configurato in `www/.env` (variabili `SMTP_HOST/USER/PASS`).
+- Configurazione attuale: Ethereal (sandbox di test) → email NON arrivano realmente, ma vengono
+  catturate e visibili sul portale Ethereal con le credenziali della SMTP_USER.
+- Per email reali in produzione, sostituire con SendGrid / Mailgun / Resend / ...
 
 ## Reset password
-- Endpoint: `POST /api/auth/forgot-password` con `{ email }`
-- Endpoint: `POST /api/auth/reset-password` con `{ token, newPassword }`
-- Token valido 1 ora
-- In dev (NODE_ENV=development) il link viene loggato in console
-- In prod, mail vera se SMTP è configurato in `.env`
+- `POST /api/auth/forgot-password` con `{ email }` → crea token (1h validità)
+- `POST /api/auth/reset-password` con `{ token, newPassword }`
+- In dev viene loggato il link, in prod inviato per email se SMTP configurato
 
 ## Reset password forzato (super-admin)
-- Endpoint: `POST /api/auth/admin-reset-password` con `{ userId, newPassword }` e Bearer token del super-admin
-
-## Privacy ereditata
-Quando un utente autenticato (con privacy già accettata) crea un sotto-utente via `POST /api/auth/register`, la privacy viene **ereditata automaticamente** — il sotto-utente non deve accettare di nuovo l'informativa. Vale solo se viene fornito `Authorization: Bearer <token>` valido nella richiesta. Se il token manca o è invalido, la registrazione è considerata "pubblica" e `privacy_accepted: true` resta obbligatorio.
+- `POST /api/auth/admin-reset-password` con `{ userId, newPassword }` + Bearer token del super-admin

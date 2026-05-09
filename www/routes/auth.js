@@ -146,28 +146,62 @@ router.post('/register', async (req, res) => {
         ? inheritedFromParent.username
         : (parent_username || null);
 
+    // ✅ AUTO-PROMOZIONE PRIMO UTENTE AD ADMIN
+    // Se non esistono altri utenti nel DB (oltre eventualmente al super-admin 'admin' di seed),
+    // il primo utente che si registra pubblicamente diventa amministratore.
+    let finalRole = role || 'visitatore';
+    if (!inheritedFromParent) {
+        const otherUsersCount = await db.getAsync(
+            "SELECT COUNT(*) as c FROM users WHERE username != 'admin'"
+        );
+        if ((otherUsersCount?.c || 0) === 0) {
+            finalRole = 'admin';
+        }
+    }
+
     // ✅ INSERISCI CON PRIVACY
     const result = await db.runAsync(
         `INSERT INTO users (username, email, password_hash, role, user_type, azienda_data, parent_id, parent_username, privacy_accepted, privacy_accepted_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [username, email, hashedPassword, role || 'visitatore', user_type || 'libero_professionista',
+        [username, email, hashedPassword, finalRole, user_type || 'libero_professionista',
          azienda_data ? JSON.stringify(azienda_data) : null, parent_id || null, finalParentUsername,
          1, now, now]
     );
 
     // Genera token JWT
     const token = jwt.sign(
-        { id: result.id, username, email, role: role || 'visitatore' },
+        { id: result.id, username, email, role: finalRole },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
     );
+
+    // ✅ INVIO EMAIL CREDENZIALI (se richiesto e SMTP configurato)
+    let emailSent = false;
+    if (req.body.send_credentials_email && transporter && email) {
+        try {
+            const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
+            await transporter.sendMail({
+                from: process.env.SMTP_FROM || 'no-reply@agrimanager.local',
+                to: email,
+                subject: 'AgriManager — Le tue credenziali di accesso',
+                text: `Ciao ${username},\n\nÈ stato creato un account AgriManager per te.\n\n  • Username: ${username}\n  • Password: ${password}\n  • Ruolo: ${finalRole}\n\nPer accedere apri: ${publicUrl}\n\nTi consigliamo di cambiare la password al primo accesso.`,
+                html: `<p>Ciao <b>${username}</b>,</p><p>È stato creato un account AgriManager per te.</p><ul><li><b>Username:</b> ${username}</li><li><b>Password:</b> <code>${password}</code></li><li><b>Ruolo:</b> ${finalRole}</li></ul><p>Per accedere apri: <a href="${publicUrl}">${publicUrl}</a></p><p style="color:#888;font-size:.9em">Ti consigliamo di cambiare la password al primo accesso.</p>`
+            });
+            emailSent = true;
+            logger.info('Email credenziali inviata', { username, email });
+        } catch (mailErr) {
+            logger.error('Errore invio email credenziali', { error: mailErr.message });
+        }
+    }
 
     res.status(201).json({
         success: true,
         message: 'Utente registrato con successo',
         token,
-        user: { id: result.id, username, email, role: role || 'visitatore', parent_id: parent_id || null },
-        inherited_privacy: inheritedPrivacy
+        user: { id: result.id, username, email, role: finalRole, parent_id: parent_id || null },
+        inherited_privacy: inheritedPrivacy,
+        email_sent: emailSent,
+        auto_promoted_admin: finalRole === 'admin' && (!role || role !== 'admin')
     });
 });
 
