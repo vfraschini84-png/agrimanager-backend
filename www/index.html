@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#4CAF50">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -295,9 +296,31 @@ h1 {
     transform: scale(0.95);
 }
 
-/* Smooth scroll body (evita salti bruschi su mobile) */
-html { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-body { -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+/* ✅ Scroll su Android/iOS: niente smooth globale (causa scatti), ma momentum scrolling.
+   Lo smooth viene applicato solo a navigazioni esplicite via JS (es. cambio sezione). */
+html {
+    -webkit-overflow-scrolling: touch;
+}
+body {
+    -webkit-overflow-scrolling: touch;
+    /* Non usare overscroll-behavior-y: contain su Android — può bloccare lo scroll
+       e causare "rimbalzi" alla riga superiore quando l'utente fa swipe rapido. */
+    overscroll-behavior-y: auto;
+    /* Evita che `transition: all` su elementi figli inneschi un riflusso che resetta lo scroll */
+    will-change: auto;
+}
+
+/* Durante lo scroll attivo, disabilita le transizioni su elementi posizionati che possono
+   essere causa di reflow → meno chance di scroll-jump su Android. */
+body.is-scrolling * {
+    transition: none !important;
+    animation-play-state: paused !important;
+}
+
+/* Su Android dedicato: evita anchor-jump quando un elemento focused riceve attention */
+.android-device :focus {
+    scroll-margin-top: 80px;  /* dà un po' di "respiro" sopra l'elemento focused */
+}
 
 @media (max-width: 600px) {
     #app-header > div { gap: 8px !important; }
@@ -5301,16 +5324,8 @@ function setupSafeArea() {
 }
 
           function initMobileGPS() {
-            if (isMobileDevice()) {
-                const gpsField = document.getElementById('gps-coordinates');
-                if (gpsField) {
-                    gpsField.addEventListener('focus', function() {
-                        setTimeout(() => {
-                            this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
-                    });
-                }
-            }
+            // ⚠️ Disabilitato scrollIntoView su focus GPS — causava scroll jump su Android.
+            // Il browser nativo posiziona già correttamente l'input quando si apre la keyboard.
         }
 
         // SOSTITUISCI optimizeMobileLoad CON QUESTA VERSIONE MIGLIORATA
@@ -7949,7 +7964,11 @@ function popolaFormEconomico(record) {
     }
     
     if (isMobileDevice()) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Scroll all'inizio della sezione, ma senza smooth (causa scatti su Android).
+        // Usiamo scroll diretto + requestAnimationFrame per attendere il rendering della sezione.
+        requestAnimationFrame(() => {
+            window.scrollTo(0, 0);
+        });
     }
     
     // Rimuovi classe 'active' da TUTTE le sezioni e pulisci stili inline
@@ -8955,14 +8974,11 @@ function setupSafeArea() {
     if (hasNotch) {
         document.body.classList.add('notch-device');
         console.log('✅ Dispositivo con notch rilevato - Safe Area Attivata');
-        
-        // Forza il re-calcolo del layout
-        setTimeout(() => {
-            document.body.style.display = 'none';
-            document.body.offsetHeight; // Trigger reflow
-            document.body.style.display = '';
-            console.log('🔄 Reflow forzato per safe area');
-        }, 100);
+        // ⚠️ RIMOSSO reflow forzato (display:none + display:''):
+        // su Android resettava lo scroll a 0 quando setupSafeArea veniva richiamato
+        // dopo l'apertura della keyboard, l'orientation change, o un resize.
+        // Le CSS variables --safe-area-* vengono applicate immediatamente dai browser
+        // moderni senza bisogno di forzare il reflow.
     }
     
     // Debug: mostra i valori delle safe area
@@ -8983,6 +8999,19 @@ function initMobileOptimizations() {
     
     console.log('📱 Avvio ottimizzazioni mobile...');
     
+    // ✅ Anti scroll-jump: aggiungi classe 'is-scrolling' durante lo scroll
+    // per disabilitare transition/animation che potrebbero causare reflow.
+    let _scrollEndTimer = null;
+    window.addEventListener('scroll', () => {
+        if (!document.body.classList.contains('is-scrolling')) {
+            document.body.classList.add('is-scrolling');
+        }
+        clearTimeout(_scrollEndTimer);
+        _scrollEndTimer = setTimeout(() => {
+            document.body.classList.remove('is-scrolling');
+        }, 150);
+    }, { passive: true });
+    
     // Previeni zoom su input
     document.addEventListener('touchstart', function() {}, { passive: true });
     
@@ -8996,48 +9025,33 @@ function initMobileOptimizations() {
         element.style.minWidth = '44px';
     });
     
-    // Keyboard avoidance per iOS
-    document.querySelectorAll('input, textarea, select').forEach(input => {
-        input.addEventListener('focus', function() {
-            setTimeout(() => {
-                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
+    // Keyboard avoidance: SOLO iOS (su Android il browser nativo gestisce meglio,
+    // e fare scrollIntoView qui causava lo "scatto verso l'alto" su Android).
+    const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isiOS) {
+        document.querySelectorAll('input, textarea, select').forEach(input => {
+            input.addEventListener('focus', function() {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
         });
-    });
+    }
     
     console.log('✅ Ottimizzazioni mobile completate');
 }
 
 // ==================== GESTIONE KEYBOARD SU ANDROID ====================
+// ⚠️ Versione safe: NON forziamo più scroll su blur (causava il "salto su" sgradevole).
+// Lasciamo che il browser gestisca nativamente lo scroll della keyboard tramite
+// il meta viewport `interactive-widget=resizes-content`.
 function initAndroidKeyboardHandler() {
     if (!isAndroidDevice()) return;
-    
-    console.log('📱 Attivazione gestione keyboard per Android');
-    
-    const inputs = document.querySelectorAll('input, textarea, select');
-    let originalScrollPosition = 0;
-    
-    inputs.forEach(input => {
-        input.addEventListener('focus', () => {
-            originalScrollPosition = window.scrollY;
-            
-            // Ritarda lo scroll per evitare conflitti con la gesture bar
-            setTimeout(() => {
-                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                
-                // Aggiungi un padding extra quando la keyboard è aperta
-                document.body.style.paddingBottom = 'calc(25px + var(--safe-area-bottom) + var(--extra-padding-bottom) + 200px)';
-            }, 300);
-        });
-        
-        input.addEventListener('blur', () => {
-            // Ripristina il padding quando la keyboard si chiude
-            setTimeout(() => {
-                document.body.style.paddingBottom = '';
-                window.scrollTo(0, originalScrollPosition);
-            }, 100);
-        });
-    });
+    console.log('📱 Android keyboard handler (modalità safe - no forced scroll)');
+    // Non aggiungiamo più listener focus/blur che alterano window.scrollY.
+    // L'unica cosa che ci serve è assicurare che gli input siano visibili
+    // quando la keyboard si apre — lo fa nativamente Android se il meta viewport
+    // è configurato con `interactive-widget=resizes-content`.
 }
 
 function isAndroidDevice() {
@@ -9149,7 +9163,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Esegui anche al resize e orientation change
-window.addEventListener('resize', setupSafeArea);
+// ⚠️ Versione safe: debounce + skip se è solo l'apertura della keyboard Android
+// (riconoscibile da: stessa larghezza ma altezza ridotta -> probabilmente keyboard aperta).
+let _lastViewportWidth = window.innerWidth;
+let _lastViewportHeight = window.innerHeight;
+let _safeAreaDebounce = null;
+window.addEventListener('resize', function() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // Se cambia solo l'altezza e in modo significativo (>150px) MENTRE un input è focus,
+    // è la tastiera che si apre/chiude → NON ricalcolare safe area (causerebbe scroll jump).
+    const sameWidth = (w === _lastViewportWidth);
+    const heightDelta = Math.abs(h - _lastViewportHeight);
+    const isInputFocused = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+    if (sameWidth && heightDelta > 150 && isInputFocused) {
+        // Keyboard event: ignora resize per safe area
+        _lastViewportHeight = h;
+        return;
+    }
+    _lastViewportWidth = w;
+    _lastViewportHeight = h;
+    // Debounce
+    clearTimeout(_safeAreaDebounce);
+    _safeAreaDebounce = setTimeout(setupSafeArea, 250);
+});
 window.addEventListener('orientationchange', function() {
     setTimeout(setupSafeArea, 300);
 });
