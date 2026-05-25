@@ -73,7 +73,12 @@ app.use(helmet({
             ],
             fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
             imgSrc: ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'", 'https://api.ipify.org', 'https://cdn.jsdelivr.net'],
+            connectSrc: [
+                "'self'",
+                'https://api.ipify.org',
+                'https://cdn.jsdelivr.net',
+                'https://nominatim.openstreetmap.org'
+            ],
             objectSrc: ["'none'"],
             frameAncestors: ["'self'"]
         }
