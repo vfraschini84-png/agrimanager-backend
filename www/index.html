@@ -2752,7 +2752,90 @@ input[type="radio"]:checked + span {
     }
 }
 
+/* ==================== PAGINAZIONE COMPATTA PER MOBILE ==================== */
+/* Container principale della paginazione */
+#pagination-controls {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    margin: 20px 0 !important;
+    padding: 10px 0 !important;
+}
 
+/* Stile base per desktop */
+#pagination-controls button {
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: opacity 0.2s !important;
+}
+
+#pagination-controls button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+#pagination-controls .page-info {
+    font-size: 0.9rem !important;
+    color: #666 !important;
+    padding: 0 15px !important;
+    white-space: nowrap !important;
+}
+
+/* MOBILE (max 768px) - versione compatta */
+@media (max-width: 768px) {
+    #pagination-controls {
+        gap: 6px !important;
+        justify-content: space-between !important;
+        padding: 8px 0 !important;
+        margin: 15px 0 !important;
+    }
+    
+    #pagination-controls button {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+        border-radius: 20px !important;
+        min-width: auto !important;
+        flex-shrink: 0 !important;
+    }
+    
+    #pagination-controls .page-info {
+        font-size: 0.8rem !important;
+        padding: 0 8px !important;
+        white-space: nowrap !important;
+        background: #f0f0f0 !important;
+        padding: 5px 12px !important;
+        border-radius: 20px !important;
+        font-weight: 500 !important;
+        color: #333 !important;
+        flex-shrink: 0 !important;
+    }
+}
+
+/* Mobile piccolo (max 480px) - ancora più compatto */
+@media (max-width: 480px) {
+    #pagination-controls {
+        gap: 4px !important;
+        padding: 5px 0 !important;
+    }
+    
+    #pagination-controls button {
+        padding: 5px 10px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    #pagination-controls .page-info {
+        font-size: 0.75rem !important;
+        padding: 3px 10px !important;
+    }
+}
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
