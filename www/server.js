@@ -62,22 +62,26 @@ app.use(helmet({
                 'https://cdnjs.cloudflare.com',
                 'https://kit.fontawesome.com',
                 'https://cdn.jsdelivr.net',
-                'https://static.cloudflareinsights.com'
+                'https://static.cloudflareinsights.com',
+                'https://unpkg.com'
             ],
             scriptSrcAttr: ["'self'", "'unsafe-inline'"],
             styleSrc: [
                 "'self'",
                 "'unsafe-inline'",
                 'https://cdnjs.cloudflare.com',
-                'https://fonts.googleapis.com'
+                'https://fonts.googleapis.com',
+                'https://unpkg.com'
             ],
             fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'https://fonts.gstatic.com', 'data:'],
-            imgSrc: ["'self'", 'data:', 'https:'],
+            imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
             connectSrc: [
                 "'self'",
                 'https://api.ipify.org',
                 'https://cdn.jsdelivr.net',
-                'https://nominatim.openstreetmap.org'
+                'https://unpkg.com',
+                'https://nominatim.openstreetmap.org',
+                'https://*.tile.openstreetmap.org'
             ],
             objectSrc: ["'none'"],
             frameAncestors: ["'self'"]

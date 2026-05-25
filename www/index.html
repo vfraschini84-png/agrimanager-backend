@@ -9,8 +9,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>AgriManager - Gestione Lotti</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <style>
 :root {
     --primary: #4CAF50;
@@ -5635,8 +5635,23 @@ function optimizeMobileLoad() {
          */
         function openMapPicker(targetInputId = 'gps-coordinates') {
             if (typeof L === 'undefined') {
-                showNotification('Caricamento mappa in corso, riprova tra 1 secondo...', 'warning');
-                setTimeout(() => openMapPicker(targetInputId), 1000);
+                // Leaflet non ancora caricato → mostra spinner e aspetta
+                showNotification('⏳ Caricamento mappa...', 'loading');
+                let attempts = 0;
+                const wait = setInterval(() => {
+                    attempts++;
+                    if (typeof L !== 'undefined') {
+                        clearInterval(wait);
+                        openMapPicker(targetInputId);
+                    } else if (attempts > 15) {
+                        clearInterval(wait);
+                        showNotification('⚠️ Impossibile caricare la mappa. Uso fallback Google Maps...', 'warning');
+                        // Fallback: vecchio comportamento Google Maps
+                        if (typeof openGoogleMapsToGetLocation === 'function') {
+                            setTimeout(openGoogleMapsToGetLocation, 500);
+                        }
+                    }
+                }, 400);
                 return;
             }
 
