@@ -81,7 +81,8 @@ app.use(helmet({
                 'https://cdn.jsdelivr.net',
                 'https://unpkg.com',
                 'https://nominatim.openstreetmap.org',
-                'https://*.tile.openstreetmap.org'
+                'https://*.tile.openstreetmap.org',
+                'https://server.arcgisonline.com'
             ],
             objectSrc: ["'none'"],
             frameAncestors: ["'self'"]
