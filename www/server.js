@@ -85,7 +85,7 @@ app.use(compression());
 
 // ==================== CORS WHITELIST ====================
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
-    'http://localhost:3000,http://127.0.0.1:3000,capacitor://localhost')
+    'http://localhost:3000,http://127.0.0.1:3000,capacitor://localhost,http://localhost:5500,http://192.168.0.69:5500')
     .split(',').map(o => o.trim()).filter(Boolean);
 
 // Pattern aggiuntivi: sottodomini Emergent preview e localhost dev

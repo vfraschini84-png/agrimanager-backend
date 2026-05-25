@@ -241,12 +241,14 @@ router.put('/personale/:id', authenticateToken, async (req, res) => {
 // GET /api/costi/mezzi/:lotId/:stagione
 router.get('/mezzi/:lotId/:stagione', authenticateToken, async (req, res) => {
     try {
+        const { lotId, stagione } = req.params;
+        
         // ✅ Verifica che il lotto appartenga all'utente
-        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [req.params.lotId]);
+        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
         if (!lot) {
             return res.status(404).json({ error: 'Lotto non trovato' });
         }
-
+        
         if (req.user.username !== 'admin' && req.user.role !== 'admin') {
             const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
             const ownerId = user?.parent_id || req.user.id;
@@ -254,12 +256,10 @@ router.get('/mezzi/:lotId/:stagione', authenticateToken, async (req, res) => {
                 return res.status(403).json({ error: 'Accesso negato' });
             }
         }
-
+        
         const records = await db.allAsync(
-            `SELECT * FROM costi_mezzi_tecnici 
-             WHERE lot_id = ? AND stagione_agricola = ?
-             ORDER BY data_registrazione DESC`,
-            [req.params.lotId, req.params.stagione]
+            `SELECT * FROM costi_mezzi_tecnici WHERE lot_id = ? AND stagione_agricola = ? ORDER BY data_registrazione DESC`,
+            [lotId, stagione]
         );
         const totale = records.reduce((sum, r) => sum + (r.importo || 0), 0);
         res.json({ data: records, totale });
