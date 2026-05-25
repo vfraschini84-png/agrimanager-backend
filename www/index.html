@@ -9,6 +9,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>AgriManager - Gestione Lotti</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <style>
 :root {
     --primary: #4CAF50;
@@ -2775,7 +2777,122 @@ input[type="radio"]:checked + span {
     }
 }
 
-/* ==================== PAGINAZIONE COMPATTA PER MOBILE ==================== */
+/* ==================== MAPPA INTERATTIVA (Leaflet) PER SALVA POSIZIONE ==================== */
+#map-picker-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 10500;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+}
+#map-picker-modal.show { display: flex; }
+.map-picker-container {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 720px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+.map-picker-header {
+    background: #2E7D32;
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.map-picker-header h3 { margin: 0; font-size: 1.1rem; }
+.map-picker-close {
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    border: none;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.map-picker-close:hover { background: rgba(255,255,255,0.32); }
+
+/* Toggle Strada/Satellite */
+.map-layer-toggle {
+    display: inline-flex;
+    background: rgba(255,255,255,0.18);
+    border-radius: 24px;
+    padding: 3px;
+    gap: 0;
+}
+.map-layer-toggle button {
+    background: transparent;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.map-layer-toggle button.active {
+    background: #fff;
+    color: #2E7D32;
+}
+.map-layer-toggle button:not(.active):hover {
+    background: rgba(255,255,255,0.15);
+}
+#leaflet-map { width: 100%; height: 60vh; min-height: 320px; flex-shrink: 0; }
+.map-picker-info {
+    padding: 12px 16px;
+    background: #f5f5f5;
+    font-size: 0.9rem;
+    color: #333;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+.map-picker-coords {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #2E7D32;
+}
+.map-picker-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+}
+.map-picker-actions button {
+    flex: 1;
+    min-width: 130px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+.btn-mp-locate { background: #1976d2; color: #fff; }
+.btn-mp-search { background: #f57c00; color: #fff; }
+.btn-mp-confirm { background: #2E7D32; color: #fff; }
+.btn-mp-cancel { background: #e0e0e0; color: #333; }
+@media (max-width: 600px) {
+    #leaflet-map { height: 50vh; min-height: 280px; }
+    .map-picker-actions button { font-size: 0.85rem; min-width: 100px; padding: 10px; }
+}
 /* Container principale della paginazione */
 #pagination-controls {
     display: flex !important;
@@ -3164,7 +3281,7 @@ input[type="radio"]:checked + span {
     <label for="gps-coordinates">Coordinate GPS (Link Google Maps) - Opzionale</label>
     <div style="display: flex; gap: 10px; align-items: center;">
         <input type="url" id="gps-coordinates" placeholder="https://maps.google.com/?q=45.4765,10.9257" onblur="validateOptionalGoogleMapsUrl()" oninput="clearFieldError('gps-coordinates')" style="flex: 1;">
-        <button type="button" onclick="openGoogleMapsToGetLocation()" class="btn btn-primary" style="white-space: nowrap;">
+        <button type="button" onclick="openMapPicker()" class="btn btn-primary" style="white-space: nowrap;">
             <i class="fas fa-map-marker-alt"></i> Salva Posizione
         </button>
     </div>
@@ -5466,56 +5583,53 @@ function optimizeMobileLoad() {
         }
 
         function getCurrentLocation() {
-            if (!navigator.geolocation) {
-                showNotification('Geolocalizzazione non supportata su questo dispositivo', 'error');
-                return;
-            }
-            
+            // ✅ Wrapper: usa Capacitor Geolocation se siamo nell'APK (più affidabile),
+            //    altrimenti fallback su navigator.geolocation per browser.
+            const isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+            const usePlugin = isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+
             showNotification('Acquisizione posizione in corso...', 'loading');
-            
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 60000
+
+            const onSuccess = (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+                const url = `https://maps.google.com/?q=${lat},${lng}`;
+                document.getElementById('gps-coordinates').value = url;
+                validateGoogleMapsUrl();
+                let message = '📍 Posizione corrente acquisita!';
+                if (accuracy > 100) message += ` (Precisione: ~${Math.round(accuracy)} metri)`;
+                showNotification(message, 'success');
             };
-            
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy;
-                    
-                    const url = `https://maps.google.com/?q=${lat},${lng}`;
-                    
-                    document.getElementById('gps-coordinates').value = url;
-                    validateGoogleMapsUrl();
-                    
-                    let message = 'Posizione corrente acquisita!';
-                    if (accuracy > 100) {
-                        message += ` (Precisione: ~${Math.round(accuracy)} metri)`;
-                    }
-                    
-                    showNotification(message, 'success');
-                },
-                (error) => {
-                    let errorMessage = 'Impossibile acquisire la posizione';
-                    
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = 'Permesso di geolocalizzazione negato. Abilitalo nelle impostazioni del browser.';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'Informazioni di posizione non disponibili.';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage = 'Timeout nella richiesta di posizione.';
-                            break;
-                    }
-                    
-                    showNotification(errorMessage, 'error');
-                },
-                options
-            );
+
+            const onError = (error) => {
+                let errorMessage = 'Impossibile acquisire la posizione';
+                const code = error && (error.code !== undefined ? error.code : error.code);
+                switch (code) {
+                    case 1: errorMessage = '🚫 Permesso GPS negato. Vai in Impostazioni → App → AgriManager → Autorizzazioni e abilita "Posizione".'; break;
+                    case 2: errorMessage = '🛰️ GPS non disponibile. Verifica che il GPS dello smartphone sia acceso e prova all\'aperto.'; break;
+                    case 3: errorMessage = '⏱️ Timeout GPS. Riprova all\'aperto con cielo libero.'; break;
+                    default:
+                        if (error && error.message) errorMessage += ': ' + error.message;
+                }
+                showNotification(errorMessage, 'error');
+                console.error('Errore GPS:', error);
+            };
+
+            const options = { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 };
+
+            if (usePlugin) {
+                // ✅ Capacitor native: gestisce permessi runtime automaticamente
+                const Geolocation = window.Capacitor.Plugins.Geolocation;
+                Geolocation.requestPermissions().then(() => {
+                    return Geolocation.getCurrentPosition(options);
+                }).then(pos => onSuccess(pos)).catch(err => onError(err));
+            } else if (navigator.geolocation) {
+                // Fallback browser
+                navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
+            } else {
+                showNotification('Geolocalizzazione non supportata su questo dispositivo', 'error');
+            }
         }
 
         function openGoogleMapsToGetLocation() {
@@ -5540,6 +5654,270 @@ function optimizeMobileLoad() {
             } catch (error) {
                 showNotification('Impossibile accedere agli appunti', 'error');
             }
+        }
+
+        // ==================== MAPPA INTERATTIVA (Leaflet) ====================
+        // Stato modulo mappa
+        let _mapPicker = { map: null, marker: null, target: null };
+
+        /**
+         * Apre il modal con la mappa interattiva per scegliere/confermare la posizione.
+         * @param {string} targetInputId - id del campo input da popolare (default 'gps-coordinates')
+         */
+        function openMapPicker(targetInputId = 'gps-coordinates') {
+            if (typeof L === 'undefined') {
+                // Leaflet non ancora caricato → mostra spinner e aspetta
+                showNotification('⏳ Caricamento mappa...', 'loading');
+                let attempts = 0;
+                const wait = setInterval(() => {
+                    attempts++;
+                    if (typeof L !== 'undefined') {
+                        clearInterval(wait);
+                        openMapPicker(targetInputId);
+                    } else if (attempts > 15) {
+                        clearInterval(wait);
+                        showNotification('⚠️ Impossibile caricare la mappa. Uso fallback Google Maps...', 'warning');
+                        // Fallback: vecchio comportamento Google Maps
+                        if (typeof openGoogleMapsToGetLocation === 'function') {
+                            setTimeout(openGoogleMapsToGetLocation, 500);
+                        }
+                    }
+                }, 400);
+                return;
+            }
+
+            _mapPicker.target = targetInputId;
+
+            // Crea modal se non esiste
+            let modal = document.getElementById('map-picker-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'map-picker-modal';
+                modal.innerHTML = `
+                    <div class="map-picker-container">
+                        <div class="map-picker-header">
+                            <h3><i class="fas fa-map-marker-alt"></i> Posizione del lotto</h3>
+                            <div class="map-layer-toggle">
+                                <button type="button" id="mp-layer-street" class="active" onclick="switchMapLayer('street')" title="Vista stradale (OpenStreetMap)">
+                                    <i class="fas fa-road"></i> Strada
+                                </button>
+                                <button type="button" id="mp-layer-satellite" onclick="switchMapLayer('satellite')" title="Vista satellitare (Esri World Imagery)">
+                                    <i class="fas fa-satellite"></i> Satellite
+                                </button>
+                            </div>
+                            <button type="button" class="map-picker-close" onclick="closeMapPicker()" aria-label="Chiudi">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="leaflet-map"></div>
+                        <div class="map-picker-info">
+                            <div>📍 Trascina il marker o tocca un punto sulla mappa.</div>
+                            <div style="margin-top:6px;">Coordinate: <span class="map-picker-coords" id="map-coords-display">—</span></div>
+                        </div>
+                        <div class="map-picker-actions">
+                            <button type="button" class="btn-mp-locate" onclick="mapPickerLocateMe()">
+                                <i class="fas fa-location-arrow"></i> La mia posizione
+                            </button>
+                            <button type="button" class="btn-mp-search" onclick="mapPickerSearch()">
+                                <i class="fas fa-search"></i> Cerca luogo
+                            </button>
+                            <button type="button" class="btn-mp-confirm" onclick="mapPickerConfirm()">
+                                <i class="fas fa-check"></i> Conferma
+                            </button>
+                            <button type="button" class="btn-mp-cancel" onclick="closeMapPicker()">
+                                Annulla
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            modal.classList.add('show');
+
+            // Posizione iniziale: prova a leggere dal campo se già compilato, altrimenti centro Italia
+            let initLat = 41.9, initLng = 12.5, initZoom = 5;
+            const existing = document.getElementById(targetInputId)?.value;
+            const parsed = extractLatLngFromMapsUrl(existing);
+            if (parsed) {
+                initLat = parsed.lat; initLng = parsed.lng; initZoom = 16;
+            }
+
+            // Inizializza Leaflet (creo o reset)
+            if (_mapPicker.map) {
+                _mapPicker.map.remove();
+                _mapPicker.map = null;
+            }
+            // Wait for DOM
+            setTimeout(() => {
+                _mapPicker.map = L.map('leaflet-map').setView([initLat, initLng], initZoom);
+
+                // ✅ Due tile layers: Strada (OSM) e Satellite (Esri World Imagery)
+                _mapPicker.layers = {
+                    street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap contributors'
+                    }),
+                    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: 'Tiles © Esri — Source: Esri, Maxar, GeoEye, Earthstar Geographics, CNES/Airbus DS, USDA, USGS, AeroGRID, IGN'
+                    })
+                };
+                // Layer iniziale: strada (preferenza utente eventualmente in localStorage)
+                _mapPicker.currentLayer = localStorage.getItem('mapLayerPref') === 'satellite' ? 'satellite' : 'street';
+                _mapPicker.layers[_mapPicker.currentLayer].addTo(_mapPicker.map);
+
+                // Aggiorna stato bottoni in base alla preferenza
+                requestAnimationFrame(() => {
+                    document.getElementById('mp-layer-street')?.classList.toggle('active', _mapPicker.currentLayer === 'street');
+                    document.getElementById('mp-layer-satellite')?.classList.toggle('active', _mapPicker.currentLayer === 'satellite');
+                });
+
+                _mapPicker.marker = L.marker([initLat, initLng], { draggable: true }).addTo(_mapPicker.map);
+                updateCoordsDisplay(initLat, initLng);
+
+                _mapPicker.marker.on('dragend', (e) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    updateCoordsDisplay(lat, lng);
+                });
+
+                _mapPicker.map.on('click', (e) => {
+                    _mapPicker.marker.setLatLng(e.latlng);
+                    updateCoordsDisplay(e.latlng.lat, e.latlng.lng);
+                });
+
+                // Se non c'è già una posizione, prova ad auto-localizzare
+                if (!parsed) {
+                    setTimeout(() => mapPickerLocateMe(true), 500);
+                }
+            }, 80);
+        }
+
+        /**
+         * Cambia il tile layer della mappa fra strada e satellite.
+         */
+        function switchMapLayer(name) {
+            if (!_mapPicker.map || !_mapPicker.layers || !_mapPicker.layers[name]) return;
+            if (_mapPicker.currentLayer === name) return;
+
+            // Rimuovi il layer attuale e aggiungi il nuovo
+            _mapPicker.map.removeLayer(_mapPicker.layers[_mapPicker.currentLayer]);
+            _mapPicker.layers[name].addTo(_mapPicker.map);
+            _mapPicker.currentLayer = name;
+
+            // Aggiorna stato bottoni
+            document.getElementById('mp-layer-street')?.classList.toggle('active', name === 'street');
+            document.getElementById('mp-layer-satellite')?.classList.toggle('active', name === 'satellite');
+
+            // Salva preferenza
+            try { localStorage.setItem('mapLayerPref', name); } catch(_) {}
+        }
+
+        function closeMapPicker() {
+            const modal = document.getElementById('map-picker-modal');
+            if (modal) modal.classList.remove('show');
+            if (_mapPicker.map) {
+                _mapPicker.map.remove();
+                _mapPicker.map = null;
+                _mapPicker.marker = null;
+                _mapPicker.layers = null;
+                _mapPicker.currentLayer = null;
+            }
+        }
+
+        function updateCoordsDisplay(lat, lng) {
+            const el = document.getElementById('map-coords-display');
+            if (el) el.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+
+        function mapPickerConfirm() {
+            if (!_mapPicker.marker) return;
+            const { lat, lng } = _mapPicker.marker.getLatLng();
+            const url = `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+            const target = document.getElementById(_mapPicker.target || 'gps-coordinates');
+            if (target) {
+                target.value = url;
+                if (typeof validateGoogleMapsUrl === 'function') validateGoogleMapsUrl();
+                else clearFieldError(_mapPicker.target);
+            }
+            closeMapPicker();
+            showNotification('✅ Posizione salvata', 'success');
+        }
+
+        /**
+         * Acquisisce la posizione GPS dello smartphone e centra la mappa sul punto.
+         * Usa Capacitor se disponibile, altrimenti navigator.geolocation.
+         */
+        function mapPickerLocateMe(silent = false) {
+            if (!_mapPicker.map) return;
+            if (!silent) showNotification('Acquisizione GPS in corso...', 'loading');
+
+            const apply = (lat, lng) => {
+                _mapPicker.map.setView([lat, lng], 17);
+                _mapPicker.marker.setLatLng([lat, lng]);
+                updateCoordsDisplay(lat, lng);
+                if (!silent) showNotification('📍 Posizione attuale acquisita', 'success');
+            };
+
+            const isCapacitor = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+            const usePlugin = isCapacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+            const opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 };
+
+            if (usePlugin) {
+                const Geo = window.Capacitor.Plugins.Geolocation;
+                Geo.requestPermissions().then(() => Geo.getCurrentPosition(opts))
+                    .then(p => apply(p.coords.latitude, p.coords.longitude))
+                    .catch(() => { if (!silent) showNotification('GPS non disponibile', 'error'); });
+            } else if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    p => apply(p.coords.latitude, p.coords.longitude),
+                    () => { if (!silent) showNotification('GPS non disponibile', 'error'); },
+                    opts
+                );
+            }
+        }
+
+        /**
+         * Cerca un indirizzo con Nominatim (OpenStreetMap) e centra la mappa.
+         */
+        async function mapPickerSearch() {
+            const q = prompt('Cerca un luogo o indirizzo:');
+            if (!q) return;
+            try {
+                showNotification('Ricerca luogo...', 'loading');
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const arr = await res.json();
+                if (!arr || arr.length === 0) {
+                    showNotification('Nessun risultato', 'warning');
+                    return;
+                }
+                const lat = parseFloat(arr[0].lat);
+                const lng = parseFloat(arr[0].lon);
+                _mapPicker.map.setView([lat, lng], 16);
+                _mapPicker.marker.setLatLng([lat, lng]);
+                updateCoordsDisplay(lat, lng);
+                showNotification(`🔍 ${arr[0].display_name.substring(0, 60)}…`, 'success');
+            } catch (e) {
+                showNotification('Errore nella ricerca', 'error');
+            }
+        }
+
+        /**
+         * Estrae lat/lng da un URL Google Maps. Ritorna {lat, lng} o null.
+         */
+        function extractLatLngFromMapsUrl(url) {
+            if (!url) return null;
+            // Pattern 1: maps.google.com/?q=lat,lng
+            let m = url.match(/[?&]q=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+            if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+            // Pattern 2: @lat,lng,zoomz
+            m = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),\d/);
+            if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+            // Pattern 3: solo numeri lat,lng
+            m = url.match(/(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+            if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+            return null;
         }
 
 function validateOptionalField(fieldId, minLength = 2) {
