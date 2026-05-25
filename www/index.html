@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="theme-color" content="#4CAF50">
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -61,7 +62,6 @@ body {
     margin: 0 auto;
     width: 100%;
     height: 100%;
-    overflow-y: visible !important;   /* Nessun overflow hidden che possa interferire */
 }
 
 .mobile-optimized {
@@ -296,18 +296,30 @@ h1 {
     transform: scale(0.95);
 }
 
-/* Smooth scroll body (evita salti bruschi su mobile) */
-/* Rimuovi scroll-behavior smooth su mobile (causa problemi con touch) */
+/* ✅ Scroll su Android/iOS: niente smooth globale (causa scatti), ma momentum scrolling.
+   Lo smooth viene applicato solo a navigazioni esplicite via JS (es. cambio sezione). */
 html {
-    scroll-behavior: auto !important;
     -webkit-overflow-scrolling: touch;
 }
-
 body {
     -webkit-overflow-scrolling: touch;
-    overflow-y: auto !important;
-    overscroll-behavior-y: none !important;
-    /* IMPORTANTE: permette lo scroll fluido senza rimbalzi */
+    /* Non usare overscroll-behavior-y: contain su Android — può bloccare lo scroll
+       e causare "rimbalzi" alla riga superiore quando l'utente fa swipe rapido. */
+    overscroll-behavior-y: auto;
+    /* Evita che `transition: all` su elementi figli inneschi un riflusso che resetta lo scroll */
+    will-change: auto;
+}
+
+/* Durante lo scroll attivo, disabilita le transizioni su elementi posizionati che possono
+   essere causa di reflow → meno chance di scroll-jump su Android. */
+body.is-scrolling * {
+    transition: none !important;
+    animation-play-state: paused !important;
+}
+
+/* Su Android dedicato: evita anchor-jump quando un elemento focused riceve attention */
+.android-device :focus {
+    scroll-margin-top: 80px;  /* dà un po' di "respiro" sopra l'elemento focused */
 }
 
 @media (max-width: 600px) {
@@ -1207,7 +1219,7 @@ footer {
 
 .section-content {
     transition: all var(--animation-duration) ease;
-    overflow: visible !important;  /* ← CAMBIA da 'hidden' a 'visible' */
+    overflow: hidden;
 }
 
 .section-content.collapsed {
@@ -1215,13 +1227,11 @@ footer {
     max-height: 0;
     margin: 0;
     padding: 0;
-    overflow: hidden !important;  /* solo quando collassato */
 }
 
 .section-content.expanded {
     opacity: 1;
-    max-height: none !important;  /* ← CAMBIA da '2000px' a 'none' */
-    overflow: visible !important;  /* ← AGGIUNGI */
+    max-height: 2000px;
 }
 
 /* Grid migliorato per i form */
@@ -2469,15 +2479,9 @@ input[type="radio"]:checked + span {
 
 /* ==================== CORREZIONE SEZIONE ECONOMICA ==================== */
 /* Assicura che la sezione economica sia completamente visibile */
-/* Applica a TUTTE le sezioni espandibili */
-.section-economica .section-content.expanded,
-.special-section .section-content.expanded,
-.section-raccolta .section-content.expanded,
-.section-analisi .section-content.expanded,
-.section-note .section-content.expanded {
-    max-height: none !important;
+.section-economica .section-content.expanded {
+    max-height: none !important; /* Rimuove il limite di altezza */
     overflow-y: visible !important;
-    overflow-x: visible !important;
 }
 
 /* Per mobile, mantieni lo scrolling se necessario */
@@ -2771,356 +2775,90 @@ input[type="radio"]:checked + span {
     }
 }
 
-/* ==================== PAGINAZIONE COMPATTA MOBILE ==================== */
-/* Prima riga: pulsanti e indicatore */
-#lots-pagination {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 12px !important;
-    margin: 15px 0 !important;
-    padding: 10px !important;
-}
-
-/* Container dei 3 elementi (Precedente, Pagina, Successivo) */
-.pagination-controls-row {
+/* ==================== PAGINAZIONE COMPATTA PER MOBILE ==================== */
+/* Container principale della paginazione */
+#pagination-controls {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
     justify-content: center !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 10px !important;
+    margin: 20px 0 !important;
+    padding: 10px 0 !important;
 }
 
-#lots-pagination button {
-    flex: 0 0 auto !important;
-    padding: 6px 12px !important;
-    font-size: 0.85rem !important;
-    white-space: nowrap !important;
-    min-width: auto !important;
+/* Stile base per desktop */
+#pagination-controls button {
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
     border-radius: 8px !important;
-}
-
-#lots-pagination span#page-info {
-    flex: 0 0 auto !important;
-    padding: 4px 12px !important;
-    font-size: 0.85rem !important;
-    background-color: #f0f0f0 !important;
-    border-radius: 20px !important;
-    white-space: nowrap !important;
-    color: #333 !important;
-    font-weight: 500 !important;
-}
-
-/* Seconda riga: selettore (centrato) */
-#lots-pagination .items-per-page-wrapper {
-    display: flex !important;
-    justify-content: center !important;
-    width: 100% !important;
-}
-
-#lots-pagination select#items-per-page {
-    padding: 6px 12px !important;
-    font-size: 0.85rem !important;
-    border: 1px solid #ddd !important;
-    border-radius: 8px !important;
-    background-color: white !important;
+    background: var(--primary) !important;
+    color: white !important;
+    border: none !important;
     cursor: pointer !important;
+    transition: opacity 0.2s !important;
 }
 
-/* Mobile piccolo (max 480px) - compatto */
-@media (max-width: 480px) {
-    #lots-pagination {
-        gap: 10px !important;
-        padding: 8px 5px !important;
-    }
-    
-    .pagination-controls-row {
-        gap: 5px !important;
-    }
-    
-    #lots-pagination button {
-        padding: 5px 10px !important;
-        font-size: 0.75rem !important;
-    }
-    
-    #lots-pagination span#page-info {
-        padding: 3px 10px !important;
-        font-size: 0.75rem !important;
-    }
-    
-    #lots-pagination select#items-per-page {
-        padding: 5px 10px !important;
-        font-size: 0.75rem !important;
-    }
+#pagination-controls button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
 }
 
-/* ==================== FIX MOBILE PER SCHERMI PICCOLI ==================== */
-@media (max-width: 480px) {
-    
-    /* 1. Pulsanti GPS - layout a griglia 2x2 */
-    .form-group:has(#gps-coordinates) > div[style*="display: flex"] {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-    }
-    .form-group:has(#gps-coordinates) > div[style*="display: flex"] .btn-help {
-        margin: 0 !important;
-        text-align: center !important;
-        justify-content: center !important;
-        font-size: 0.7rem !important;
-        padding: 8px 4px !important;
-        white-space: normal !important;
-    }
-    .form-group:has(#gps-coordinates) > div[style*="display: flex"] .btn-help[style*="background: #FF9800"] {
-        grid-column: span 2 !important;
-    }
-    
-    /* 2. Pulsanti Giorno/Settimana/Mese */
-    .btn-help[onclick*="cambiaVistaRegistro"],
-    .btn-help[onclick*="cambiaVistaMezzi"] {
-        display: inline-block !important;
-        margin: 3px !important;
-        padding: 5px 8px !important;
-        font-size: 0.65rem !important;
-    }
-    
-    /* 3. Pulsanti azione Gestione Costi (Personale) */
-    .special-section[style*="border-left-color: #FF5722"] .section-actions,
-    .special-section[style*="background: #fbe9e7"] .section-actions {
-        flex-direction: column !important;
-        gap: 8px !important;
-    }
-    .special-section[style*="border-left-color: #FF5722"] .section-actions .btn,
-    .special-section[style*="background: #fbe9e7"] .section-actions .btn {
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* 4. Pulsanti azione Gestione Costi (Mezzi Tecnici) */
-    .special-section[style*="border-left-color: #2196F3"] .section-actions,
-    .special-section[style*="background: #e3f2fd"] .section-actions {
-        flex-direction: column !important;
-        gap: 8px !important;
-    }
-    .special-section[style*="border-left-color: #2196F3"] .section-actions .btn {
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* 5. Pulsanti Beni Durevoli */
-    .special-section[style*="border-left-color: #9C27B0"] .section-actions {
-        flex-direction: column !important;
-    }
-    .special-section[style*="border-left-color: #9C27B0"] .section-actions .btn {
-        width: 100% !important;
-    }
-    
-    /* 6. Pulsanti Dettagli Lotto */
-    #dettagli-section > div[style*="display: flex"][style*="gap: 10px"] {
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    #dettagli-section > div[style*="display: flex"][style*="gap: 10px"] .btn {
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* 7. Pulsanti Gestione Economica */
-    .section-economica .section-actions {
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    .section-economica .section-actions .btn {
-        width: 100% !important;
-    }
-    
-    /* 8. Pulsanti Esportazione Bilancio */
-    .export-buttons-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    .export-buttons-grid .btn {
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    
-    /* 9. Pulsante Registra Utente */
-    .permission-section > .btn-primary {
-        width: 100% !important;
-    }
-    
-    /* 10. Fix generale - pulsanti Salva/Annulla in tutte le sezioni */
-    .section-actions {
-        flex-direction: column !important;
-        gap: 8px !important;
-    }
-    .section-actions .btn {
-        width: 100% !important;
-        margin: 0 !important;
-    }
+#pagination-controls .page-info {
+    font-size: 0.9rem !important;
+    color: #666 !important;
+    padding: 0 15px !important;
+    white-space: nowrap !important;
 }
 
-/* ==================== FIX CAMPI DATA PER MOBILE ==================== */
-@media (max-width: 480px) {
-    
-    /* 1. FIX Campi Data in tutte le sezioni - riduci larghezza */
-    input[type="date"],
-    input[type="date"].special-input {
-        font-size: 0.75rem !important;
-        padding: 10px 8px !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        box-sizing: border-box !important;
+/* MOBILE (max 768px) - versione compatta */
+@media (max-width: 768px) {
+    #pagination-controls {
+        gap: 6px !important;
+        justify-content: space-between !important;
+        padding: 8px 0 !important;
+        margin: 15px 0 !important;
     }
     
-    /* 2. FIX Sezione Dettagli Lotti - Attività di Raccolta (grid a 2 colonne su mobile) */
-    #dettagli-section .section-raccolta .section-grid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-    }
-    
-    /* 3. FIX Sezione Gestione Economica - Nuova Registrazione */
-    .section-economica .section-grid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-    }
-    
-    /* 4. FIX Sezione Gestione Costi - Costi Mezzi Tecnici */
-    #gestione-costi-section .special-section[style*="border-left-color: #2196F3"] .section-grid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-    }
-    
-    /* 5. FIX Sezione Gestione Costi - Registra Attività Personale (campo N. Operatori e Data) */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] .section-grid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 12px !important;
-    }
-    
-    /* 6. FIX specifico per il campo "N. Operatori" e "Data Attività" */
-    .section-grid .form-group {
-        width: 100% !important;
-        margin-bottom: 0 !important;
-    }
-    
-    /* 7. Forza tutti i campi input a non superare il contenitore */
-    .section-grid input,
-    .section-grid select,
-    .section-grid .special-input {
-        max-width: 100% !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-}
-
-/* ==================== FIX SOVRAPPOSIZIONE STESSA RIGA ==================== */
-@media (max-width: 480px) {
-    
-    /* Griglia a 2 colonne della sezione "Registra Attività Personale" */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] .section-grid,
-    .special-section[style*="border-left-color: #FF5722"] .section-grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-    }
-    
-    /* Ogni campo nella griglia */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] .form-group,
-    .special-section[style*="border-left-color: #FF5722"] .form-group {
-        width: 100% !important;
-        margin-bottom: 8px !important;
-        min-width: 0 !important;
-    }
-    
-    /* Campi input più compatti */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] input,
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] select,
-    .special-section[style*="border-left-color: #FF5722"] input,
-    .special-section[style*="border-left-color: #FF5722"] select {
-        width: 100% !important;
-        padding: 8px 6px !important;
-        font-size: 0.75rem !important;
-        min-height: 40px !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Etichette dei campi più compatte */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] label,
-    .special-section[style*="border-left-color: #FF5722"] label {
-        font-size: 0.7rem !important;
-        margin-bottom: 4px !important;
-    }
-    
-    /* Campo "Attività Svolta" e "Note" occupano tutta la larghezza */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] .form-group[style*="grid-column: span 2"],
-    .special-section[style*="border-left-color: #FF5722"] .form-group[style*="grid-column: span 2"] {
-        grid-column: span 2 !important;
-    }
-}
-
-/* ==================== RIDUCI SOLO N. OPERATORI ==================== */
-@media (max-width: 480px) {
-    
-    /* Riduce la larghezza del campo "N. Operatori" */
-    #gestione-costi-section .special-section[style*="border-left-color: #FF5722"] .form-group:has(#costo-numero-operatori),
-    .special-section[style*="border-left-color: #FF5722"] .form-group:has(#costo-numero-operatori) {
-        width: 70px !important;
-        min-width: 70px !important;
+    #pagination-controls button {
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+        border-radius: 20px !important;
+        min-width: auto !important;
         flex-shrink: 0 !important;
     }
     
-    /* Input del campo N. Operatori compatto e centrato */
-    #costo-numero-operatori {
-        text-align: center !important;
-        padding: 8px 4px !important;
-        font-size: 0.75rem !important;
-        width: 100% !important;
-        min-width: 60px !important;
-    }
-    
-    /* Etichetta "N. Operatori" più compatta */
-    label[for="costo-numero-operatori"] {
-        font-size: 0.7rem !important;
+    #pagination-controls .page-info {
+        font-size: 0.8rem !important;
+        padding: 0 8px !important;
         white-space: nowrap !important;
+        background: #f0f0f0 !important;
+        padding: 5px 12px !important;
+        border-radius: 20px !important;
+        font-weight: 500 !important;
+        color: #333 !important;
+        flex-shrink: 0 !important;
     }
 }
 
-/* ==================== KILLER SCROLL ANDROID ==================== */
-/* Queste regole forzano il rendering su un unico layer e disabilitano comportamenti problematici */
-@media (max-width: 768px) {
-    /* 1. Isola il body e i suoi figli diretti per ottimizzare lo scroll */
-    body, .container, .main-menu, .section {
-        will-change: scroll-position !important;
-        transform: translateZ(0) !important;
-        -webkit-transform: translateZ(0) !important;
-        backface-visibility: hidden !important;
-        -webkit-backface-visibility: hidden !important;
-        perspective: 1000px !important;
-        -webkit-perspective: 1000px !important;
-    }
-
-    /* 2. Rimuovi qualsiasi proprietà che possa creare un "nuovo contesto di scroll" */
-    .special-section, .section-content, .history-content, .financial-card {
-        overflow: visible !important;
-        transform: none !important;
-        box-shadow: none !important;
-        border-left: 1px solid #eee !important; /* Rimpiazza l'effetto ombra/bordo che causa il rimbalzo */
+/* Mobile piccolo (max 480px) - ancora più compatto */
+@media (max-width: 480px) {
+    #pagination-controls {
+        gap: 4px !important;
+        padding: 5px 0 !important;
     }
     
-    /* 3. Disabilita le transizioni su TUTTO (anche se le avevi già disabilitate) */
-    * {
-        transition: none !important;
-        animation: none !important;
-        scroll-behavior: auto !important;
+    #pagination-controls button {
+        padding: 5px 10px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    #pagination-controls .page-info {
+        font-size: 0.75rem !important;
+        padding: 3px 10px !important;
     }
 }
-
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -3132,6 +2870,7 @@ input[type="radio"]:checked + span {
         <p class="spinner-text" id="spinner-message">Caricamento in corso...</p>
     </div>
 </div>
+<div class="safe-area-top"></div>
     <div class="container mobile-optimized">
         <!-- Sezione Autenticazione -->
         <div id="auth-section" class="auth-section active">
@@ -3525,8 +3264,7 @@ input[type="radio"]:checked + span {
     </div>
 
     <!-- ✅ CONTROLLI PAGINAZIONE - INSERISCI QUI -->
-    <div id="lots-pagination">
-    <div class="pagination-controls-row">
+    <div id="lots-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; padding: 15px; flex-wrap: wrap;">
         <button id="prev-page-btn" onclick="loadLotsPage('prev')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
             ← Precedente
         </button>
@@ -3536,9 +3274,7 @@ input[type="radio"]:checked + span {
         <button id="next-page-btn" onclick="loadLotsPage('next')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
             Successiva →
         </button>
-    </div>
-    <div class="items-per-page-wrapper">
-        <select id="items-per-page" onchange="changeItemsPerPage()">
+        <select id="items-per-page" onchange="changeItemsPerPage()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-left: 20px;">
             <option value="10">10 per pagina</option>
             <option value="20" selected>20 per pagina</option>
             <option value="50">50 per pagina</option>
@@ -3546,7 +3282,6 @@ input[type="radio"]:checked + span {
         </select>
     </div>
 </div>
-</div> 
 <!-- Fine Sezione Lista Lotti -->
                 
         <!-- Sezione Dettagli Lotto -->
@@ -5569,7 +5304,8 @@ function generateRandomPassword(targetId) {
 
 function initTouchOptimization() {
     if (isMobileDevice()) {
-        // ❌ RIMOSSO il listener touchstart vuoto
+        // Migliora il feedback visivo per i touch
+        document.addEventListener('touchstart', function() {}, { passive: true });
         
         // Previeni il zoom doppio tap sui pulsanti
         document.querySelectorAll('button, .menu-item, .action-btn').forEach(element => {
@@ -5587,32 +5323,10 @@ function setupSafeArea() {
     }
 }
 
-          // ==================== GPS CON SCROLL MIGLIORATO (SENZA RIMBALZO) ====================
-function initMobileGPS() {
-    if (!isMobileDevice()) return;
-    
-    const gpsField = document.getElementById('gps-coordinates');
-    if (!gpsField) return;
-    
-    gpsField.addEventListener('focus', function() {
-        // Attendi che la tastiera si apra
-        setTimeout(() => {
-            // Ottieni la posizione del campo rispetto alla finestra
-            const rect = this.getBoundingClientRect();
-            const absoluteTop = window.scrollY + rect.top;
-            const windowHeight = window.innerHeight;
-            
-            // Calcola lo scroll: porta il campo a 1/3 dall'alto (non centrato)
-            const targetScroll = absoluteTop - (windowHeight / 3);
-            
-            // Scroll liscio senza "rimbalzo"
-            window.scrollTo({
-                top: Math.max(0, targetScroll),
-                behavior: 'smooth'
-            });
-        }, 200);
-    });
-}
+          function initMobileGPS() {
+            // ⚠️ Disabilitato scrollIntoView su focus GPS — causava scroll jump su Android.
+            // Il browser nativo posiziona già correttamente l'input quando si apre la keyboard.
+        }
 
         // SOSTITUISCI optimizeMobileLoad CON QUESTA VERSIONE MIGLIORATA
 function optimizeMobileLoad() {
@@ -7742,7 +7456,7 @@ function popolaFormEconomico(record) {
     document.getElementById('costo-mezzi-tecnici').value = record.costo_mezzi_tecnici || 0;
     document.getElementById('costo-personale').value = record.costo_personale || 0;
     
-    // ✅ NUOVO POPOLAMENTO BENI DUREVOLI CON AMMORTAMENTO
+        // ✅ NUOVO POPOLAMENTO BENI DUREVOLI CON AMMORTAMENTO
     const container = document.getElementById('beni-durevoli-container');
     if (container) {
         container.innerHTML = '';
@@ -7811,22 +7525,8 @@ function popolaFormEconomico(record) {
         value: document.getElementById('editing-economic-id')?.value
     });
     
-    // ✅ Scrolla al form (versione senza rimbalzo su Android)
-    setTimeout(() => {
-        const formContainer = document.querySelector('#gestione-economica .form-container');
-        if (formContainer) {
-            const rect = formContainer.getBoundingClientRect();
-            const absoluteTop = window.scrollY + rect.top;
-            const windowHeight = window.innerHeight;
-            // Porta il form a 1/4 dall'alto (più naturale)
-            const targetScroll = absoluteTop - (windowHeight / 4);
-            
-            window.scrollTo({
-                top: Math.max(0, targetScroll),
-                behavior: 'smooth'
-            });
-        }
-    }, 150);
+    // Scrolla al form
+    document.querySelector('#gestione-economica .form-container')?.scrollIntoView({ behavior: 'smooth' });
 }
 
        async function modificaRegistrazioneEconomica(registrazioneId) {
@@ -8264,7 +7964,11 @@ function popolaFormEconomico(record) {
     }
     
     if (isMobileDevice()) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // Scroll all'inizio della sezione, ma senza smooth (causa scatti su Android).
+        // Usiamo scroll diretto + requestAnimationFrame per attendere il rendering della sezione.
+        requestAnimationFrame(() => {
+            window.scrollTo(0, 0);
+        });
     }
     
     // Rimuovi classe 'active' da TUTTE le sezioni e pulisci stili inline
@@ -9270,14 +8974,11 @@ function setupSafeArea() {
     if (hasNotch) {
         document.body.classList.add('notch-device');
         console.log('✅ Dispositivo con notch rilevato - Safe Area Attivata');
-        
-        // Forza il re-calcolo del layout
-        setTimeout(() => {
-            document.body.style.display = 'none';
-            document.body.offsetHeight; // Trigger reflow
-            document.body.style.display = '';
-            console.log('🔄 Reflow forzato per safe area');
-        }, 100);
+        // ⚠️ RIMOSSO reflow forzato (display:none + display:''):
+        // su Android resettava lo scroll a 0 quando setupSafeArea veniva richiamato
+        // dopo l'apertura della keyboard, l'orientation change, o un resize.
+        // Le CSS variables --safe-area-* vengono applicate immediatamente dai browser
+        // moderni senza bisogno di forzare il reflow.
     }
     
     // Debug: mostra i valori delle safe area
@@ -9298,47 +8999,59 @@ function initMobileOptimizations() {
     
     console.log('📱 Avvio ottimizzazioni mobile...');
     
-    // ❌ RIMOSSO il listener touchstart vuoto che causava conflitti
-    // document.addEventListener('touchstart', function() {}, { passive: true });
+    // ✅ Anti scroll-jump: aggiungi classe 'is-scrolling' durante lo scroll
+    // per disabilitare transition/animation che potrebbero causare reflow.
+    let _scrollEndTimer = null;
+    window.addEventListener('scroll', () => {
+        if (!document.body.classList.contains('is-scrolling')) {
+            document.body.classList.add('is-scrolling');
+        }
+        clearTimeout(_scrollEndTimer);
+        _scrollEndTimer = setTimeout(() => {
+            document.body.classList.remove('is-scrolling');
+        }, 150);
+    }, { passive: true });
     
+    // Previeni zoom su input
+    document.addEventListener('touchstart', function() {}, { passive: true });
+    
+    // Migliora lo scrolling
     document.documentElement.style.setProperty('--webkit-overflow-scrolling', 'touch');
     
+    // Ottimizza i touch target
     document.querySelectorAll('button, .menu-item, .action-btn, .btn').forEach(element => {
         element.style.touchAction = 'manipulation';
         element.style.minHeight = '44px';
         element.style.minWidth = '44px';
     });
     
+    // Keyboard avoidance: SOLO iOS (su Android il browser nativo gestisce meglio,
+    // e fare scrollIntoView qui causava lo "scatto verso l'alto" su Android).
+    const isiOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isiOS) {
+        document.querySelectorAll('input, textarea, select').forEach(input => {
+            input.addEventListener('focus', function() {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            });
+        });
+    }
+    
     console.log('✅ Ottimizzazioni mobile completate');
 }
 
 // ==================== GESTIONE KEYBOARD SU ANDROID ====================
+// ⚠️ Versione safe: NON forziamo più scroll su blur (causava il "salto su" sgradevole).
+// Lasciamo che il browser gestisca nativamente lo scroll della keyboard tramite
+// il meta viewport `interactive-widget=resizes-content`.
 function initAndroidKeyboardHandler() {
     if (!isAndroidDevice()) return;
-    
-    console.log('📱 Attivazione gestione keyboard per Android (modalità passiva)');
-    
-    const inputs = document.querySelectorAll('input, textarea, select');
-    
-    function handleFocus() {
-        // Solo padding extra - nessun scroll forzato
-        setTimeout(() => {
-            document.body.style.paddingBottom = '200px';
-        }, 50);
-    }
-    
-    function handleBlur() {
-        setTimeout(() => {
-            document.body.style.paddingBottom = '';
-        }, 50);
-    }
-    
-    inputs.forEach(input => {
-        input.removeEventListener('focus', handleFocus);
-        input.removeEventListener('blur', handleBlur);
-        input.addEventListener('focus', handleFocus);
-        input.addEventListener('blur', handleBlur);
-    });
+    console.log('📱 Android keyboard handler (modalità safe - no forced scroll)');
+    // Non aggiungiamo più listener focus/blur che alterano window.scrollY.
+    // L'unica cosa che ci serve è assicurare che gli input siano visibili
+    // quando la keyboard si apre — lo fa nativamente Android se il meta viewport
+    // è configurato con `interactive-widget=resizes-content`.
 }
 
 function isAndroidDevice() {
@@ -9446,11 +9159,34 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOM Ready - Inizializzazione Safe Area');
     setupSafeArea();
     initMobileOptimizations();
-    // initAndroidKeyboardHandler(); // ← DISABILITATA PER TEST SU ANDROID
+    initAndroidKeyboardHandler(); // ✅ AGGIUNGI QUESTA RIGA
 });
 
 // Esegui anche al resize e orientation change
-window.addEventListener('resize', setupSafeArea);
+// ⚠️ Versione safe: debounce + skip se è solo l'apertura della keyboard Android
+// (riconoscibile da: stessa larghezza ma altezza ridotta -> probabilmente keyboard aperta).
+let _lastViewportWidth = window.innerWidth;
+let _lastViewportHeight = window.innerHeight;
+let _safeAreaDebounce = null;
+window.addEventListener('resize', function() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // Se cambia solo l'altezza e in modo significativo (>150px) MENTRE un input è focus,
+    // è la tastiera che si apre/chiude → NON ricalcolare safe area (causerebbe scroll jump).
+    const sameWidth = (w === _lastViewportWidth);
+    const heightDelta = Math.abs(h - _lastViewportHeight);
+    const isInputFocused = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+    if (sameWidth && heightDelta > 150 && isInputFocused) {
+        // Keyboard event: ignora resize per safe area
+        _lastViewportHeight = h;
+        return;
+    }
+    _lastViewportWidth = w;
+    _lastViewportHeight = h;
+    // Debounce
+    clearTimeout(_safeAreaDebounce);
+    _safeAreaDebounce = setTimeout(setupSafeArea, 250);
+});
 window.addEventListener('orientationchange', function() {
     setTimeout(setupSafeArea, 300);
 });
@@ -11660,6 +11396,7 @@ if (riepilogoStagione) {
 //     break;
 
     </script>
+<div class="safe-area-bottom"></div>
 
 <!-- ==================== SEZIONE SVILUPPATORE ==================== -->
 <div id="developer-section" style="display: none;">
@@ -11778,6 +11515,7 @@ if (riepilogoStagione) {
         
         <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
             <button onclick="closePrivacyModal()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Ho capito
             </button>
         </div>
     </div>
