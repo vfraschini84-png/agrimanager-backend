@@ -238,6 +238,10 @@ h1 {
     border-top: 5px solid var(--accent);
 }
 
+#economia {
+    border-top: 5px solid #9C27B0;  /* Viola, in linea con l'icona della sezione */
+}
+
 .section {
     display: none;
     background: white;
@@ -2976,6 +2980,256 @@ input[type="radio"]:checked + span {
         padding: 3px 10px !important;
     }
 }
+
+/* ==================== FIX GPS PER BROWSER SENZA :has() ==================== */
+@media (max-width: 480px) {
+    /* Selettore alternativo per i pulsanti GPS - funziona su tutti i browser */
+    .form-group > div:has(.btn-help),
+    .form-group:has(#gps-coordinates) > div,
+    #gps-coordinates ~ div {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+}
+
+/* ==================== PAGINAZIONE COMPATTA MOBILE ==================== */
+@media (max-width: 768px) {
+    #lots-pagination {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+        margin: 15px 0 !important;
+        padding: 10px !important;
+    }
+    
+    /* Prima riga: 3 pulsanti affiancati */
+    .pagination-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    
+    .pagination-row button {
+        padding: 6px 14px !important;
+        font-size: 0.8rem !important;
+        border-radius: 25px !important;
+        white-space: nowrap !important;
+        min-width: auto !important;
+    }
+    
+    .pagination-row #page-info {
+        font-size: 0.8rem !important;
+        padding: 4px 14px !important;
+        background: #e9ecef !important;
+        border-radius: 25px !important;
+        white-space: nowrap !important;
+        font-weight: 500 !important;
+        color: #333 !important;
+    }
+    
+    /* Seconda riga: selettore centrato */
+    #lots-pagination select#items-per-page {
+        width: auto !important;
+        min-width: 120px !important;
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
+        border-radius: 20px !important;
+        background: white !important;
+        border: 1px solid #ddd !important;
+        text-align: center !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #lots-pagination {
+        gap: 10px !important;
+        padding: 8px !important;
+    }
+    
+    .pagination-row {
+        gap: 5px !important;
+    }
+    
+    .pagination-row button {
+        padding: 5px 10px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .pagination-row #page-info {
+        font-size: 0.7rem !important;
+        padding: 3px 10px !important;
+    }
+    
+    #lots-pagination select#items-per-page {
+        min-width: 100px !important;
+        padding: 5px 10px !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ==================== PULSANTI GIORNO/SETTIMANA/MESE COMPATTI ==================== */
+@media (max-width: 768px) {
+    /* Container dei pulsanti */
+    #gestione-costi-section div[style*="display: flex"][style*="gap: 10px"] {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    
+    /* Pulsanti singoli */
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaRegistro"],
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaMezzi"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 6px 10px !important;
+        font-size: 0.7rem !important;
+        border-radius: 20px !important;
+        white-space: nowrap !important;
+        flex: 1 !important;
+        min-width: 60px !important;
+        background: #2196F3 !important;
+        color: white !important;
+        border: none !important;
+        cursor: pointer !important;
+    }
+    
+    /* Hover/active per mobile */
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaRegistro"]:active,
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaMezzi"]:active {
+        transform: scale(0.97) !important;
+        background: #0b7dda !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaRegistro"],
+    #gestione-costi-section .btn-help[onclick*="cambiaVistaMezzi"] {
+        padding: 5px 6px !important;
+        font-size: 0.65rem !important;
+        min-width: 50px !important;
+    }
+    
+    #gestione-costi-section div[style*="display: flex"][style*="gap: 10px"] {
+        gap: 4px !important;
+    }
+}
+
+/* Versione con classi specifiche (più robusta) */
+@media (max-width: 768px) {
+    .vista-buttons-container {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    
+    .vista-btn {
+        flex: 1 !important;
+        min-width: 55px !important;
+        padding: 6px 8px !important;
+        font-size: 0.7rem !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        background: #2196F3 !important;
+        color: white !important;
+        border-radius: 20px !important;
+    }
+}
+
+/* ==================== CAMPI DATA COMPATTI SU MOBILE ==================== */
+@media (max-width: 768px) {
+    /* Tutti i campi data in generale */
+    input[type="date"],
+    input[type="date"].special-input,
+    .special-input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        padding: 10px 8px !important;
+        font-size: 0.75rem !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Forza il campo a non superare il contenitore */
+    .form-group input[type="date"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    input[type="date"],
+    input[type="date"].special-input,
+    .special-input[type="date"] {
+        padding: 8px 6px !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+/* ==================== CAMPO N. OPERATORI COMPATTO SU MOBILE ==================== */
+@media (max-width: 768px) {
+    /* Container del campo N. Operatori */
+    .form-group:has(#costo-numero-operatori),
+    .form-group:has(#costo-numero-operatori) {
+        width: auto !important;
+        min-width: 85px !important;
+        max-width: 100px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Input del campo N. Operatori */
+    #costo-numero-operatori {
+        text-align: center !important;
+        padding: 8px 4px !important;
+        font-size: 0.75rem !important;
+        width: 100% !important;
+        min-width: 60px !important;
+    }
+    
+    /* Etichetta del campo N. Operatori */
+    label[for="costo-numero-operatori"] {
+        font-size: 0.7rem !important;
+        white-space: nowrap !important;
+        text-align: center !important;
+    }
+    
+    /* Griglia della sezione - mantiene i campi affiancati */
+    .special-section[style*="border-left-color: #FF5722"] .section-grid {
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-group:has(#costo-numero-operatori) {
+        min-width: 75px !important;
+        max-width: 85px !important;
+    }
+    
+    #costo-numero-operatori {
+        padding: 6px 2px !important;
+        font-size: 0.7rem !important;
+        min-width: 55px !important;
+    }
+    
+    label[for="costo-numero-operatori"] {
+        font-size: 0.65rem !important;
+    }
+}
+
 </style>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
@@ -3381,23 +3635,23 @@ input[type="radio"]:checked + span {
     </div>
 
     <!-- ✅ CONTROLLI PAGINAZIONE - INSERISCI QUI -->
-    <div id="lots-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; padding: 15px; flex-wrap: wrap;">
+    <div id="lots-pagination">
+    <div class="pagination-row">
         <button id="prev-page-btn" onclick="loadLotsPage('prev')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
             ← Precedente
         </button>
-        <span id="page-info" style="font-weight: bold;">
-            Pagina <span id="current-page">1</span> di <span id="total-pages">1</span>
-        </span>
+        <span id="page-info" style="font-weight: bold;">Pagina <span id="current-page">1</span> di <span id="total-pages">1</span></span>
         <button id="next-page-btn" onclick="loadLotsPage('next')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
             Successiva →
         </button>
-        <select id="items-per-page" onchange="changeItemsPerPage()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-left: 20px;">
-            <option value="10">10 per pagina</option>
-            <option value="20" selected>20 per pagina</option>
-            <option value="50">50 per pagina</option>
-            <option value="100">100 per pagina</option>
-        </select>
     </div>
+    <select id="items-per-page" onchange="changeItemsPerPage()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+        <option value="10">10 per pagina</option>
+        <option value="20" selected>20 per pagina</option>
+        <option value="50">50 per pagina</option>
+        <option value="100">100 per pagina</option>
+    </select>
+</div>
 </div>
 <!-- Fine Sezione Lista Lotti -->
                 
@@ -3834,11 +4088,11 @@ input[type="radio"]:checked + span {
                 <div style="margin-top: 25px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h4>📊 Registro Attività Personale</h4>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="btn-help" onclick="cambiaVistaRegistro('giornaliera')">📅 Giorno</button>
-                            <button class="btn-help" onclick="cambiaVistaRegistro('settimanale')">📆 Settimana</button>
-                            <button class="btn-help" onclick="cambiaVistaRegistro('mensile')">🗓️ Mese</button>
-                        </div>
+                        <div class="vista-buttons-container" style="display: flex; gap: 10px;">
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('giornaliera')">📅 Giorno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('settimanale')">📆 Settimana</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('mensile')">🗓️ Mese</button>
+</div>
                     </div>
                     <div id="costi-personale-registro" style="max-height: 400px; overflow-y: auto;"></div>
                     <div style="text-align: right; margin-top: 15px; padding: 10px; background: #FF5722; color: white; border-radius: 8px;">
@@ -3901,11 +4155,11 @@ input[type="radio"]:checked + span {
                 <div style="margin-top: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h4 style="margin: 0;">📊 Registro Mezzi Tecnici</h4>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn-help" onclick="cambiaVistaMezzi('giornaliera')">📅 Giorno</button>
-            <button class="btn-help" onclick="cambiaVistaMezzi('settimanale')">📆 Settimana</button>
-            <button class="btn-help" onclick="cambiaVistaMezzi('mensile')">🗓️ Mese</button>
-        </div>
+        <div class="vista-buttons-container" style="display: flex; gap: 10px;">
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('giornaliera')">📅 Giorno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('settimanale')">📆 Settimana</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('mensile')">🗓️ Mese</button>
+</div>
     </div>
     <div id="mezzi-tecnici-registro" style="max-height: 300px; overflow-y: auto;"></div>
                     <div style="text-align: right; margin-top: 15px; padding: 10px; background: #2196F3; color: white; border-radius: 8px;">
@@ -8691,15 +8945,15 @@ if (lot.variety && lot.variety.trim() !== '') {
         <small>ID: ${lot.id} - Creato: ${new Date(lot.created_at).toLocaleDateString()} da ${lot.createdBy || 'Utente'}</small>
     </div>
             <div class="lotto-actions">
-                <div class="action-btn" onclick="navigateToLot('${lot.gps_coordinates}')" title="Naviga su Maps">
-                    <i class="fas fa-directions"></i>
-                </div>
+               <div class="action-btn" onclick="navigateToLot('${lot.gps_coordinates}')" title="Naviga su Maps" style="background: #4CAF50; color: white; border-color: #4CAF50;">
+    <i class="fas fa-directions"></i>
+</div>
 <div class="action-btn" onclick="addGPSLater(${lot.id})" title="Aggiungi coordinate GPS" style="background: #FF9800; color: white; border-color: #FF9800;">
     <i class="fas fa-map-marker-alt"></i>
 </div>
-                <div class="action-btn" onclick="loadLotDetails(${lot.id})" title="Vedi dettagli completi">
-                    <i class="fas fa-chart-bar"></i>
-                </div>
+                <div class="action-btn" onclick="loadLotDetails(${lot.id})" title="Vedi dettagli completi" style="background: #2196F3; color: white; border-color: #2196F3;">
+    <i class="fas fa-chart-bar"></i>
+</div>
                 <div class="action-btn" onclick="goToEconomicManagement(${lot.id})" title="Gestione Economica" style="background: #9C27B0; color: white; border-color: #9C27B0;">
                     <i class="fas fa-euro-sign"></i>
                 </div>
