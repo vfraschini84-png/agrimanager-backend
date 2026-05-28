@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.agrimanager.app',
-  appName: 'AgriManager',
+  appId: 'com.cropbook.app',
+  appName: 'CROPBOOK',
   webDir: 'www',
   android: {
     path: 'android'

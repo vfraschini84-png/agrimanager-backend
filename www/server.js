@@ -232,10 +232,10 @@ if (EXTRA && EXTRA !== PORT) PORTS.push(EXTRA);
 
 // In modalità test NON aprire le porte (Supertest usa l'app in-process)
 const servers = NODE_ENV === 'test' ? [] : PORTS.map(p => app.listen(p, '0.0.0.0', () => {
-    logger.info('🚀 Server AgriManager in ascolto', { port: p, nodeEnv: NODE_ENV });
+    logger.info('🚀 Server Cropbook in ascolto', { port: p, nodeEnv: NODE_ENV });
     if (NODE_ENV !== 'production') {
         console.log(`==================================`);
-        console.log(`🚀 AgriManager pronto su porta ${p}`);
+        console.log(`🚀 Cropbook pronto su porta ${p}`);
         console.log(`📍 http://localhost:${p}`);
         console.log(`📚 http://localhost:${p}/api-docs`);
         console.log(`🩺 http://localhost:${p}/api/health`);

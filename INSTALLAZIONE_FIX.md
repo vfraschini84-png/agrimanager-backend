@@ -89,7 +89,7 @@ npm start
 ```
 [2026-05-08 14:30:15] [info]: ✅ Connesso al database SQLite
 [2026-05-08 14:30:15] [info]: 🧪 Inizio caricamento routes
-[2026-05-08 14:30:15] [info]: 🚀 Server AgriManager avviato!
+[2026-05-08 14:30:15] [info]: 🚀 Server Cropbook avviato!
 ```
 
 ### Test 3: Verificare logging

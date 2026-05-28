@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#4CAF50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>AgriManager - Gestione Lotti</title>
+    <title>CROPBOOK - Gestione Lotti</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
@@ -3245,7 +3245,7 @@ input[type="radio"]:checked + span {
     <div class="container mobile-optimized">
         <!-- Sezione Autenticazione -->
         <div id="auth-section" class="auth-section active">
-            <h2 class="section-title"><i class="fas fa-user-shield"></i> Accesso AgriManager</h2>
+            <h2 class="section-title"><i class="fas fa-user-shield"></i> Accesso Cropbook</h2>
             
             <div class="auth-tabs">
     <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
@@ -3442,7 +3442,7 @@ input[type="radio"]:checked + span {
                 <i class="fas fa-home"></i>
             </button>
             <div>
-                <h1 style="margin: 0;">AgriManager</h1>
+                <h1 style="margin: 0;">CROPBOOK</h1>
                 <p class="app-description" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
             </div>
         </div>
@@ -4425,7 +4425,7 @@ input[type="radio"]:checked + span {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
         <footer>
-            <p>© 2025 AgriManager - Tutti i diritti riservati</p>
+            <p>© 2025 Cropbook - Tutti i diritti riservati</p>
         </footer>
     </div>
 
@@ -5860,7 +5860,7 @@ function optimizeMobileLoad() {
                 let errorMessage = 'Impossibile acquisire la posizione';
                 const code = error && (error.code !== undefined ? error.code : error.code);
                 switch (code) {
-                    case 1: errorMessage = '🚫 Permesso GPS negato. Vai in Impostazioni → App → AgriManager → Autorizzazioni e abilita "Posizione".'; break;
+                    case 1: errorMessage = '🚫 Permesso GPS negato. Vai in Impostazioni → App → Cropbook → Autorizzazioni e abilita "Posizione".'; break;
                     case 2: errorMessage = '🛰️ GPS non disponibile. Verifica che il GPS dello smartphone sia acceso e prova all\'aperto.'; break;
                     case 3: errorMessage = '⏱️ Timeout GPS. Riprova all\'aperto con cielo libero.'; break;
                     default:
@@ -5918,7 +5918,23 @@ function optimizeMobileLoad() {
          * Apre il modal con la mappa interattiva per scegliere/confermare la posizione.
          * @param {string} targetInputId - id del campo input da popolare (default 'gps-coordinates')
          */
-        function openMapPicker(targetInputId = 'gps-coordinates') {
+        /**
+         * Apre il modal con la mappa interattiva per scegliere/confermare la posizione.
+         * @param {string|object} target - id del campo input da popolare oppure oggetto { onConfirm: (lat, lng, url) => void, initialUrl?: string }
+         */
+        function openMapPicker(target = 'gps-coordinates') {
+            // Normalizza parametro: supporta sia string (legacy: id campo) sia object con callback custom
+            let targetInputId = null;
+            let onConfirmCallback = null;
+            let initialUrlOverride = null;
+            if (typeof target === 'string') {
+                targetInputId = target;
+            } else if (target && typeof target === 'object') {
+                onConfirmCallback = target.onConfirm;
+                initialUrlOverride = target.initialUrl || null;
+                targetInputId = target.targetInputId || null;
+            }
+
             if (typeof L === 'undefined') {
                 // Leaflet non ancora caricato → mostra spinner e aspetta
                 showNotification('⏳ Caricamento mappa...', 'loading');
@@ -5927,20 +5943,17 @@ function optimizeMobileLoad() {
                     attempts++;
                     if (typeof L !== 'undefined') {
                         clearInterval(wait);
-                        openMapPicker(targetInputId);
+                        openMapPicker(target);
                     } else if (attempts > 15) {
                         clearInterval(wait);
-                        showNotification('⚠️ Impossibile caricare la mappa. Uso fallback Google Maps...', 'warning');
-                        // Fallback: vecchio comportamento Google Maps
-                        if (typeof openGoogleMapsToGetLocation === 'function') {
-                            setTimeout(openGoogleMapsToGetLocation, 500);
-                        }
+                        showNotification('⚠️ Impossibile caricare la mappa', 'warning');
                     }
                 }, 400);
                 return;
             }
 
             _mapPicker.target = targetInputId;
+            _mapPicker.onConfirm = onConfirmCallback;
 
             // Crea modal se non esiste
             let modal = document.getElementById('map-picker-modal');
@@ -5988,9 +6001,9 @@ function optimizeMobileLoad() {
             }
             modal.classList.add('show');
 
-            // Posizione iniziale: prova a leggere dal campo se già compilato, altrimenti centro Italia
+            // Posizione iniziale: prova a leggere dal campo o initialUrl override, altrimenti centro Italia
             let initLat = 41.9, initLng = 12.5, initZoom = 5;
-            const existing = document.getElementById(targetInputId)?.value;
+            const existing = initialUrlOverride || (targetInputId && document.getElementById(targetInputId)?.value) || '';
             const parsed = extractLatLngFromMapsUrl(existing);
             if (parsed) {
                 initLat = parsed.lat; initLng = parsed.lng; initZoom = 16;
@@ -6076,6 +6089,8 @@ function optimizeMobileLoad() {
                 _mapPicker.layers = null;
                 _mapPicker.currentLayer = null;
             }
+            _mapPicker.onConfirm = null;
+            _mapPicker.target = null;
         }
 
         function updateCoordsDisplay(lat, lng) {
@@ -6087,11 +6102,22 @@ function optimizeMobileLoad() {
             if (!_mapPicker.marker) return;
             const { lat, lng } = _mapPicker.marker.getLatLng();
             const url = `https://maps.google.com/?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+            // ✅ Se è stato passato un callback custom, usalo (per casi tipo "aggiorna lotto esistente")
+            if (typeof _mapPicker.onConfirm === 'function') {
+                try {
+                    _mapPicker.onConfirm(parseFloat(lat.toFixed(6)), parseFloat(lng.toFixed(6)), url);
+                } catch (e) { console.error('onConfirm callback errore:', e); }
+                closeMapPicker();
+                return;
+            }
+
+            // Comportamento legacy: scrive nel campo input
             const target = document.getElementById(_mapPicker.target || 'gps-coordinates');
             if (target) {
                 target.value = url;
                 if (typeof validateGoogleMapsUrl === 'function') validateGoogleMapsUrl();
-                else clearFieldError(_mapPicker.target);
+                else if (typeof clearFieldError === 'function') clearFieldError(_mapPicker.target);
             }
             closeMapPicker();
             showNotification('✅ Posizione salvata', 'success');
@@ -6381,26 +6407,27 @@ function showGPSOptionsModal(lotId) {
                 </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    <button onclick="addGPSManual(${lotId}); closeGPSModal()" class="btn btn-primary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
-                        <i class="fas fa-keyboard" style="margin-right: 10px; width: 20px;"></i> Inserisci manualmente il link
+                    <button onclick="addGPSFromMapPicker(${lotId}); closeGPSModal();" class="btn btn-primary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem; background: #2E7D32;">
+                        <i class="fas fa-map-marked-alt" style="margin-right: 10px; width: 20px;"></i> Salva posizione (mappa interattiva)
                     </button>
-                    
+
                     <button onclick="addGPSCurrentLocation(${lotId}); closeGPSModal()" class="btn btn-secondary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
                         <i class="fas fa-location-arrow" style="margin-right: 10px; width: 20px;"></i> Usa posizione attuale
                     </button>
-                    
+
+                    <button onclick="addGPSManual(${lotId}); closeGPSModal()" class="btn btn-secondary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
+                        <i class="fas fa-keyboard" style="margin-right: 10px; width: 20px;"></i> Inserisci manualmente il link
+                    </button>
+
                     <button onclick="addGPSFromClipboard(${lotId}); closeGPSModal()" class="btn btn-secondary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
                         <i class="fas fa-paste" style="margin-right: 10px; width: 20px;"></i> Incolla dagli appunti
                     </button>
-                    
+
                     <button onclick="addGPSFromCoordinates(${lotId}); closeGPSModal()" class="btn btn-secondary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
                         <i class="fas fa-coordinates" style="margin-right: 10px; width: 20px;"></i> Genera da coordinate
+
                     </button>
-                    
-                    <button onclick="openGoogleMapsForLocation(${lotId})" class="btn btn-secondary" style="text-align: left; padding: 15px; border-radius: 10px; font-size: 1rem;">
-                        <i class="fas fa-external-link-alt" style="margin-right: 10px; width: 20px;"></i> Apri Google Maps
-                    </button>
-                    
+
                     <button onclick="closeGPSModal()" class="btn" style="background: #f5f5f5; color: #666; padding: 15px; border-radius: 10px; margin-top: 10px; font-size: 1rem;">
                         <i class="fas fa-times" style="margin-right: 10px; width: 20px;"></i> Annulla
                     </button>
@@ -6446,6 +6473,26 @@ function openGoogleMapsForLocation(lotId) {
         addGPSFromClipboard(lotId);
     }, 3000);
 }
+
+/**
+ * Apre la mappa interattiva (Leaflet) per scegliere/regolare le coordinate di un lotto esistente,
+ * poi aggiorna il lotto via API. Stesso flusso di "Salva Posizione" usato in fase di registrazione.
+ */
+function addGPSFromMapPicker(lotId) {
+    // Trova lotto per leggere coordinate esistenti (se ci sono)
+    const lot = (typeof allLots !== 'undefined' && Array.isArray(allLots))
+        ? allLots.find(l => l.id === parseInt(lotId))
+        : null;
+    const initialUrl = lot && lot.gps_coordinates ? lot.gps_coordinates : '';
+
+    openMapPicker({
+        initialUrl,
+        onConfirm: (lat, lng, url) => {
+            updateLotGPS(lotId, url);
+        }
+    });
+}
+
 
 function addGPSManual(lotId) {
     const gpsUrl = prompt('Incolla il link Google Maps:');
@@ -8358,7 +8405,7 @@ function popolaFormEconomico(record) {
                 }
                 
                 const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-                saveAsExcelFile(excelBuffer, `agrimanager_completo_${new Date().toISOString().split('T')[0]}.xlsx`);
+                saveAsExcelFile(excelBuffer, `cropbook_completo_${new Date().toISOString().split('T')[0]}.xlsx`);
                 
                 showNotification('File Excel generato con successo!', 'success');
                 
@@ -9445,7 +9492,7 @@ function closeAllDropdowns() {
 
         // ==================== INIZIALIZZAZIONE GLOBALE MIGLIORATA ====================
         document.addEventListener('DOMContentLoaded', function() {
-    console.log('AgriManager Frontend inizializzato');
+    console.log('Cropbook Frontend inizializzato');
     
     // Inizializza il sistema di autenticazione
     initAuthSystem();
@@ -9825,7 +9872,7 @@ window.addEventListener('orientationchange', function() {
 
 // ==================== SEZIONE SVILUPPATORE ====================
 let devPasswordAttempts = 0;
-const DEV_SECRET = 'AgriManager2024Dev!'; // CAMBIA QUESTA PASSWORD!
+const DEV_SECRET = 'Cropbook2024Dev!'; // CAMBIA QUESTA PASSWORD!
 
 // Attivazione con 7 click consecutivi (solo per super-admin)
 function initDeveloperAccess() {
@@ -10283,7 +10330,7 @@ async function exportAllUsersData() {
         
         // Scrivi il file
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAsExcelFile(excelBuffer, `agrimanager_utenti_${new Date().toISOString().split('T')[0]}.xlsx`);
+        saveAsExcelFile(excelBuffer, `cropbook_utenti_${new Date().toISOString().split('T')[0]}.xlsx`);
         
         showNotification(`Esportati ${users.length} utenti con successo!`, 'success');
         
@@ -10362,7 +10409,7 @@ async function exportAllLotsData() {
         
         // Salva file
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAsExcelFile(excelBuffer, `agrimanager_lotti_${new Date().toISOString().split('T')[0]}.xlsx`);
+        saveAsExcelFile(excelBuffer, `cropbook_lotti_${new Date().toISOString().split('T')[0]}.xlsx`);
         
         showNotification(`Esportati ${lots.length} lotti con successo!`, 'success');
         
@@ -10440,7 +10487,7 @@ async function exportAllActivitiesData() {
         
         // Salva file
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAsExcelFile(excelBuffer, `agrimanager_attivita_${new Date().toISOString().split('T')[0]}.xlsx`);
+        saveAsExcelFile(excelBuffer, `cropbook_attivita_${new Date().toISOString().split('T')[0]}.xlsx`);
         
         showNotification(`Esportate ${allActivities.length} attività con successo!`, 'success');
         
@@ -10541,7 +10588,7 @@ async function exportAllEconomicData() {
         
         // Salva file
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        saveAsExcelFile(excelBuffer, `agrimanager_economico_${new Date().toISOString().split('T')[0]}.xlsx`);
+        saveAsExcelFile(excelBuffer, `cropbook_economico_${new Date().toISOString().split('T')[0]}.xlsx`);
         
         showNotification(`Esportati ${allEconomicRecords.length} record economici con successo!`, 'success');
         
@@ -11127,7 +11174,7 @@ async function esportaBilancioCompleto() {
         } catch(e) {}
         
         // Salva file
-        const nomeFile = `AgriManager_Report_${lot?.company_name || 'Lotto'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const nomeFile = `Cropbook_Report_${lot?.company_name || 'Lotto'}_${new Date().toISOString().split('T')[0]}.xlsx`;
         XLSX.writeFile(workbook, nomeFile);
         
         showNotification('Report Excel generato con successo!', 'success');
@@ -12097,7 +12144,7 @@ if (riepilogoStagione) {
             <p><strong>Ultimo aggiornamento:</strong> 21 Aprile 2026</p>
             
             <h3>1. Titolare del trattamento</h3>
-            <p>AgriManager - [Inserisci nome azienda/professionista]<br>
+            <p>Cropbook - [Inserisci nome azienda/professionista]<br>
             Email: [inserisci email]<br>
             P.IVA: [inserisci partita IVA]</p>
             

@@ -51,7 +51,7 @@ app.use(helmet({
 ### Situazione Attuale (INSICURO)
 ```
 www/
-├── agrimanager.db          ❌ ACCESSIBILE VIA HTTP
+├── cropbook.db          ❌ ACCESSIBILE VIA HTTP
 ├── server.js
 ├── index.html
 └── backups/                ❌ ACCESSIBILE
@@ -63,9 +63,9 @@ www/
 **Step 1: Spostare database**
 ```bash
 # Struttura corretta
-agrimanager-backend/
+cropbook-backend/
 ├── data/                           # ✅ NUOVA DIRECTORY
-│   ├── agrimanager.db
+│   ├── cropbook.db
 │   └── backups/
 ├── www/
 │   ├── server.js
@@ -75,7 +75,7 @@ agrimanager-backend/
 
 **Step 2: Aggiornare percorsi in database.js**
 ```javascript
-const dbPath = path.join(__dirname, '..', 'data', 'agrimanager.db');
+const dbPath = path.join(__dirname, '..', 'data', 'cropbook.db');
 //                        ↑↑ Salire di 1 livello
 ```
 
@@ -186,7 +186,7 @@ const logger = winston.createLogger({
         winston.format.errors({ stack: true }),
         winston.format.json()
     ),
-    defaultMeta: { service: 'agrimanager' },
+    defaultMeta: { service: 'cropbook' },
     transports: [
         // File per errori
         new winston.transports.File({ 
@@ -330,7 +330,7 @@ app.use(cors({
 
 ### File .env
 ```bash
-ALLOWED_ORIGINS=http://localhost:3000,https://agrimanager.app,https://app.agrimanager.com
+ALLOWED_ORIGINS=http://localhost:3000,https://cropbook.app,https://app.cropbook.com
 ```
 
 ---

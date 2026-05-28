@@ -1,5 +1,5 @@
 {
-  "name": "agrimanager-backend",
+  "name": "cropbook-backend",
   "version": "1.0.0",
   "description": "Backend per la gestione di lotti agricoli",
   "main": "server.js",

@@ -1,4 +1,4 @@
-# 📋 VALUTAZIONE COMPLETA - AgriManager
+# 📋 VALUTAZIONE COMPLETA - Cropbook
 
 **Data**: 8 maggio 2026  
 **Versione**: 1.0.0
@@ -9,7 +9,7 @@
 
 **Stato Generale**: ⚠️ **BUONO CON CRITICITÀ**
 
-L'app AgriManager è un'applicazione Capacitor ben strutturata per la gestione agricola con backend Express.js robusto. Ha implementazioni di sicurezza solide ma presenta aree di miglioramento critico: mancanza di test, documentazione insufficiente e alcuni problemi architetturali.
+L'app Cropbook è un'applicazione Capacitor ben strutturata per la gestione agricola con backend Express.js robusto. Ha implementazioni di sicurezza solide ma presenta aree di miglioramento critico: mancanza di test, documentazione insufficiente e alcuni problemi architetturali.
 
 ---
 

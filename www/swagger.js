@@ -5,12 +5,12 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'AgriManager API',
+            title: 'Cropbook API',
             version: '1.0.0',
             description: 'API per la gestione di lotti agricoli con multitenant support',
             contact: {
-                name: 'AgriManager Team',
-                url: 'https://agrimanager.example.com',
+                name: 'Cropbook Team',
+                url: 'https://cropbook.example.com',
             },
         },
         servers: [

@@ -4,10 +4,10 @@ const { exec } = require('child_process');
 
 class DatabaseBackup {
     constructor() {
-        this.dbPath = path.join(__dirname, 'agrimanager.db');
+        this.dbPath = path.join(__dirname, 'cropbook.db');
         this.backupDir = path.join(__dirname, 'backups');
         this.timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        this.backupPath = path.join(this.backupDir, `agrimanager-${this.timestamp}.db`);
+        this.backupPath = path.join(this.backupDir, `cropbook-${this.timestamp}.db`);
     }
 
     async createBackup() {

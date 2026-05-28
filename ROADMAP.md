@@ -47,12 +47,12 @@ mkdir data
 mkdir data/backups
 
 # 2. Spostare file
-mv www/agrimanager.db data/
+mv www/cropbook.db data/
 mv www/backups/* data/backups/
 rm -rf www/backups
 
 # 3. Aggiornare percorsi nei file JS
-# - database.js: const dbPath = path.join(__dirname, '..', 'data', 'agrimanager.db')
+# - database.js: const dbPath = path.join(__dirname, '..', 'data', 'cropbook.db')
 # - backup.js: destinationPath = path.join(__dirname, '../data/backups/...')
 # - server.js: verificare che non serve la cartella data/
 
@@ -285,7 +285,7 @@ npx eslint --init
     if: github.ref == 'refs/heads/main'
     run: |
       # SSH deploy script
-      ssh user@server "cd /app && git pull && npm install && npm test && pm2 restart agrimanager"
+      ssh user@server "cd /app && git pull && npm install && npm test && pm2 restart cropbook"
 ```
 
 ### Sprint 3.3: Containerization (1 giorno)
@@ -324,7 +324,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      DB_PATH: /app/data/agrimanager.db
+      DB_PATH: /app/data/cropbook.db
     volumes:
       - ./data:/app/data
     restart: unless-stopped

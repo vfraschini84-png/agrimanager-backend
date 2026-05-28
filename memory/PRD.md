@@ -1,4 +1,4 @@
-# PRD — AgriManager
+# PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-05-09
 **Versione**: 1.3.0
@@ -9,7 +9,7 @@
 "Analizza la mia app" → analisi completa + applicazione di tutti i fix critici e poi una serie di feature improvements su un'app Capacitor Android (Node/Express + SQLite + HTML monolitico) per la gestione di lotti agricoli.
 
 ## Stack
-- Backend: Node.js 20 + Express 4 + SQLite3 (file `/app/data/agrimanager.db`, fuori da www/)
+- Backend: Node.js 20 + Express 4 + SQLite3 (file `/app/data/cropbook.db`, fuori da www/)
 - Auth: JWT + bcrypt
 - Sicurezza: helmet, cors whitelist con regex, express-rate-limit, compression
 - Logging: Winston (file rotation + console dev)
@@ -18,7 +18,7 @@
 - Test: Jest + Supertest (36 test attivi)
 - PDF: pdfkit + chartjs-node-canvas (per report bilancio)
 - Email: nodemailer (SMTP da env)
-- Process manager: supervisor (program `agrimanager`)
+- Process manager: supervisor (program `cropbook`)
 
 ## Personas
 - **Super-admin** (`username='admin'`): vede e gestisce tutto, può resettare password.
@@ -61,7 +61,7 @@
 | 8 | Bottone "Report PDF Stagione" affianco a "Excel Completo" nella sezione Bilancio (grid 2-col responsive) | `index.html` |
 | 9 | **Rimosso box "Credenziali di test"** dalla schermata di login | `index.html` |
 | 10 | Server NON ascolta in test mode (per Supertest in-process) | `server.js` |
-| 11 | Server ora gestito da **supervisor** (`agrimanager` program) → autostart + autorestart | `/etc/supervisor/conf.d/supervisord_agrimanager.conf` |
+| 11 | Server ora gestito da **supervisor** (`cropbook` program) → autostart + autorestart | `/etc/supervisor/conf.d/supervisord_cropbook.conf` |
 
 ### Test coverage
 - **36 test passanti** in 5 suite:
@@ -107,8 +107,8 @@
 ## Avvio
 Server gestito da supervisor:
 ```bash
-sudo supervisorctl status agrimanager
-sudo supervisorctl restart agrimanager
-sudo supervisorctl tail -f agrimanager
+sudo supervisorctl status cropbook
+sudo supervisorctl restart cropbook
+sudo supervisorctl tail -f cropbook
 ```
 URL pubblico: https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com/

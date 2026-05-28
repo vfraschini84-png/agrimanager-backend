@@ -1,15 +1,15 @@
-# Test credentials — AgriManager
+# Test credentials — Cropbook
 
 ## Super-admin (auto-creato al primo avvio)
 - **Username**: `admin`
-- **Email**: `admin@agrimanager.com`
-- **Password attuale**: `96a0761f3943` (valida finché non viene cancellato il DB `/app/data/agrimanager.db`)
+- **Email**: `admin@cropbook.com`
+- **Password attuale**: `96a0761f3943` (valida finché non viene cancellato il DB `/app/data/cropbook.db`)
 - **Ruolo**: `admin` (super-admin se username === 'admin')
 - **privacy_accepted**: 1 (auto-impostato dal seed)
 
 Per recuperare la password admin se la dimentichi:
 ```bash
-grep "Password:" /var/log/supervisor/agrimanager.out.log | tail -1 | awk '{print $NF}'
+grep "Password:" /var/log/supervisor/cropbook.out.log | tail -1 | awk '{print $NF}'
 ```
 
 ## Auto-promozione primo utente

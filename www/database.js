@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 const logger = require('./logger');
 
 // ✅ Path DB da env (default fuori da www/ per non esporlo via static)
-const dbPath = path.resolve(__dirname, process.env.DATABASE_PATH || '../data/agrimanager.db');
+const dbPath = path.resolve(__dirname, process.env.DATABASE_PATH || '../data/cropbook.db');
 const dbDir = path.dirname(dbPath);
 
 // Crea cartella DB se non esiste
@@ -325,7 +325,7 @@ async function createDefaultAdmin() {
         await db.runAsync(
             `INSERT INTO users (username, email, password_hash, role, user_type, privacy_accepted, privacy_accepted_at)
              VALUES (?, ?, ?, ?, ?, 1, datetime('now'))`,
-            ['admin', 'admin@agrimanager.com', hashedPassword, 'admin', 'libero_professionista']
+            ['admin', 'admin@cropbook.com', hashedPassword, 'admin', 'libero_professionista']
         );
 
         logger.warn('🔐 Nuovo utente admin creato — CAMBIA QUESTA PASSWORD AL PRIMO ACCESSO', {

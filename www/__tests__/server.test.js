@@ -18,8 +18,8 @@ describe('Server smoke tests', () => {
         expect(res.body.openapi).toBe('3.0.0');
     });
 
-    test('GET /agrimanager.db → 404 (file DB non esposto)', async () => {
-        const res = await request(app).get('/agrimanager.db');
+    test('GET /cropbook.db → 404 (file DB non esposto)', async () => {
+        const res = await request(app).get('/cropbook.db');
         expect(res.statusCode).toBe(404);
     });
 

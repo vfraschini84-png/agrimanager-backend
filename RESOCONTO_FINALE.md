@@ -2,7 +2,7 @@
 
 **Compilato**: 8 maggio 2026  
 **Utente**: Vito  
-**Scenario**: AgriManager v1.0 → v2.0 (Multitenant Cloud)
+**Scenario**: Cropbook v1.0 → v2.0 (Multitenant Cloud)
 
 ---
 

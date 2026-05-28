@@ -3,10 +3,10 @@ const path = require('path');
 
 console.log('🔄 Creazione backup del database...');
 
-const dbPath = path.join(__dirname, 'agrimanager.db');
+const dbPath = path.join(__dirname, 'cropbook.db');
 const backupDir = path.join(__dirname, 'backups');
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-const backupPath = path.join(backupDir, `agrimanager-${timestamp}.db`);
+const backupPath = path.join(backupDir, `cropbook-${timestamp}.db`);
 
 // Crea cartella backups se non esiste
 if (!fs.existsSync(backupDir)) {

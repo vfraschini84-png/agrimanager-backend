@@ -181,11 +181,11 @@ router.post('/register', async (req, res) => {
         try {
             const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3000}`;
             await transporter.sendMail({
-                from: process.env.SMTP_FROM || 'no-reply@agrimanager.local',
+                from: process.env.SMTP_FROM || 'no-reply@cropbook.local',
                 to: email,
-                subject: 'AgriManager — Le tue credenziali di accesso',
-                text: `Ciao ${username},\n\nÈ stato creato un account AgriManager per te.\n\n  • Username: ${username}\n  • Password: ${password}\n  • Ruolo: ${finalRole}\n\nPer accedere apri: ${publicUrl}\n\nTi consigliamo di cambiare la password al primo accesso.`,
-                html: `<p>Ciao <b>${username}</b>,</p><p>È stato creato un account AgriManager per te.</p><ul><li><b>Username:</b> ${username}</li><li><b>Password:</b> <code>${password}</code></li><li><b>Ruolo:</b> ${finalRole}</li></ul><p>Per accedere apri: <a href="${publicUrl}">${publicUrl}</a></p><p style="color:#888;font-size:.9em">Ti consigliamo di cambiare la password al primo accesso.</p>`
+                subject: 'Cropbook — Le tue credenziali di accesso',
+                text: `Ciao ${username},\n\nÈ stato creato un account Cropbook per te.\n\n  • Username: ${username}\n  • Password: ${password}\n  • Ruolo: ${finalRole}\n\nPer accedere apri: ${publicUrl}\n\nTi consigliamo di cambiare la password al primo accesso.`,
+                html: `<p>Ciao <b>${username}</b>,</p><p>È stato creato un account Cropbook per te.</p><ul><li><b>Username:</b> ${username}</li><li><b>Password:</b> <code>${password}</code></li><li><b>Ruolo:</b> ${finalRole}</li></ul><p>Per accedere apri: <a href="${publicUrl}">${publicUrl}</a></p><p style="color:#888;font-size:.9em">Ti consigliamo di cambiare la password al primo accesso.</p>`
             });
             emailSent = true;
             logger.info('Email credenziali inviata', { username, email });
@@ -587,9 +587,9 @@ router.post('/forgot-password', async (req, res) => {
         if (transporter) {
             try {
                 await transporter.sendMail({
-                    from: process.env.SMTP_FROM || 'no-reply@agrimanager.local',
+                    from: process.env.SMTP_FROM || 'no-reply@cropbook.local',
                     to: user.email,
-                    subject: 'AgriManager — Reset password',
+                    subject: 'Cropbook — Reset password',
                     text: `Ciao ${user.username},\n\nApri questo link per impostare una nuova password (valido 1 ora):\n${resetLink}\n\nSe non hai richiesto il reset, ignora questa email.`,
                     html: `<p>Ciao <b>${user.username}</b>,</p><p>Apri questo link per impostare una nuova password (valido 1 ora):</p><p><a href="${resetLink}">${resetLink}</a></p><p>Se non hai richiesto il reset, ignora questa email.</p>`
                 });

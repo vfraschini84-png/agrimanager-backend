@@ -16,7 +16,7 @@ const logger = winston.createLogger({
         winston.format.errors({ stack: true }),
         winston.format.json()
     ),
-    defaultMeta: { service: 'agrimanager' },
+    defaultMeta: { service: 'cropbook' },
     transports: [
         // File per errori
         new winston.transports.File({

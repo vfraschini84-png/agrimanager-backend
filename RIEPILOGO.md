@@ -1,4 +1,4 @@
-# 📱 RIEPILOGO VALUTAZIONE AGRIMANAGER
+# 📱 RIEPILOGO VALUTAZIONE CROPBOOK
 
 **Status**: ⚠️ **BUONO CON CRITICITÀ**  
 **Score**: 5.1/10  
@@ -77,12 +77,12 @@ Performance tuning
 ## 📊 STRUTTURA ATTUALE
 
 ```
-agrimanager-backend/
+cropbook-backend/
 ├── www/
 │   ├── server.js              ✅ Express setup
 │   ├── database.js            ✅ SQLite init
 │   ├── index.html             ⚠️ Monolitico (1000+ linee?)
-│   ├── agrimanager.db         ❌ ESPOSTO
+│   ├── cropbook.db         ❌ ESPOSTO
 │   ├── backups/               ❌ ESPOSTO
 │   └── routes/
 │       ├── auth.js            ✅ JWT auth

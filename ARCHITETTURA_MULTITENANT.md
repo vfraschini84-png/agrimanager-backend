@@ -1,7 +1,7 @@
 # 🏗️ VALUTAZIONE ARCHITETTURA - EVOLUZIONE MULTITENANT CLOUD
 
 **Data**: 8 maggio 2026  
-**Scenario**: AgriManager passa da single-tenant local → multitenant cloud  
+**Scenario**: Cropbook passa da single-tenant local → multitenant cloud  
 **Urgenza**: 🔴 CRITICA (determinante per futuro dell'app)
 
 ---
@@ -75,7 +75,7 @@ role TEXT NOT NULL DEFAULT 'visitatore'
 ### 1. **DATABASE: SQLite → Cloud URGENTE**
 ```javascript
 // ❌ ATTUALE
-const dbPath = path.join(__dirname, 'agrimanager.db');
+const dbPath = path.join(__dirname, 'cropbook.db');
 const db = new sqlite3.Database(dbPath);
 ```
 
@@ -347,7 +347,7 @@ wss.on('connection', (ws, req) => {
 });
 
 // Frontend
-const ws = new WebSocket('ws://api.agrimanager.com/sync');
+const ws = new WebSocket('ws://api.cropbook.com/sync');
 ws.onmessage = (event) => {
     const { type, resource, data } = JSON.parse(event.data);
     if (type === 'update' && resource === 'lots') {

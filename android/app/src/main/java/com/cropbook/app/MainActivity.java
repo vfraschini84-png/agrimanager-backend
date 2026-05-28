@@ -1,4 +1,4 @@
-package com.example.myapp;
+package com.cropbook.app;
 
 import com.getcapacitor.BridgeActivity;
 

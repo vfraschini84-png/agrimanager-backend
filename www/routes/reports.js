@@ -131,13 +131,13 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
 
         const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
             Title: `Bilancio ${lot.company_name}`,
-            Author: 'AgriManager',
+            Author: 'Cropbook',
             Subject: 'Report Bilancio Stagione'
         }});
         doc.pipe(res);
 
         // Header
-        doc.fillColor('#2E7D32').fontSize(24).font('Helvetica-Bold').text('AgriManager', { continued: false });
+        doc.fillColor('#2E7D32').fontSize(24).font('Helvetica-Bold').text('Cropbook', { continued: false });
         doc.fillColor('#555').fontSize(11).font('Helvetica').text('Report Bilancio Stagione');
         doc.moveDown(0.5);
         doc.strokeColor('#4CAF50').lineWidth(2).moveTo(50, doc.y).lineTo(545, doc.y).stroke();
@@ -228,7 +228,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(range.start + i);
             doc.text(
-                `AgriManager · ${lot.company_name} · pag. ${i + 1}/${range.count}`,
+                `Cropbook · ${lot.company_name} · pag. ${i + 1}/${range.count}`,
                 50, doc.page.height - 35, { width: 495, align: 'center' }
             );
         }

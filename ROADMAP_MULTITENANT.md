@@ -17,7 +17,7 @@
   ```
 
 - [ ] **Database protection** (30 min)
-  - Spostare agrimanager.db fuori da www/
+  - Spostare cropbook.db fuori da www/
   - Aggiungere .gitignore
 
 - [ ] **Error handling globale** (45 min)
@@ -83,7 +83,7 @@ npm install pg
 DB_HOST=xyz.us-east-1.rds.amazonaws.com
 DB_USER=postgres
 DB_PASSWORD=...
-DB_NAME=agrimanager
+DB_NAME=cropbook
 
 # Usare
 const { Pool } = require('pg');
@@ -239,7 +239,7 @@ const sqlite3 = require('sqlite3');
 const { Pool } = require('pg');
 const uuid = require('uuid');
 
-const sqliteDb = new sqlite3.Database('./data/agrimanager.db');
+const sqliteDb = new sqlite3.Database('./data/cropbook.db');
 const pgPool = new Pool({
     connectionString: process.env.DATABASE_URL // From Supabase
 });
@@ -732,7 +732,7 @@ supabase
 // public/service-worker.js
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open('agrimanager-v2').then((cache) => {
+        caches.open('cropbook-v2').then((cache) => {
             return cache.addAll([
                 '/',
                 '/index.html',
@@ -808,7 +808,7 @@ class SyncManager {
     
     openDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open('agrimanager', 1);
+            const request = indexedDB.open('cropbook', 1);
             request.onupgradeneeded = () => {
                 request.result.createObjectStore('syncQueue', { keyPath: 'timestamp' });
             };
