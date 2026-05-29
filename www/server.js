@@ -182,6 +182,7 @@ mountRoute('/api/analyses', './routes/analyses');
 mountRoute('/api/economic', './routes/economic');
 mountRoute('/api/costi', './routes/costi');
 mountRoute('/api/reports', './routes/reports');
+mountRoute('/api/admin', './routes/admin');
 
 // ==================== 404 ====================
 app.use((req, res) => {

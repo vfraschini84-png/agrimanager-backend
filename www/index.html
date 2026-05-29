@@ -9871,8 +9871,13 @@ window.addEventListener('orientationchange', function() {
 });
 
 // ==================== SEZIONE SVILUPPATORE ====================
+// ==================== ACCESSO SVILUPPATORE (PROTETTO SERVER-SIDE) ====================
+// ⚠️ Sicurezza: nessuna password hardcoded. Il backend richiede:
+//   - JWT valido (Authorization: Bearer ...)
+//   - utente == super-admin (username='admin')
+//   - password dev verificata contro DEV_PASSWORD_HASH in .env del server
+//   - dev session token con scadenza 30 minuti memorizzato in sessionStorage
 let devPasswordAttempts = 0;
-const DEV_SECRET = 'Cropbook2024Dev!'; // CAMBIA QUESTA PASSWORD!
 
 // Attivazione con 7 click consecutivi (solo per super-admin)
 function initDeveloperAccess() {
@@ -9900,40 +9905,96 @@ function initDeveloperAccess() {
     });
 }
 
-function showDeveloperLogin() {
-    // Verifica che l'utente sia loggato e sia il super-admin (username 'admin')
+async function showDeveloperLogin() {
+    // Validazione lato client minima — quella REALE è server-side
     const token = localStorage.getItem('auth_token');
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    // Controlla se c'è un token e se l'utente è admin con username 'admin'
+
     if (!token) {
-        alert('⚠️ Accesso Sviluppatore non disponibile.\n\nDevi prima effettuare il login come Amministratore Principale.');
+        alert('⚠️ Devi prima effettuare il login come Amministratore Principale.');
         return;
     }
-    
-    if (currentUser.role !== 'admin') {
-        alert('⚠️ Accesso Sviluppatore non disponibile.\n\nSolo l\'Amministratore Principale può accedere a quest\'area.');
+    if (currentUser.role !== 'admin' || currentUser.username !== 'admin') {
+        alert('⚠️ Solo l\'utente super-admin "admin" può accedere a quest\'area.');
         return;
     }
-    
-    if (currentUser.username !== 'admin') {
-        alert('⚠️ Accesso Sviluppatore non disponibile.\n\nSolo l\'utente "admin" può accedere a quest\'area.');
-        return;
-    }
-    
+
     const password = prompt('🔐 Accesso Sviluppatore - Inserisci la password segreta:');
-    
-    if (password === DEV_SECRET) {
-        showDeveloperSection();
-    } else {
-        devPasswordAttempts++;
-        if (devPasswordAttempts >= 3) {
-            alert('Troppi tentativi falliti. Riprova più tardi.');
-            devPasswordAttempts = 0;
-        } else {
-            alert(`Password errata. Tentativi rimasti: ${3 - devPasswordAttempts}`);
+    if (!password) return;
+
+    try {
+        // ✅ Validazione server-side via /api/admin/dev/auth
+        const res = await fetch(`${API_BASE_URL}/admin/dev/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ password })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.status === 429) {
+            alert('🚫 Troppi tentativi falliti. Riprova fra 15 minuti.');
+            return;
         }
+        if (res.status === 404) {
+            alert('⚠️ Pannello sviluppatore non disponibile su questo server (disabilitato in produzione).');
+            return;
+        }
+        if (!res.ok) {
+            devPasswordAttempts++;
+            if (devPasswordAttempts >= 3) {
+                alert('Troppi tentativi falliti su questo dispositivo. Per sicurezza il pannello è ora bloccato.');
+                devPasswordAttempts = 0;
+                return;
+            }
+            alert(`Password errata. Tentativi rimasti: ${3 - devPasswordAttempts}`);
+            return;
+        }
+
+        // Salva dev token in sessionStorage (effimero — niente persistenza)
+        sessionStorage.setItem('dev_token', data.devToken);
+        sessionStorage.setItem('dev_token_exp', String(Date.now() + (data.expiresInSec * 1000)));
+        devPasswordAttempts = 0;
+        showDeveloperSection();
+    } catch (err) {
+        console.error('Errore dev auth:', err);
+        alert('Errore di connessione al server: ' + (err.message || err));
     }
+}
+
+/**
+ * Helper per chiamate API admin: aggiunge X-Dev-Token. Se scaduto, riapre il login.
+ */
+async function devApiCall(endpoint, options = {}) {
+    const token = localStorage.getItem('auth_token');
+    const devToken = sessionStorage.getItem('dev_token');
+    const exp = parseInt(sessionStorage.getItem('dev_token_exp') || '0');
+
+    if (!devToken || Date.now() > exp) {
+        sessionStorage.removeItem('dev_token');
+        sessionStorage.removeItem('dev_token_exp');
+        throw new Error('DEV_SESSION_EXPIRED');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/admin${endpoint}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Dev-Token': devToken,
+            ...(options.headers || {})
+        }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+        sessionStorage.removeItem('dev_token');
+        sessionStorage.removeItem('dev_token_exp');
+        throw new Error('DEV_SESSION_EXPIRED');
+    }
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    return res.json();
 }
 
 async function showDeveloperSection() {
@@ -9975,18 +10036,22 @@ function formatDate(dateString) {
 
 async function loadDevUsers() {
     try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-            const container = document.getElementById('dev-users-list');
-            if (container) {
-                container.innerHTML = '<p style="color: orange;">⚠️ Non sei loggato. Effettua il login come Admin per visualizzare gli utenti.</p>';
+        let users = [];
+        try {
+            const response = await devApiCall('/dev/users');
+            users = response.data || [];
+        } catch (devErr) {
+            if (devErr.message === 'DEV_SESSION_EXPIRED') {
+                const container = document.getElementById('dev-users-list');
+                if (container) container.innerHTML = '<p style="color: orange;">⚠️ Sessione dev scaduta. Riapri il pannello (7 click).</p>';
+                closeDeveloperSection();
+                return;
             }
-            return;
+            // Fallback: per compatibilità leggi via /auth/users (richiede comunque autenticazione)
+            const response = await apiCall('/auth/users');
+            users = response.data || [];
         }
-        
-        const response = await apiCall('/auth/users');
-        const users = response.data || [];
-        
+
         const container = document.getElementById('dev-users-list');
         if (!container) return;
         
