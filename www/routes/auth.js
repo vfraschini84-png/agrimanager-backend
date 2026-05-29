@@ -624,10 +624,10 @@ router.post('/reset-password', async (req, res) => {
     }
     
     try {
-        // Verifica token
+        // Verifica token (confronto datetime esplicito per gestire formato ISO/SQLite)
         const resetToken = await db.getAsync(
             `SELECT * FROM password_reset_tokens 
-             WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
+             WHERE token = ? AND used = 0 AND datetime(expires_at) > datetime('now')`,
             [token]
         );
         
@@ -635,18 +635,18 @@ router.post('/reset-password', async (req, res) => {
             return res.status(400).json({ error: 'Token non valido o scaduto' });
         }
         
-        // Aggiorna password
+        // Aggiorna password + marca token usato (atomico)
         const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-        await db.runAsync(
-            'UPDATE users SET password_hash = ? WHERE id = ?',
-            [hashedPassword, resetToken.user_id]
-        );
-        
-        // Marca token come usato
-        await db.runAsync(
-            'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
-            [resetToken.id]
-        );
+        await db.withTransaction(async () => {
+            await db.runAsync(
+                'UPDATE users SET password_hash = ? WHERE id = ?',
+                [hashedPassword, resetToken.user_id]
+            );
+            await db.runAsync(
+                'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
+                [resetToken.id]
+            );
+        });
         
         res.json({ success: true, message: 'Password aggiornata con successo' });
     } catch (error) {

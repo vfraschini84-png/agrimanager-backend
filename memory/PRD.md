@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-05-09
-**Versione**: 1.3.0
+**Ultimo aggiornamento**: 2026-05-29
+**Versione**: 1.5.1
 
 ---
 
@@ -64,12 +64,23 @@
 | 11 | Server ora gestito da **supervisor** (`cropbook` program) → autostart + autorestart | `/etc/supervisor/conf.d/supervisord_cropbook.conf` |
 
 ### Test coverage
-- **36 test passanti** in 5 suite:
+- **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
   - `rbac.test.js` (7): alias ruoli IT/EN
   - `lots.test.js` (8): protezione 401/403 endpoint
   - `server.test.js` (8): health, swagger, file safety
   - `sub-user-registration.test.js` (3): privacy ereditata
+  - `admin-dev.test.js` (8): pannello sviluppatore server-side
+  - `reset-password.test.js` (4): atomicità transazionale + scadenza token
+
+### Sessione 4 (2026-05-29): security hardening pannello sviluppatore + reset password
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Pannello sviluppatore protetto server-side**: nuovo router `/api/admin/dev/*` con doppia auth (JWT + dev-session token JWT scope=dev, scadenza 30min), bcrypt-hash della dev password in `.env` (`DEV_PASSWORD_HASH`), rate-limit dedicato 5 tentativi/15min, audit log su `/app/data/dev_audit.log` | `routes/admin.js` (nuovo), `.env`, `server.js`, `index.html` |
+| 2 | Rimosso `DEV_SECRET` hardcoded dal frontend; `showDeveloperSection()` ora chiama API server-side; `ENABLE_DEV_PANEL=false` → 404 (non rivela esistenza) | `index.html` |
+| 3 | **FIX bug critico**: confronto datetime su `password_reset_tokens.expires_at` non funzionava (formato ISO vs SQLite → confronto lessicografico) → **i token reset password non scadevano mai**. Wrap con `datetime()` per confronto datetime esplicito | `routes/auth.js` |
+| 4 | **Atomicità reset password**: `UPDATE users password_hash` + `UPDATE tokens used=1` ora dentro `withTransaction` → impedisce replay attack se la seconda write fallisce | `routes/auth.js` |
+| 5 | `DEV_PASSWORD_HASH` e `ENABLE_DEV_PANEL` ora letti dinamicamente (lazy getter) → permette override in test / runtime senza riavvio | `routes/admin.js` |
 
 ### Validazione live
 - ✅ Login admin via URL pubblico → 200

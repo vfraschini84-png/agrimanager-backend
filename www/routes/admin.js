@@ -15,8 +15,9 @@ const logger = require('../logger');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
-const DEV_PASSWORD_HASH = process.env.DEV_PASSWORD_HASH;
-const ENABLE_DEV_PANEL = process.env.ENABLE_DEV_PANEL !== 'false'; // default true
+// Letti dinamicamente (vedi getter sotto) per permettere override in test / runtime
+const getDevPasswordHash = () => process.env.DEV_PASSWORD_HASH;
+const isDevPanelEnabled = () => process.env.ENABLE_DEV_PANEL !== 'false'; // default true
 
 // ==================== AUDIT LOG ====================
 // Log dedicato per audit accessi dev (file separato per evidenza)
@@ -68,7 +69,7 @@ const devApiLimiter = rateLimit({
  * Verifica che il dev panel sia abilitato. In produzione → 404 (non rivelare neanche l'esistenza).
  */
 function requireDevPanelEnabled(req, res, next) {
-    if (!ENABLE_DEV_PANEL) {
+    if (!isDevPanelEnabled()) {
         return res.status(404).json({ error: 'Not found' });
     }
     next();
@@ -133,6 +134,7 @@ function requireDevSession(req, res, next) {
  * Richiede: JWT valido + utente=super-admin + DEV_PASSWORD_HASH configurato server-side.
  */
 router.post('/dev/auth', requireDevPanelEnabled, devAuthLimiter, authenticateToken, requireSuperAdmin, async (req, res) => {
+    const DEV_PASSWORD_HASH = getDevPasswordHash();
     if (!DEV_PASSWORD_HASH) {
         auditLog('dev_auth_not_configured', req);
         return res.status(503).json({ error: 'Dev panel non configurato sul server (manca DEV_PASSWORD_HASH).' });
