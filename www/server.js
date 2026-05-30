@@ -134,6 +134,22 @@ const PUBLIC_FILES = [
 PUBLIC_FILES.forEach(file => {
     app.get(`/${file}`, (req, res) => res.sendFile(path.join(__dirname, file)));
 });
+
+// Assets statici: SOLO le cartelle css/ e js/ (mai esporre tutta www/)
+const staticOpts = {
+    maxAge: NODE_ENV === 'production' ? '7d' : 0,
+    fallthrough: true,
+    setHeaders: (res, filePath) => {
+        // Difesa: blocca file sensibili anche se finissero per sbaglio in /css o /js
+        const lower = filePath.toLowerCase();
+        if (lower.endsWith('.env') || lower.endsWith('.db') || lower.endsWith('.sqlite')) {
+            res.status(403).end();
+        }
+    }
+};
+app.use('/css', express.static(path.join(__dirname, 'css'), staticOpts));
+app.use('/js', express.static(path.join(__dirname, 'js'), staticOpts));
+
 app.get('/', (req, res) => {
     logger.info('GET /', { ip: req.ip });
     res.sendFile(path.join(__dirname, 'index.html'));

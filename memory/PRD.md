@@ -63,6 +63,20 @@
 | 10 | Server NON ascolta in test mode (per Supertest in-process) | `server.js` |
 | 11 | Server ora gestito da **supervisor** (`cropbook` program) → autostart + autorestart | `/etc/supervisor/conf.d/supervisord_cropbook.conf` |
 
+### Sessione 5 (2026-05-29 pomeriggio): refactoring Fase A — estrazione asset
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Estratto `<style>` da `index.html`** → `css/cropbook.css` (3.222 righe) | `css/cropbook.css` (nuovo) |
+| 2 | **Estratto `<script>` inline da `index.html`** → `js/cropbook.js` (7.713 righe) | `js/cropbook.js` (nuovo) |
+| 3 | `index.html` ridotto da 12.267 → **1.338 righe** (-89%) | `index.html` |
+| 4 | `server.js`: aggiunto `express.static` su `/css` e `/js` con whitelist e blocco file sensibili (.env/.db/.sqlite → 403) | `server.js` |
+| 5 | Validazione: 48/48 test Jest passano, smoke test browser → login admin OK, dashboard renderizzata, zero errori console | — |
+
+**Vantaggi ottenuti**:
+- IDE/editor performanti sull'HTML (era unusable a 12k+ righe)
+- Browser fa cache separata di CSS/JS → caricamenti successivi più veloci
+- Apre la strada a Fase B (split per dominio) e tightening CSP
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
