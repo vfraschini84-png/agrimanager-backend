@@ -3704,8 +3704,9 @@ function popolaFormEconomico(record) {
     // Kg totali
     document.getElementById('totale-kg-raccolti').value = record.totale_kg || 0;
     
-    // Costi
-    document.getElementById('costo-mezzi-tecnici').value = record.costo_mezzi_tecnici || 0;
+    // Costo mezzi tecnici (protetto - potrebbe non esistere nella sezione Ricavi)
+const costiMezziInput = document.getElementById('costo-mezzi-tecnici');
+if (costiMezziInput) costiMezziInput.value = record.costo_mezzi_tecnici || 0;
     document.getElementById('costo-personale').value = record.costo_personale || 0;
     
         // ✅ NUOVO POPOLAMENTO BENI DUREVOLI CON AMMORTAMENTO
