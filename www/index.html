@@ -703,16 +703,21 @@
         <!-- QUARTA RIGA: Costi -->
                 
             <div class="form-group">
-    <label for="costo-personale"><i class="fas fa-users"></i> Costo Personale (€)</label>
+    <label for="costo-personale"><i class="fas fa-coins"></i> Totale Costi Stagione (€)</label>
     <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="number" id="costo-personale" step="0.01" placeholder="0.00" class="special-input" style="flex: 1;">
-        <button type="button" onclick="importaCostoPersonaleDaGestioneCosti()" 
+        <input type="text" id="costo-personale" readonly placeholder="Nessun costo aggiunto" class="special-input"
+               style="flex: 1; background: #f0f0f0; color: #333; cursor: not-allowed; font-weight: bold;">
+        <button type="button" onclick="importaCostiTotaliDaGestioneCosti()"
                 style="background: #FF5722; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 0.9rem;"
-                title="Importa il totale costo personale dalla sezione Gestione Costi">
+                title="Importa il totale costi (personale + mezzi tecnici + ammortamenti) dalla sezione Gestione Costi">
             <i class="fas fa-download"></i> Aggiorna da Costi
         </button>
     </div>
-    <div class="help-text">Inserisci manualmente o importa dalla sezione Gestione Costi</div>
+    <div class="help-text">Somma di personale, mezzi tecnici e quote di ammortamento dalla sezione Gestione Costi (sola lettura)</div>
+    <!-- Campi nascosti popolati al click di "Aggiorna da Costi" -->
+    <input type="hidden" id="costo-personale-valore" value="0">
+    <input type="hidden" id="costo-mezzi-valore" value="0">
+    <input type="hidden" id="costo-ammortamenti-valore" value="0">
 </div>
         
         <!-- PULSANTI AZIONE -->

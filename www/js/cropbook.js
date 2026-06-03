@@ -3160,7 +3160,10 @@ async function handleCambioStagione() {
     const prezzoKgValue = parseFloat(document.getElementById('prezzo-acquisto-vendita').value) || 0;
     const prezzoTotaleValue = parseFloat(document.getElementById('prezzo-totale').value) || 0;
     const kgRaccolti = parseFloat(document.getElementById('totale-kg-raccolti').value) || 0;
-    const costoPersonale = parseFloat(document.getElementById('costo-personale').value) || 0;
+    // ✅ I 3 costi sono importati dalla sezione Gestione Costi (campi nascosti)
+    const costoPersonale = parseFloat(document.getElementById('costo-personale-valore')?.value) || 0;
+    const costoMezziTecnici = parseFloat(document.getElementById('costo-mezzi-valore')?.value) || 0;
+    const quotaAmmortamento = parseFloat(document.getElementById('costo-ammortamenti-valore')?.value) || 0;
             
     console.log('📊 Dati form:', {
         editingId,
@@ -3170,7 +3173,9 @@ async function handleCambioStagione() {
         prezzoKgValue,
         prezzoTotaleValue,
         kgRaccolti,
-        costoPersonale
+        costoPersonale,
+        costoMezziTecnici,
+        quotaAmmortamento
     });
     
     // Calcola ricavi
@@ -3186,14 +3191,17 @@ async function handleCambioStagione() {
         ricaviTotali = prezzoTotale;
     }
     
-    // ✅ CALCOLO SEMPLIFICATO (solo costo personale)
-    const costiTotali = costoPersonale;
+    // ✅ TOTALE COSTI = personale + mezzi tecnici + quota ammortamento (sorgente: Gestione Costi)
+    const costiTotali = costoPersonale + costoMezziTecnici + quotaAmmortamento;
     const bilancio = ricaviTotali - costiTotali;
 
     console.log('📊 Calcoli:', {
         prezzoKg,
         prezzoTotale,
         ricaviTotali,
+        costoPersonale,
+        costoMezziTecnici,
+        quotaAmmortamento,
         costiTotali,
         bilancio
     });
@@ -3208,6 +3216,8 @@ async function handleCambioStagione() {
         totale_kg: kgRaccolti,
         ricavi_totali: ricaviTotali,
         costo_personale: costoPersonale,
+        costo_mezzi_tecnici: costoMezziTecnici,
+        quota_ammortamento: quotaAmmortamento,
         costi_totali: costiTotali,
         bilancio: bilancio
     };
@@ -3257,7 +3267,7 @@ async function handleCambioStagione() {
     }
 }
 
-async function importaCostoPersonaleDaGestioneCosti() {
+async function importaCostiTotaliDaGestioneCosti() {
     const lotId = currentEconomicLotId;
     const stagione = document.getElementById('stagione-agricola').value;
     
@@ -3272,28 +3282,55 @@ async function importaCostoPersonaleDaGestioneCosti() {
     }
     
     try {
-        showNotification('Recupero costo personale dalla sezione Costi...', 'loading');
+        showNotification('Recupero costi totali dalla sezione Gestione Costi...', 'loading');
         
-        // Chiama l'API dei costi personale
-        const response = await apiCall(`/costi/personale/${lotId}/${stagione}`);
-        const totale = response.totale || 0;
+        // Fetch in parallelo: personale + mezzi tecnici + ammortamenti (beni durevoli)
+        const [resPersonale, resMezzi, resEconomic] = await Promise.all([
+            apiCall(`/costi/personale/${lotId}/${stagione}`).catch(() => ({ totale: 0 })),
+            apiCall(`/costi/mezzi/${lotId}/${stagione}`).catch(() => ({ totale: 0 })),
+            apiCall(`/economic/${lotId}`).catch(() => ({ data: [] }))
+        ]);
         
-        if (totale === 0) {
-            showNotification(`⚠️ Nessun costo personale registrato per la stagione ${stagione} nella sezione Costi`, 'warning');
+        const totalePersonale = resPersonale.totale || 0;
+        const totaleMezzi = resMezzi.totale || 0;
+        
+        // Ammortamenti: somma delle quote_ammortamento dei record economici della stagione
+        // (i beni durevoli vengono salvati come record economico "fantasma" da Gestione Costi)
+        const recordsStagione = (resEconomic.data || []).filter(r => String(r.stagione_agricola) === String(stagione));
+        const totaleAmmortamenti = recordsStagione.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0);
+        
+        const totaleCosti = totalePersonale + totaleMezzi + totaleAmmortamenti;
+        
+        // Popola campi (visibile + nascosti)
+        const campoVisibile = document.getElementById('costo-personale');
+        document.getElementById('costo-personale-valore').value = totalePersonale.toFixed(2);
+        document.getElementById('costo-mezzi-valore').value = totaleMezzi.toFixed(2);
+        document.getElementById('costo-ammortamenti-valore').value = totaleAmmortamenti.toFixed(2);
+        
+        if (totaleCosti === 0) {
+            campoVisibile.value = '';
+            campoVisibile.placeholder = 'Nessun costo aggiunto';
+            showNotification(`⚠️ Nessun costo registrato per la stagione ${stagione} nella sezione Gestione Costi`, 'warning');
         } else {
-            // Inserisci il totale nel campo
-            document.getElementById('costo-personale').value = totale.toFixed(2);
-            showNotification(`✅ Importato costo personale di €${totale.toFixed(2)} dalla sezione Costi!`, 'success');
+            campoVisibile.value = `€ ${totaleCosti.toFixed(2)}`;
+            showNotification(
+                `✅ Costi importati — Personale: €${totalePersonale.toFixed(2)} · Mezzi: €${totaleMezzi.toFixed(2)} · Ammortamenti: €${totaleAmmortamenti.toFixed(2)} · TOTALE: €${totaleCosti.toFixed(2)}`,
+                'success'
+            );
             
-            // Ricalcola anteprima
             if (typeof calcolaPrezzoAutomatico === 'function') {
                 calcolaPrezzoAutomatico();
             }
         }
     } catch (error) {
-        console.error('Errore importazione costo personale:', error);
+        console.error('Errore importazione costi totali:', error);
         showNotification('Errore nel recupero: ' + error.message, 'error');
     }
+}
+
+// Backward compat: vecchio nome funzione (potrebbe essere ancora referenziato)
+async function importaCostoPersonaleDaGestioneCosti() {
+    return importaCostiTotaliDaGestioneCosti();
 }
 
               function resetFormEconomico() {
@@ -3301,7 +3338,13 @@ async function importaCostoPersonaleDaGestioneCosti() {
     document.getElementById('stagione-agricola').value = '';
     document.getElementById('data-acquisto-vendita').value = '';
     document.getElementById('totale-kg-raccolti').value = '';
-    document.getElementById('costo-personale').value = '';
+    // ✅ Reset campo totale costi (visibile + 3 nascosti)
+    const cp = document.getElementById('costo-personale');
+    if (cp) { cp.value = ''; cp.placeholder = 'Nessun costo aggiunto'; }
+    ['costo-personale-valore', 'costo-mezzi-valore', 'costo-ammortamenti-valore'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '0';
+    });
     
     // Reset metodo calcolo
     document.getElementById('metodo-prezzo-kg').checked = true;
@@ -3360,6 +3403,11 @@ async function importaCostoPersonaleDaGestioneCosti() {
     
     calcolaEBilanciaBilancio(registrazioniFiltrate);
     
+    // ✅ HELPER: calcola costi REALI da componenti (single source of truth)
+    const costiReali = (r) => Number(r.costo_personale || 0) + Number(r.costo_mezzi_tecnici || 0) + Number(r.quota_ammortamento || 0);
+    // ✅ HELPER: registrazione "fantasma" creata da Gestione Costi → solo ammortamenti, no vendita
+    const isFantasma = (r) => (Number(r.ricavi_totali || 0) === 0) && (Number(r.totale_kg || 0) === 0) && (Number(r.prezzo_kg || 0) === 0);
+    
     // ✅ RAGGRUPPA PER STAGIONE
     const gruppi = {};
     registrazioniFiltrate.forEach(reg => {
@@ -3378,8 +3426,10 @@ async function importaCostoPersonaleDaGestioneCosti() {
     // ✅ Genera HTML con accordion per stagione
     container.innerHTML = stagioniOrdinate.map((stagione, idx) => {
         const regs = gruppi[stagione];
-        const totaleRicaviStagione = regs.reduce((sum, r) => sum + (r.ricavi_totali || 0), 0);
-        const totaleCostiStagione = regs.reduce((sum, r) => sum + (r.costi_totali || 0), 0);
+        const regsVendita = regs.filter(r => !isFantasma(r));
+        const totaleRicaviStagione = regs.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
+        // Costi: somma da componenti per TUTTI i record (vendite + fantasma per ammortamenti)
+        const totaleCostiStagione = regs.reduce((sum, r) => sum + costiReali(r), 0);
         const bilancioStagione = totaleRicaviStagione - totaleCostiStagione;
         
         return `
@@ -3447,17 +3497,25 @@ async function importaCostoPersonaleDaGestioneCosti() {
                             } catch(e) {}
                         }
                         
-                        // Genera dettaglio costi
+                        // ✅ Dettaglio costi UNIVOCO per ogni registrazione (sempre visibile, anche zero)
+                        const cpReg = Number(reg.costo_personale || 0);
+                        const cmReg = Number(reg.costo_mezzi_tecnici || 0);
+                        const caReg = Number(reg.quota_ammortamento || 0);
+                        const ctReg = cpReg + cmReg + caReg;
                         const costItems = [];
-                        if ((reg.costo_mezzi_tecnici || 0) > 0) costItems.push(`🧪 Mezzi tecnici: €${(reg.costo_mezzi_tecnici || 0).toFixed(2)}`);
-                        if ((reg.costo_personale || 0) > 0) costItems.push(`👥 Personale: €${(reg.costo_personale || 0).toFixed(2)}`);
-                        if ((reg.costi_totali || 0) > 0 && costItems.length === 0) {
-                            costItems.push(`💸 Costi totali: €${(reg.costi_totali || 0).toFixed(2)}`);
-                        }
+                        if (cpReg > 0) costItems.push(`<span style="color:#2196F3;">👥 Personale: €${cpReg.toFixed(2)}</span>`);
+                        if (cmReg > 0) costItems.push(`<span style="color:#FF9800;">🧪 Mezzi tecnici: €${cmReg.toFixed(2)}</span>`);
+                        if (caReg > 0) costItems.push(`<span style="color:#9C27B0;">📦 Ammortamenti: €${caReg.toFixed(2)}</span>`);
                         
                         const costiDettaglio = costItems.length > 0 
-                            ? `<div style="font-size: 12px; color: #666; margin-top: 5px;">${costItems.join(' | ')}</div>` 
-                            : '';
+                            ? `<div style="font-size: 12px; margin-top: 8px; padding: 8px; background: #fafafa; border-radius: 6px; border-left: 3px solid #f44336;">
+                                 <strong style="color:#555;">💸 Dettaglio costi:</strong><br>
+                                 ${costItems.join(' &nbsp;·&nbsp; ')}
+                                 <br><strong style="color:#f44336;">Totale: €${ctReg.toFixed(2)}</strong>
+                               </div>` 
+                            : `<div style="font-size: 12px; margin-top: 8px; padding: 6px 10px; background: #f9f9f9; border-radius: 6px; color: #888; font-style: italic;">
+                                 💸 Nessun costo aggiunto
+                               </div>`;
                         
                         return `
                             <div style="background: white; padding: 12px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #eee;">
@@ -3479,7 +3537,7 @@ async function importaCostoPersonaleDaGestioneCosti() {
                                             </div>
                                             <div>
                                                 <span style="color: #f44336;">💸 Costi:</span>
-                                                <strong>€${(reg.costi_totali || 0).toFixed(2)}</strong>
+                                                <strong>€${ctReg.toFixed(2)}</strong>
                                             </div>
                                             <div>
                                                 <span>🌾 Kg:</span>
@@ -3487,8 +3545,8 @@ async function importaCostoPersonaleDaGestioneCosti() {
                                             </div>
                                             <div>
                                                 <span>⚖️ Bilancio:</span>
-                                                <strong style="color: ${(reg.bilancio || 0) >= 0 ? '#4CAF50' : '#f44336'};">
-                                                    €${(reg.bilancio || 0).toFixed(2)}
+                                                <strong style="color: ${(Number(reg.ricavi_totali || 0) - ctReg) >= 0 ? '#4CAF50' : '#f44336'};">
+                                                    €${(Number(reg.ricavi_totali || 0) - ctReg).toFixed(2)}
                                                 </strong>
                                             </div>
                                         </div>
@@ -3616,9 +3674,12 @@ async function eliminaStagioneEconomica(stagione, lotId) {
         function calcolaEBilanciaBilancio(registrazioni) {
     const bilancioContainer = document.getElementById('bilancio-dettaglio');
     
-    // Usa i nomi dei campi corretti (snake_case come nel database)
-    const totaleRicavi = registrazioni.reduce((sum, reg) => sum + (reg.ricavi_totali || 0), 0);
-    const totaleCosti = registrazioni.reduce((sum, reg) => sum + (reg.costi_totali || 0), 0);
+    // ✅ Ricalcola totali da componenti (single source of truth) — niente più discrepanze
+    const totaleRicavi = registrazioni.reduce((sum, reg) => sum + Number(reg.ricavi_totali || 0), 0);
+    const totalePersonale = registrazioni.reduce((sum, reg) => sum + Number(reg.costo_personale || 0), 0);
+    const totaleMezzi = registrazioni.reduce((sum, reg) => sum + Number(reg.costo_mezzi_tecnici || 0), 0);
+    const totaleAmmortamenti = registrazioni.reduce((sum, reg) => sum + Number(reg.quota_ammortamento || 0), 0);
+    const totaleCosti = totalePersonale + totaleMezzi + totaleAmmortamenti;
     const bilancioFinale = totaleRicavi - totaleCosti;
     
     bilancioContainer.innerHTML = `
@@ -3634,6 +3695,24 @@ async function eliminaStagioneEconomica(stagione, lotId) {
             <div style="text-align: center; padding: 15px; background: ${bilancioFinale >= 0 ? '#E8F5E8' : '#FFEBEE'}; border-radius: 8px;">
                 <h5 style="color: ${bilancioFinale >= 0 ? '#4CAF50' : '#f44336'}; margin: 0 0 5px 0;">📊 Bilancio Finale</h5>
                 <p style="font-size: 1.5rem; font-weight: bold; color: ${bilancioFinale >= 0 ? '#4CAF50' : '#f44336'};">€${bilancioFinale.toFixed(2)}</p>
+            </div>
+        </div>
+        <!-- ✅ BREAKDOWN COSTI (allineato con Gestione Costi) -->
+        <div style="margin-top: 15px; padding: 12px; background: #fafafa; border-radius: 8px; border-left: 4px solid #f44336;">
+            <h6 style="margin: 0 0 8px 0; color: #555; font-size: 0.9rem;">💸 Dettaglio costi totali</h6>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; font-size: 0.85rem;">
+                <div style="padding: 8px; background: white; border-radius: 6px; border-left: 3px solid #2196F3;">
+                    <span style="color: #555;">👥 Personale</span><br>
+                    <strong style="color: #2196F3;">€${totalePersonale.toFixed(2)}</strong>
+                </div>
+                <div style="padding: 8px; background: white; border-radius: 6px; border-left: 3px solid #FF9800;">
+                    <span style="color: #555;">🧪 Mezzi tecnici</span><br>
+                    <strong style="color: #FF9800;">€${totaleMezzi.toFixed(2)}</strong>
+                </div>
+                <div style="padding: 8px; background: white; border-radius: 6px; border-left: 3px solid #9C27B0;">
+                    <span style="color: #555;">📦 Ammortamenti</span><br>
+                    <strong style="color: #9C27B0;">€${totaleAmmortamenti.toFixed(2)}</strong>
+                </div>
             </div>
         </div>
     `;
@@ -3704,10 +3783,22 @@ function popolaFormEconomico(record) {
     // Kg totali
     document.getElementById('totale-kg-raccolti').value = record.totale_kg || 0;
     
-    // Costo mezzi tecnici (protetto - potrebbe non esistere nella sezione Ricavi)
-const costiMezziInput = document.getElementById('costo-mezzi-tecnici');
-if (costiMezziInput) costiMezziInput.value = record.costo_mezzi_tecnici || 0;
-    document.getElementById('costo-personale').value = record.costo_personale || 0;
+    // ✅ Popola i 3 campi nascosti dei costi + campo visibile totale
+    const cp = Number(record.costo_personale || 0);
+    const cm = Number(record.costo_mezzi_tecnici || 0);
+    const ca = Number(record.quota_ammortamento || 0);
+    const totale = cp + cm + ca;
+    document.getElementById('costo-personale-valore').value = cp.toFixed(2);
+    document.getElementById('costo-mezzi-valore').value = cm.toFixed(2);
+    document.getElementById('costo-ammortamenti-valore').value = ca.toFixed(2);
+    const campoVisibile = document.getElementById('costo-personale');
+    if (campoVisibile) {
+        campoVisibile.value = totale > 0 ? `€ ${totale.toFixed(2)}` : '';
+        if (totale === 0) campoVisibile.placeholder = 'Nessun costo aggiunto';
+    }
+    // Compat: vecchio campo (se ancora referenziato altrove)
+    const costiMezziInput = document.getElementById('costo-mezzi-tecnici');
+    if (costiMezziInput) costiMezziInput.value = cm;
     
         // ✅ NUOVO POPOLAMENTO BENI DUREVOLI CON AMMORTAMENTO
     const container = document.getElementById('beni-durevoli-container');

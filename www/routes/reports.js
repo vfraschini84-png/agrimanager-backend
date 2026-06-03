@@ -190,32 +190,55 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             { label: 'Costi', w: 70 },
             { label: 'Bilancio', w: 70 }
         ];
+        // Header riga: rettangolo verde + testo bianco DENTRO (non sopra)
+        const headerY = doc.y;
+        doc.rect(50, headerY, 450, 18).fill('#2E7D32');
         let cx = 50;
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#fff');
-        doc.rect(50, doc.y, 450, 18).fill('#2E7D32');
-        cols.forEach(c => { doc.fillColor('#fff').text(c.label, cx + 4, doc.y - 12, { width: c.w - 4, align: c.label === 'Stagione' || c.label === 'Data' ? 'left' : 'right' }); cx += c.w; });
-        doc.y += 8;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+        cols.forEach(c => {
+            doc.fillColor('#FFFFFF').text(
+                c.label,
+                cx + 4,
+                headerY + 5,
+                {
+                    width: c.w - 8,
+                    align: (c.label === 'Stagione' || c.label === 'Data') ? 'left' : 'right',
+                    lineBreak: false
+                }
+            );
+            cx += c.w;
+        });
+        doc.y = headerY + 18;
+        doc.x = 50;
         doc.font('Helvetica').fontSize(9).fillColor('#222');
 
         if (records.length === 0) {
             doc.moveDown(0.5);
             doc.fillColor('#888').text('Nessuna registrazione economica per il periodo selezionato.', { align: 'center' });
         } else {
-            records.forEach((r, idx) => {
+            // Filtra registrazioni "fantasma" (solo beni durevoli, ricavi=0 e kg=0)
+            const visibili = records.filter(r =>
+                !((Number(r.ricavi_totali || 0) === 0) && (Number(r.totale_kg || 0) === 0) && (Number(r.prezzo_kg || 0) === 0))
+            );
+            const sorgente = visibili.length > 0 ? visibili : records;
+            sorgente.forEach((r, idx) => {
                 const rowY = doc.y;
                 if (idx % 2 === 0) doc.rect(50, rowY, 450, 16).fill('#f5f5f5');
                 cx = 50;
+                // ✅ Costi ricalcolati da componenti (allineati con KPI)
+                const costiRiga = Number(r.costo_personale || 0) + Number(r.costo_mezzi_tecnici || 0) + Number(r.quota_ammortamento || 0);
+                const bilancioRiga = Number(r.ricavi_totali || 0) - costiRiga;
                 const cells = [
                     { v: r.stagione_agricola || '-', align: 'left' },
                     { v: r.data_acquisto_vendita ? r.data_acquisto_vendita.substring(0, 10) : '-', align: 'left' },
                     { v: fmtKg(r.totale_kg).replace(' kg', ''), align: 'right' },
                     { v: fmtEur(r.prezzo_kg).replace('€ ', ''), align: 'right' },
                     { v: fmtEur(r.ricavi_totali), align: 'right' },
-                    { v: fmtEur(r.costi_totali), align: 'right' },
-                    { v: fmtEur(r.bilancio), align: 'right' }
+                    { v: fmtEur(costiRiga), align: 'right' },
+                    { v: fmtEur(bilancioRiga), align: 'right' }
                 ];
                 cells.forEach((c, i) => {
-                    doc.fillColor('#222').text(c.v, cx + 4, rowY + 4, { width: cols[i].w - 8, align: c.align });
+                    doc.fillColor('#222').text(c.v, cx + 4, rowY + 4, { width: cols[i].w - 8, align: c.align, lineBreak: false });
                     cx += cols[i].w;
                 });
                 doc.y = rowY + 16;

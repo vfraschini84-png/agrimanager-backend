@@ -77,6 +77,15 @@
 - Browser fa cache separata di CSS/JS → caricamenti successivi più veloci
 - Apre la strada a Fase B (split per dominio) e tightening CSP
 
+### Sessione 6 (2026-06-03): allineamento costi economic/bilancio/PDF + UX form economico
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Form "Nuova Registrazione Economica"**: campo "Costo Personale" rinominato in "Totale Costi Stagione (€)", reso **read-only** con placeholder "Nessun costo aggiunto". Aggiornabile solo dal pulsante "Aggiorna da Costi" che ora somma personale + mezzi tecnici + ammortamenti dalla sezione Gestione Costi (3 campi nascosti separati) | `index.html`, `js/cropbook.js` |
+| 2 | `salvaRegistrazioneEconomica()`: salva i 3 componenti separati nel DB (`costo_personale`, `costo_mezzi_tecnici`, `quota_ammortamento`) + `costi_totali` come somma | `js/cropbook.js` |
+| 3 | **Storico registrazioni**: ogni registrazione mostra ora un blocco "💸 Dettaglio costi" con breakdown univoco (Personale / Mezzi / Ammortamenti) o "Nessun costo aggiunto". Costi e bilancio della singola riga ricalcolati al volo dai componenti (non più valore parziale stored) | `js/cropbook.js` |
+| 4 | **Bilancio finale & riepilogo stagione**: ricalcolati da `costo_personale + costo_mezzi_tecnici + quota_ammortamento` per essere sempre allineati alla sezione "Gestione Costi". Aggiunto blocco "Dettaglio costi totali" con 3 card colorate (👥 Personale / 🧪 Mezzi tecnici / 📦 Ammortamenti) | `js/cropbook.js` |
+| 5 | **PDF Report — fix header tabella invisibile**: testo header era posizionato a `doc.y - 12` (SOPRA il rettangolo verde) → bianco su bianco. Riposizionato a `headerY + 5` dentro la banda. Stesso fix per colonna "Costi": ricalcolata da componenti per allinearsi ai KPI totali. Filtrate registrazioni "fantasma" (ricavi=kg=0) generate dai beni durevoli | `routes/reports.js` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
