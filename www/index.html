@@ -438,9 +438,22 @@
                 
         <!-- Sezione Dettagli Lotto -->
         <div id="dettagli-section" class="section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div class="section-nav-bar">
                 <h2 class="section-title"><i class="fas fa-info-circle"></i> Dettagli Lotto</h2>
-                
+                <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
+                    <button type="button" class="section-nav-btn" data-target="dettagli-section" data-testid="nav-dettagli-btn"
+                            onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="gestione-economica-section" data-testid="nav-ricavi-btn"
+                            onclick="navigateToSection('gestione-economica-section')" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="gestione-costi-section" data-testid="nav-costi-btn"
+                            onclick="navigateToSection('gestione-costi-section')" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="bilancio-section" data-testid="nav-bilancio-btn"
+                            onclick="navigateToSection('bilancio-section')" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="lista-section" data-testid="nav-lista-btn"
+                            onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="lotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-list"></i> Seleziona Lotto
@@ -609,9 +622,22 @@
 
         <!-- Sezione Gestione Economica Lotti -->
         <div id="gestione-economica-section" class="section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div class="section-nav-bar">
                 <h2 class="section-title"><i class="fas fa-chart-line"></i> Gestione Economica Lotti</h2>
-                
+                <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
+                    <button type="button" class="section-nav-btn" data-target="dettagli-section"
+                            onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="gestione-economica-section"
+                            onclick="navigateToSection('gestione-economica-section')" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="gestione-costi-section"
+                            onclick="navigateToSection('gestione-costi-section')" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="bilancio-section"
+                            onclick="navigateToSection('bilancio-section')" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
+                    <button type="button" class="section-nav-btn" data-target="lista-section"
+                            onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="economicLotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-list"></i> Seleziona Lotto
@@ -766,7 +792,21 @@
         
 <!-- Sezione Gestione Costi del Lotto -->
 <div id="gestione-costi-section" class="section" style="display: none;">
-    <h2 class="section-title"><i class="fas fa-calculator"></i> Gestione Costi del Lotto</h2>
+    <div class="section-nav-bar">
+        <h2 class="section-title"><i class="fas fa-calculator"></i> Gestione Costi del Lotto</h2>
+        <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
+            <button type="button" class="section-nav-btn" data-target="dettagli-section"
+                    onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
+            <button type="button" class="section-nav-btn" data-target="gestione-economica-section"
+                    onclick="navigateToSection('gestione-economica-section')" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+            <button type="button" class="section-nav-btn" data-target="gestione-costi-section"
+                    onclick="navigateToSection('gestione-costi-section')" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+            <button type="button" class="section-nav-btn" data-target="bilancio-section"
+                    onclick="navigateToSection('bilancio-section')" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
+            <button type="button" class="section-nav-btn" data-target="lista-section"
+                    onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
+        </div>
+    </div>
     
     <!-- Dropdown selezione lotto -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
@@ -1136,7 +1176,21 @@
 
 <!-- Sezione Bilancio & Report -->
 <div id="bilancio-section" class="section" style="display: none;">
-    <h2 class="section-title"><i class="fas fa-chart-pie"></i> Bilancio & Report</h2>
+    <div class="section-nav-bar">
+        <h2 class="section-title"><i class="fas fa-chart-pie"></i> Bilancio & Report</h2>
+        <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
+            <button type="button" class="section-nav-btn" data-target="dettagli-section"
+                    onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
+            <button type="button" class="section-nav-btn" data-target="gestione-economica-section"
+                    onclick="navigateToSection('gestione-economica-section')" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+            <button type="button" class="section-nav-btn" data-target="gestione-costi-section"
+                    onclick="navigateToSection('gestione-costi-section')" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+            <button type="button" class="section-nav-btn" data-target="bilancio-section"
+                    onclick="navigateToSection('bilancio-section')" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
+            <button type="button" class="section-nav-btn" data-target="lista-section"
+                    onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
+        </div>
+    </div>
     
     <!-- Selettori -->
     <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center;">

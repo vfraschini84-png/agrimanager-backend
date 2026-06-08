@@ -13,6 +13,90 @@ let totalLotsPages = 1;
 let itemsPerPage = 20;
 let lotsPagination = null;
 
+// ==================== NAVIGAZIONE INTER-SEZIONI (CROPBOOK) ====================
+/**
+ * Ritorna l'ID del lotto attualmente "in contesto", se selezionato in una qualsiasi sezione.
+ * Cerca in: dettagli > economica > costi > bilancio.
+ */
+function getActiveLotId() {
+    if (typeof currentLotId !== 'undefined' && currentLotId) return Number(currentLotId);
+    if (typeof currentEconomicLotId !== 'undefined' && currentEconomicLotId) return Number(currentEconomicLotId);
+    if (typeof currentCostiLotId !== 'undefined' && currentCostiLotId) return Number(currentCostiLotId);
+    if (typeof currentBilancioLotId !== 'undefined' && currentBilancioLotId) return Number(currentBilancioLotId);
+    return null;
+}
+
+/**
+ * Sincronizza tutte le variabili globali "currentXxxLotId" su un unico valore
+ * → garantisce che il lotto resti selezionato cambiando sezione.
+ */
+function syncActiveLotId(lotId) {
+    const id = lotId ? Number(lotId) : null;
+    try { currentLotId = id; } catch (_) {}
+    try { currentEconomicLotId = id; } catch (_) {}
+    try { currentCostiLotId = id; } catch (_) {}
+    try { currentBilancioLotId = id; } catch (_) {}
+}
+
+/**
+ * Naviga verso una sezione e ricarica i dati del lotto attivo (se applicabile).
+ * Chiamato dai pulsanti della barra di navigazione presente in ogni sezione lotto-dipendente.
+ */
+function navigateToSection(targetSection, lotId) {
+    const activeLot = lotId ? Number(lotId) : getActiveLotId();
+    syncActiveLotId(activeLot);
+
+    // Mostra la sezione richiesta
+    if (typeof showSection === 'function') {
+        showSection(targetSection);
+    }
+
+    // Carica i dati del lotto attivo nel target (con piccolo delay per attendere il render della sezione)
+    if (activeLot) {
+        setTimeout(() => {
+            try {
+                switch (targetSection) {
+                    case 'dettagli-section':
+                        if (typeof loadLotDetails === 'function') loadLotDetails(activeLot);
+                        break;
+                    case 'gestione-economica-section':
+                        if (typeof openEconomicManagement === 'function') openEconomicManagement(activeLot);
+                        break;
+                    case 'gestione-costi-section':
+                        if (typeof loadCostiLotDetails === 'function') loadCostiLotDetails(activeLot);
+                        break;
+                    case 'bilancio-section':
+                        if (typeof loadBilancioData === 'function') loadBilancioData(activeLot);
+                        break;
+                }
+            } catch (err) {
+                console.error('[navigateToSection] errore caricamento dati:', err);
+            }
+        }, 250);
+    }
+
+    // Aggiorna lo stato visuale dei pulsanti (disabilita quello della sezione corrente)
+    setTimeout(() => updateSectionNavState(targetSection), 50);
+}
+
+/**
+ * Aggiorna lo stato "is-current" dei pulsanti di navigazione (disabilita il bottone della sezione attiva).
+ */
+function updateSectionNavState(currentSection) {
+    document.querySelectorAll('.section-nav-btn').forEach(btn => {
+        const target = btn.getAttribute('data-target');
+        if (target === currentSection) {
+            btn.classList.add('is-current');
+            btn.setAttribute('aria-current', 'page');
+        } else {
+            btn.classList.remove('is-current');
+            btn.removeAttribute('aria-current');
+        }
+    });
+}
+// ============================================================================
+
+
 // Utenti predefiniti
 const defaultUsers = [
     { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
@@ -2178,6 +2262,7 @@ function updateLotGPS(lotId, gpsUrl) {
         
         const lotIdNum = parseInt(lotId);
         currentLotId = lotIdNum;
+        if (typeof syncActiveLotId === 'function') syncActiveLotId(lotIdNum);
         
         // ✅ 1. Carica i dati del lotto
         const lotResponse = await apiCall(`/lots/${lotIdNum}`);
@@ -4356,6 +4441,11 @@ if (sezioneUtenti && sectionId !== 'user-management-section') {
 }
 
     handleSectionSpecificActions(sectionId);
+    
+    // ✅ Aggiorna lo stato visuale dei pulsanti di navigazione inter-sezione
+    if (typeof updateSectionNavState === 'function') {
+        updateSectionNavState(sectionId);
+    }
 }
 
 // ==================== GESTIONE AZIONI SPECIFICHE SEZIONI ====================
@@ -4708,6 +4798,7 @@ if (lot.variety && lot.variety.trim() !== '') {
     }
     
     showSection('gestione-economica-section');
+    if (typeof syncActiveLotId === 'function') syncActiveLotId(lotId);
     
     loadEconomicLotDetails(lotId);
     

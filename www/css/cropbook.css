@@ -457,6 +457,95 @@ input:valid, select:valid {
     gap: 10px;
 }
 
+/* ============ Barra navigazione rapida tra sezioni (CROPBOOK) ============ */
+.section-nav-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eee;
+}
+.section-nav-bar .section-title {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.4rem;
+    word-break: break-word;
+}
+.section-nav-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+.section-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+    font-size: 1rem;
+    text-decoration: none;
+}
+.section-nav-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+}
+.section-nav-btn:active {
+    transform: translateY(0);
+}
+.section-nav-btn[disabled],
+.section-nav-btn.is-current {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none;
+}
+.section-nav-btn[data-target="dettagli-section"]          { background: #2196F3; }
+.section-nav-btn[data-target="gestione-economica-section"]{ background: #9C27B0; }
+.section-nav-btn[data-target="gestione-costi-section"]    { background: #FF5722; }
+.section-nav-btn[data-target="bilancio-section"]          { background: #00BCD4; }
+.section-nav-btn[data-target="lista-section"]             { background: #4CAF50; }
+
+/* Mobile: pulsanti più piccoli, layout full-width sotto il titolo */
+@media (max-width: 600px) {
+    .section-nav-bar {
+        gap: 8px;
+    }
+    .section-nav-bar .section-title {
+        font-size: 1.2rem;
+        flex: 1 1 100%;
+    }
+    .section-nav-buttons {
+        flex: 1 1 100%;
+        justify-content: flex-start;
+        gap: 6px;
+    }
+    .section-nav-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 0.95rem;
+    }
+}
+@media (max-width: 380px) {
+    .section-nav-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 0.85rem;
+    }
+}
+/* ============================================================== */
+
 .action-btn {
     width: 40px;
     height: 40px;
