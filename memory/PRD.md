@@ -94,6 +94,14 @@
 | 3 | `showSection()` ora chiama `updateSectionNavState()` che marca il pulsante della sezione corrente come `is-current` (disabilitato visivamente) | `js/cropbook.js` |
 | 4 | **Storico Beni Durevoli** nella sezione "Ammortamento Beni Durevoli" di Gestione Costi: mostra TUTTI i beni mai registrati per il lotto con badge ATTIVO / TERMINATO / FUTURO calcolato dinamicamente in base alla stagione selezionata. Card compatte con descrizione, intervallo anni, quota €/anno, scadenza. Counter "X/Y attivi". Layout responsive (impilato su mobile) | `index.html`, `css/cropbook.css`, `js/cropbook.js` |
 
+### Sessione 8 (2026-06-08 pomeriggio): fix beni durevoli (4 bug correlati)
+| # | Bug | File |
+|---|------|------|
+| 1 | **Storico beni non si aggiornava** dopo "Salva Beni Durevoli" senza refresh pagina → aggiunto `await loadBeniDurevoliCosti()` immediatamente dopo POST | `js/cropbook.js` |
+| 2 | **Record "fantasma"** dei beni durevoli appariva come riga eliminabile nello storico Gestione Economica → ora i record fantasma (ricavi=kg=0) NON sono mostrati come righe; se la stagione contiene solo fantasma, viene mostrato un messaggio informativo "Nessuna vendita registrata in questa stagione (solo quote di ammortamento — vedi Gestione Costi)". Rimosso anche il blocco inline "📦 Beni in ammortamento" dalle registrazioni di vendita (ridondante col nuovo Storico Beni in Costi). Counter registrazioni esclude i fantasma | `js/cropbook.js` |
+| 3 | **"Aggiorna da Costi" → ammortamenti=0** anche con beni attivi: leggeva `r.quota_ammortamento` (campo a livello record, non popolato dal flusso beni). Ora chiama `caricaBeniDurevoliAttivi(allRecords, stagione)` e somma le quote dei beni attivi nella stagione | `js/cropbook.js` |
+| 4 | **Voce "Ammortamenti" nei dettagli storico** ora visibile e allineata grazie al salvataggio corretto di `quota_ammortamento` sul record economico (fix sessione 6 + fix Bug 3) | `js/cropbook.js` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

@@ -3379,10 +3379,13 @@ async function importaCostiTotaliDaGestioneCosti() {
         const totalePersonale = resPersonale.totale || 0;
         const totaleMezzi = resMezzi.totale || 0;
         
-        // Ammortamenti: somma delle quote_ammortamento dei record economici della stagione
-        // (i beni durevoli vengono salvati come record economico "fantasma" da Gestione Costi)
-        const recordsStagione = (resEconomic.data || []).filter(r => String(r.stagione_agricola) === String(stagione));
-        const totaleAmmortamenti = recordsStagione.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0);
+        // ✅ Ammortamenti: calcola dai beni durevoli ATTIVI in questa stagione (stessa logica di Gestione Costi)
+        const allRecords = resEconomic.data || [];
+        let totaleAmmortamenti = 0;
+        if (typeof caricaBeniDurevoliAttivi === 'function') {
+            const beniAttivi = caricaBeniDurevoliAttivi(allRecords, parseInt(stagione));
+            totaleAmmortamenti = beniAttivi.reduce((sum, b) => sum + Number(b.quota_annuale || 0), 0);
+        }
         
         const totaleCosti = totalePersonale + totaleMezzi + totaleAmmortamenti;
         
@@ -3484,7 +3487,9 @@ async function importaCostoPersonaleDaGestioneCosti() {
     }
     
     if (bilancioContainer) bilancioContainer.style.display = 'block';
-    if (countBadge) countBadge.textContent = registrazioniFiltrate.length;
+    // ✅ Counter mostra solo registrazioni di vendita "reali", non i record fantasma dei beni durevoli
+    const isFantasmaPre = (r) => (Number(r.ricavi_totali || 0) === 0) && (Number(r.totale_kg || 0) === 0) && (Number(r.prezzo_kg || 0) === 0);
+    if (countBadge) countBadge.textContent = registrazioniFiltrate.filter(r => !isFantasmaPre(r)).length;
     
     calcolaEBilanciaBilancio(registrazioniFiltrate);
     
@@ -3511,7 +3516,9 @@ async function importaCostoPersonaleDaGestioneCosti() {
     // ✅ Genera HTML con accordion per stagione
     container.innerHTML = stagioniOrdinate.map((stagione, idx) => {
         const regs = gruppi[stagione];
-        const regsVendita = regs.filter(r => !isFantasma(r));
+        // ✅ I record "fantasma" (solo ammortamenti, senza vendita) NON sono mostrati come riga separata.
+        //    Le loro quote vengono comunque conteggiate nei totali della stagione tramite costiReali().
+        const regsVisibili = regs.filter(r => !isFantasma(r));
         const totaleRicaviStagione = regs.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
         // Costi: somma da componenti per TUTTI i record (vendite + fantasma per ammortamenti)
         const totaleCostiStagione = regs.reduce((sum, r) => sum + costiReali(r), 0);
@@ -3547,40 +3554,16 @@ async function importaCostoPersonaleDaGestioneCosti() {
                 
                 <!-- CONTENUTO STAGIONE (ESPANDIBILE) -->
                 <div class="gruppo-content" style="display: ${idx === 0 ? 'block' : 'none'}; padding: 15px; background: #fafafa;">
-                    ${regs.map((reg, regIdx) => {
-                        // Genera HTML beni durevoli per questa registrazione
-                        let beniDurevoliHtml = '';
-                        if (reg.beni_durevoli) {
-                            try {
-                                const beni = typeof reg.beni_durevoli === 'string' ? JSON.parse(reg.beni_durevoli) : reg.beni_durevoli;
-                                if (Array.isArray(beni) && beni.length > 0) {
-                                    const annoCorrente = parseInt(reg.stagione_agricola) || new Date().getFullYear();
-                                    
-                                    beniDurevoliHtml = `
-                                        <div style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 6px; border-left: 3px solid #4CAF50;">
-                                            <small style="color: #2E7D32;"><strong>📦 Beni in ammortamento:</strong></small>
-                                            <table style="width: 100%; font-size: 11px; margin-top: 5px;">
-                                                ${beni.map(bene => {
-                                                    const annoInizio = bene.anno_inizio || annoCorrente;
-                                                    const anni = bene.anni_ammortamento || 1;
-                                                    const quota = bene.quota_annuale || ((bene.costo_totale || 0) / anni);
-                                                    const isAttivo = annoCorrente >= annoInizio && annoCorrente <= (annoInizio + anni - 1);
-                                                    return `
-                                                        <tr>
-                                                            <td>${bene.descrizione || 'N/D'}</td>
-                                                            <td style="text-align: right;">€${quota.toFixed(2)}</td>
-                                                            <td style="text-align: right; color: ${isAttivo ? '#4CAF50' : '#999'};">
-                                                                ${isAttivo ? '✅' : '✓'}
-                                                            </td>
-                                                        </tr>
-                                                    `;
-                                                }).join('')}
-                                            </table>
-                                        </div>
-                                    `;
-                                }
-                            } catch(e) {}
-                        }
+                    ${regsVisibili.length === 0 ? `
+                        <div style="text-align: center; color: #888; padding: 15px; font-style: italic; font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Nessuna vendita registrata in questa stagione (solo quote di ammortamento da beni durevoli — vedi Gestione Costi)
+                        </div>
+                    ` : ''}
+                    ${regsVisibili.map((reg, regIdx) => {
+                        // ✅ Blocco "Beni in ammortamento" rimosso: ridondante con lo Storico Beni Durevoli
+                        //    presente nella sezione Gestione Costi → Ammortamento Beni Durevoli.
+                        const beniDurevoliHtml = '';
                         
                         // ✅ Dettaglio costi UNIVOCO per ogni registrazione (sempre visibile, anche zero)
                         const cpReg = Number(reg.costo_personale || 0);
@@ -7799,6 +7782,9 @@ async function salvaBeniDurevoliCosti() {
         
         document.getElementById('totale-ammortamento-costi').textContent = `€${totaleQuotaAmmortamento.toFixed(2)}`;
         aggiornaRiepilogoCosti();
+        
+        // ✅ Refresh immediato dello storico beni durevoli (recupera dal server, no reload pagina)
+        await loadBeniDurevoliCosti(currentCostiLotId, stagione);
         
         showNotification('Beni durevoli salvati! Quota annuale: €' + totaleQuotaAmmortamento.toFixed(2), 'success');
         
