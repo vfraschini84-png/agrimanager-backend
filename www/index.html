@@ -453,7 +453,18 @@
                             onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
+                <!-- ✅ Selettore stagione generale per tutta la sezione Dettagli -->
+                <div class="dettagli-stagione-wrapper" style="display: flex; align-items: center; gap: 8px;">
+                    <label for="dettagli-stagione-select" style="margin: 0; font-weight: 600; color: #555; font-size: 0.9rem;">
+                        <i class="fas fa-leaf" style="color: #4CAF50;"></i> Stagione:
+                    </label>
+                    <select id="dettagli-stagione-select" data-testid="dettagli-stagione-select"
+                            onchange="onCambioStagioneDettagli()" 
+                            style="padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; background: white; font-size: 0.9rem; min-width: 120px;">
+                        <!-- Popolato via JS -->
+                    </select>
+                </div>
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="lotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-list"></i> Seleziona Lotto

@@ -2576,6 +2576,17 @@ function updateLotGPS(lotId, gpsUrl) {
                 return;
             }
             
+            // ✅ Verifica che la data appartenga alla stagione selezionata in Dettagli
+            const stagioneSelezionata = parseInt(document.getElementById('dettagli-stagione-select')?.value) || null;
+            if (stagioneSelezionata) {
+                const annoData = new Date(date).getFullYear();
+                if (annoData !== stagioneSelezionata) {
+                    if (!confirm(`⚠️ La data ${date} appartiene all'anno ${annoData}, diverso dalla stagione selezionata ${stagioneSelezionata}.\n\nVuoi salvare comunque l'attività?`)) {
+                        return;
+                    }
+                }
+            }
+            
             const activity = {
                 id: Date.now(),
                 type: 'raccolta',
@@ -2697,7 +2708,57 @@ function updateLotGPS(lotId, gpsUrl) {
             } else {
                 lotActivities = [];
             }
+            // ✅ Popola il selettore stagione di Dettagli e applica filtro iniziale
+            populateDettagliStagioneSelect();
             displayActivities();
+        }
+        
+        // ✅ Popola il <select> stagione in Dettagli Lotto con anno corrente + tutti gli anni
+        //    presenti nei dati (attività/analisi). Mantiene la stagione corrente se ancora valida.
+        function populateDettagliStagioneSelect() {
+            const select = document.getElementById('dettagli-stagione-select');
+            if (!select) return;
+            const annoCorrente = new Date().getFullYear();
+            const anni = new Set();
+            anni.add(annoCorrente);
+            (lotActivities || []).forEach(a => {
+                if (a.date) anni.add(new Date(a.date).getFullYear());
+            });
+            (lotAnalyses || []).forEach(a => {
+                if (a.year) anni.add(parseInt(a.year));
+            });
+            // Aggiungi 3 anni passati e 1 futuro come comodità
+            for (let y = annoCorrente - 3; y <= annoCorrente + 1; y++) anni.add(y);
+            
+            const valoreCorrente = select.value;
+            const opzioni = Array.from(anni).filter(y => !isNaN(y)).sort((a, b) => b - a);
+            select.innerHTML = opzioni.map(y => `<option value="${y}">Stagione ${y}</option>`).join('');
+            // Mantieni selezione se valida, altrimenti default = anno corrente
+            if (opzioni.includes(parseInt(valoreCorrente))) {
+                select.value = valoreCorrente;
+            } else {
+                select.value = String(annoCorrente);
+            }
+        }
+        
+        // ✅ Callback al cambio stagione → ri-renderizza attività e analisi filtrate
+        function onCambioStagioneDettagli() {
+            const stagione = document.getElementById('dettagli-stagione-select')?.value;
+            displayActivities();
+            displayAnalyses();
+            // Suggerisci la data raccolta: 1° gennaio della stagione (se diversa da anno corrente)
+            const harvestDateInput = document.getElementById('harvest-date');
+            if (harvestDateInput && !harvestDateInput.value && stagione) {
+                const annoCorrente = new Date().getFullYear();
+                if (parseInt(stagione) !== annoCorrente) {
+                    harvestDateInput.value = `${stagione}-01-01`;
+                }
+            }
+            // Pre-imposta anno analisi
+            const analysisYearInput = document.getElementById('analysis-year');
+            if (analysisYearInput && stagione) {
+                analysisYearInput.value = stagione;
+            }
         }
 
         function loadLotAnalyses(lotId) {
@@ -2707,6 +2768,7 @@ function updateLotGPS(lotId, gpsUrl) {
             } else {
                 lotAnalyses = [];
             }
+            populateDettagliStagioneSelect();
             displayAnalyses();
         }
         
@@ -2718,19 +2780,28 @@ function updateLotGPS(lotId, gpsUrl) {
             
             if (!container) return;
             
-            if (lotActivities.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Nessuna attività di raccolta registrata</p>';
-                historyContainer.style.display = 'none';
+            // ✅ Filtra per stagione selezionata nel dropdown Dettagli (se presente)
+            const stagioneSel = parseInt(document.getElementById('dettagli-stagione-select')?.value) || null;
+            const visibili = stagioneSel
+                ? lotActivities.filter(a => new Date(a.date).getFullYear() === stagioneSel)
+                : lotActivities;
+            
+            if (visibili.length === 0) {
+                const msg = stagioneSel
+                    ? `Nessuna attività di raccolta per la stagione ${stagioneSel}`
+                    : 'Nessuna attività di raccolta registrata';
+                container.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${msg}</p>`;
+                historyContainer.style.display = lotActivities.length > 0 ? 'block' : 'none';
                 countBadge.textContent = '0';
-                if (historyBadge) historyBadge.textContent = '0';
+                if (historyBadge) historyBadge.textContent = lotActivities.length;
                 return;
             }
             
             historyContainer.style.display = 'block';
-            countBadge.textContent = lotActivities.length;
+            countBadge.textContent = visibili.length;
             if (historyBadge) historyBadge.textContent = lotActivities.length;
             
-            container.innerHTML = lotActivities.map(activity => `
+            container.innerHTML = visibili.map(activity => `
                 <div class="lotto-item" style="margin-bottom: 10px;">
                     <div class="lotto-info">
                         <h4>📅 Raccolta - ${new Date(activity.date).toLocaleDateString('it-IT')}</h4>
@@ -2757,19 +2828,28 @@ function updateLotGPS(lotId, gpsUrl) {
             
             if (!container) return;
             
-            if (lotAnalyses.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Nessuna analisi caricata</p>';
-                historyContainer.style.display = 'none';
+            // ✅ Filtra per stagione selezionata (campo .year dell'analisi)
+            const stagioneSel = parseInt(document.getElementById('dettagli-stagione-select')?.value) || null;
+            const visibili = stagioneSel
+                ? lotAnalyses.filter(a => parseInt(a.year) === stagioneSel)
+                : lotAnalyses;
+            
+            if (visibili.length === 0) {
+                const msg = stagioneSel
+                    ? `Nessuna analisi caricata per la stagione ${stagioneSel}`
+                    : 'Nessuna analisi caricata';
+                container.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${msg}</p>`;
+                historyContainer.style.display = lotAnalyses.length > 0 ? 'block' : 'none';
                 countBadge.textContent = '0';
-                if (historyBadge) historyBadge.textContent = '0';
+                if (historyBadge) historyBadge.textContent = lotAnalyses.length;
                 return;
             }
             
             historyContainer.style.display = 'block';
-            countBadge.textContent = lotAnalyses.length;
+            countBadge.textContent = visibili.length;
             if (historyBadge) historyBadge.textContent = lotAnalyses.length;
             
-            container.innerHTML = lotAnalyses.map(analysis => `
+            container.innerHTML = visibili.map(analysis => `
                 <div class="analysis-file-item">
                     <div class="analysis-file-info">
                         <h4>🔬 Analisi ${analysis.year}</h4>
@@ -3038,18 +3118,44 @@ function calcolaKgRaccoltiAutomaticoCompleto() {
         return;
     }
     
-    const kgTotali = lotActivities
-        .filter(attivita => {
-            const annoAttivita = new Date(attivita.date).getFullYear();
+    // ✅ Fallback: se lotActivities non corrisponde a questo lotto, leggi direttamente da localStorage
+    //    Risolve il caso in cui l'utente NON ha mai aperto la sezione "Attività di Raccolta" prima.
+    let attivita = Array.isArray(lotActivities) ? lotActivities : [];
+    let needFallback = attivita.length === 0;
+    if (!needFallback && attivita.length > 0) {
+        // Se la prima attività ha un lot_id e non corrisponde a questo lotto → ricarica
+        const first = attivita[0];
+        if (first && first.lot_id !== undefined && String(first.lot_id) !== String(lotId)) {
+            needFallback = true;
+        }
+    }
+    if (needFallback) {
+        try {
+            const saved = localStorage.getItem(`agriManager_activities_${lotId}`);
+            attivita = saved ? JSON.parse(saved) : [];
+            // Aggiorna anche la variabile globale così la prossima chiamata trova i dati
+            lotActivities = attivita;
+        } catch (e) {
+            attivita = [];
+        }
+    }
+    
+    const kgTotali = attivita
+        .filter(att => {
+            const annoAttivita = new Date(att.date).getFullYear();
             return annoAttivita === parseInt(stagione);
         })
-        .reduce((totale, attivita) => totale + (parseFloat(attivita.kg) || 0), 0);
+        .reduce((totale, att) => totale + (parseFloat(att.kg) || 0), 0);
     
     document.getElementById('totale-kg-raccolti').value = kgTotali.toFixed(1);
-    showNotification(`Calcolati automaticamente ${kgTotali} kg per la stagione ${stagione}`, 'success');
+    if (kgTotali === 0) {
+        showNotification(`Nessuna attività di raccolta registrata per la stagione ${stagione}`, 'warning');
+    } else {
+        showNotification(`Calcolati automaticamente ${kgTotali} kg per la stagione ${stagione}`, 'success');
+    }
     
     // Calcolo automatico del prezzo
-    calcolaPrezzoAutomatico();
+    if (typeof calcolaPrezzoAutomatico === 'function') calcolaPrezzoAutomatico();
 }
         // ==================== GESTIONE BENI DUREVOLI CON AMMORTAMENTO ====================
 
@@ -7362,6 +7468,33 @@ function displayRegistroPersonale(records, vista = 'giornaliera') {
                 </div>
             `;
         }).join('');
+    } else if (vista === 'annuale') {
+        // ✅ Raggruppa per anno
+        const gruppiAnno = {};
+        records.forEach(r => {
+            const anno = new Date(r.data_attivita).getFullYear();
+            if (!gruppiAnno[anno]) gruppiAnno[anno] = [];
+            gruppiAnno[anno].push(r);
+        });
+        html = Object.entries(gruppiAnno).sort((a, b) => b[0] - a[0]).map(([anno, recs]) => {
+            const totaleAnno = recs.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
+            const oreTotali = recs.reduce((sum, r) => sum + (r.ore_lavorate || 0), 0);
+            const operatoriTotali = recs.reduce((sum, r) => sum + (r.numero_operatori || 0), 0);
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #FF5722; color: white; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 1.05rem;">📆 Anno ${anno}</strong>
+                        <strong style="font-size: 1.1rem;">€${totaleAnno.toFixed(2)}</strong>
+                    </div>
+                    <div style="padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; text-align: center; font-size: 0.85rem;">
+                        <div><strong>${recs.length}</strong><br><small>attività</small></div>
+                        <div><strong>${oreTotali}</strong><br><small>ore tot.</small></div>
+                        <div><strong>${operatoriTotali}</strong><br><small>operatori (cumul.)</small></div>
+                        <div><strong>€${(oreTotali > 0 ? totaleAnno / oreTotali : 0).toFixed(2)}</strong><br><small>€/ora media</small></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     
     container.innerHTML = headerHtml + html;
@@ -7605,6 +7738,40 @@ function displayMezziTecniciRegistro(records, vista = 'giornaliera') {
                     </div>
                     <div style="padding: 10px; text-align: center;">
                         <p style="color: #666;">${recs.length} registrazioni</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } else if (vista === 'annuale') {
+        // ✅ Raggruppa per anno
+        const gruppi = {};
+        records.forEach(r => {
+            if (r.data_registrazione) {
+                const anno = new Date(r.data_registrazione).getFullYear();
+                if (!gruppi[anno]) gruppi[anno] = [];
+                gruppi[anno].push(r);
+            }
+        });
+        html += Object.entries(gruppi).sort((a, b) => b[0] - a[0]).map(([anno, recs]) => {
+            const totale = recs.reduce((sum, r) => sum + (r.importo || 0), 0);
+            // Raggruppa per categoria per il breakdown
+            const perCat = {};
+            recs.forEach(r => {
+                const cat = r.categoria || 'Altro';
+                perCat[cat] = (perCat[cat] || 0) + Number(r.importo || 0);
+            });
+            const breakdown = Object.entries(perCat).sort((a, b) => b[1] - a[1])
+                .map(([cat, val]) => `<span style="background:#E3F2FD;color:#1565C0;padding:2px 8px;border-radius:10px;font-size:0.78rem;margin:2px;display:inline-block;">${cat}: €${val.toFixed(2)}</span>`)
+                .join(' ');
+            return `
+                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div style="background: #2196F3; color: white; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <strong style="font-size: 1.05rem;">📆 Anno ${anno}</strong>
+                        <strong style="font-size: 1.1rem;">€${totale.toFixed(2)}</strong>
+                    </div>
+                    <div style="padding: 10px;">
+                        <p style="text-align: center; color: #666; margin-bottom: 6px;">${recs.length} registrazioni</p>
+                        <div style="text-align: center;">${breakdown}</div>
                     </div>
                 </div>
             `;
