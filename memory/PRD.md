@@ -86,6 +86,14 @@
 | 4 | **Bilancio finale & riepilogo stagione**: ricalcolati da `costo_personale + costo_mezzi_tecnici + quota_ammortamento` per essere sempre allineati alla sezione "Gestione Costi". Aggiunto blocco "Dettaglio costi totali" con 3 card colorate (👥 Personale / 🧪 Mezzi tecnici / 📦 Ammortamenti) | `js/cropbook.js` |
 | 5 | **PDF Report — fix header tabella invisibile**: testo header era posizionato a `doc.y - 12` (SOPRA il rettangolo verde) → bianco su bianco. Riposizionato a `headerY + 5` dentro la banda. Stesso fix per colonna "Costi": ricalcolata da componenti per allinearsi ai KPI totali. Filtrate registrazioni "fantasma" (ricavi=kg=0) generate dai beni durevoli | `routes/reports.js` |
 
+### Sessione 7 (2026-06-08): nav bar inter-sezioni + storico beni durevoli
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Barra di navigazione rapida** in alto a destra in ogni sezione lotto-dipendente (Dettagli / Ricavi / Costi / Bilancio + Lista Lotti). 5 pulsanti circolari colorati (stesso stile delle action-btn della lista lotti). Mobile-responsive con 3 breakpoint (1024 / 600 / 380 px) | `index.html`, `css/cropbook.css` |
+| 2 | **`navigateToSection(target, lotId)`**: helper JS che cambia sezione + sincronizza tutte le variabili `currentXxxLotId` + invoca il loader appropriato (`loadLotDetails` / `openEconomicManagement` / `loadCostiLotDetails` / `loadBilancioData`). Il lotto resta selezionato cambiando sezione e i suoi dati vengono ricaricati automaticamente | `js/cropbook.js` |
+| 3 | `showSection()` ora chiama `updateSectionNavState()` che marca il pulsante della sezione corrente come `is-current` (disabilitato visivamente) | `js/cropbook.js` |
+| 4 | **Storico Beni Durevoli** nella sezione "Ammortamento Beni Durevoli" di Gestione Costi: mostra TUTTI i beni mai registrati per il lotto con badge ATTIVO / TERMINATO / FUTURO calcolato dinamicamente in base alla stagione selezionata. Card compatte con descrizione, intervallo anni, quota €/anno, scadenza. Counter "X/Y attivi". Layout responsive (impilato su mobile) | `index.html`, `css/cropbook.css`, `js/cropbook.js` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

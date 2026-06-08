@@ -6609,6 +6609,7 @@ function initBilancioSection() {
 // ==================== CARICA DATI BILANCIO ====================
 async function loadBilancioData(lotId) {
     currentBilancioLotId = lotId;
+    if (typeof syncActiveLotId === 'function') syncActiveLotId(lotId);
     
     const lot = allLots.find(l => l.id === parseInt(lotId));
     const badge = document.getElementById('bilancio-lot-badge');
@@ -7010,6 +7011,7 @@ async function esportaBilancioCompleto() {
 // ==================== CARICAMENTO LOTTO NELLA SEZIONE COSTI ====================
 async function loadCostiLotDetails(lotId) {
     currentCostiLotId = lotId;
+    if (typeof syncActiveLotId === 'function') syncActiveLotId(lotId);
     
     const lot = allLots.find(l => l.id === parseInt(lotId));
     if (lot) {
@@ -7816,6 +7818,9 @@ async function loadBeniDurevoliCosti(lotId, stagione) {
         // Usa caricaBeniDurevoliAttivi per trovare quelli ancora attivi
         const beniAttivi = caricaBeniDurevoliAttivi(allRecords, stagione);
         
+        // ✅ Renderizza lo storico completo (tutti i beni mai registrati per il lotto)
+        renderStoricoBeniDurevoli(allRecords, stagione);
+        
         // Calcola il totale delle quote
         let totaleQuote = 0;
         beniAttivi.forEach(bene => {
@@ -7888,6 +7893,104 @@ if (riepilogoStagione) {
     document.getElementById('riepilogo-ammortamenti').textContent = `€${ammortamenti.toFixed(2)}`;
     document.getElementById('riepilogo-totale-costi').textContent = `€${totale.toFixed(2)}`;
 }
+
+// ==================== STORICO BENI DUREVOLI (CROPBOOK) ====================
+/**
+ * Renderizza lo storico completo dei beni durevoli mai registrati per il lotto.
+ * Mostra per ognuno: descrizione, quota annuale, scadenza ammortamento,
+ * e un badge ATTIVO / TERMINATO / FUTURO rispetto alla stagione di riferimento.
+ */
+function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
+    const container = document.getElementById('beni-durevoli-storico');
+    const counter = document.getElementById('beni-storico-counter');
+    if (!container) return;
+    
+    const stagioneRef = parseInt(stagioneRiferimento) || new Date().getFullYear();
+    const beniMap = new Map(); // chiave univoca → bene
+    
+    (records || []).forEach(reg => {
+        if (!reg.beni_durevoli) return;
+        let beni;
+        try {
+            beni = typeof reg.beni_durevoli === 'string' ? JSON.parse(reg.beni_durevoli) : reg.beni_durevoli;
+        } catch (e) { return; }
+        if (!Array.isArray(beni)) return;
+        beni.forEach(bene => {
+            const descrizione = (bene.descrizione || '').trim() || '(Senza nome)';
+            const annoInizio = parseInt(bene.anno_inizio) || parseInt(reg.stagione_agricola) || stagioneRef;
+            const anniAmm = parseInt(bene.anni_ammortamento) || 1;
+            const costo = Number(bene.costo_totale) || 0;
+            const quota = Number(bene.quota_annuale) || (anniAmm > 0 ? costo / anniAmm : 0);
+            const annoFine = annoInizio + anniAmm - 1;
+            const chiave = `${descrizione.toLowerCase()}__${annoInizio}__${costo}`;
+            // Mantieni il primo che incontri (i record sono ordinati per data nelle altre logiche; qui basta dedupe)
+            if (!beniMap.has(chiave)) {
+                beniMap.set(chiave, { descrizione, annoInizio, anniAmm, costo, quota, annoFine });
+            }
+        });
+    });
+    
+    const lista = Array.from(beniMap.values()).sort((a, b) => {
+        // ordinamento: prima attivi/futuri, poi terminati; entro lo stesso gruppo per anno_fine decrescente
+        const sa = a.annoFine >= stagioneRef ? 0 : 1;
+        const sb = b.annoFine >= stagioneRef ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        return b.annoFine - a.annoFine;
+    });
+    
+    // Counter
+    const attivi = lista.filter(b => stagioneRef >= b.annoInizio && stagioneRef <= b.annoFine).length;
+    const totali = lista.length;
+    if (counter) {
+        counter.textContent = totali === 0 ? '0 beni' : `${attivi}/${totali} attivi`;
+    }
+    
+    if (totali === 0) {
+        container.innerHTML = `<div class="bene-storico-empty">
+            <i class="fas fa-inbox" style="margin-right:6px;"></i>
+            Nessun bene durevole registrato per questo lotto.
+        </div>`;
+        return;
+    }
+    
+    container.innerHTML = lista.map(b => {
+        let stato, badgeClass, badgeLabel, badgeIcon;
+        if (stagioneRef < b.annoInizio) {
+            stato = 'futuro';
+            badgeClass = 'futuro';
+            badgeLabel = 'Futuro';
+            badgeIcon = 'fa-hourglass-start';
+        } else if (stagioneRef > b.annoFine) {
+            stato = 'terminato';
+            badgeClass = 'terminato';
+            badgeLabel = 'Terminato';
+            badgeIcon = 'fa-flag-checkered';
+        } else {
+            stato = 'attivo';
+            badgeClass = 'attivo';
+            badgeLabel = 'Attivo';
+            badgeIcon = 'fa-circle-check';
+        }
+        const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        return `
+            <div class="bene-storico-row is-${stato}" data-anno-inizio="${b.annoInizio}" data-anno-fine="${b.annoFine}">
+                <span class="bene-storico-badge ${badgeClass}" title="Stato per stagione ${stagioneRef}">
+                    <i class="fas ${badgeIcon}"></i> ${badgeLabel}
+                </span>
+                <div class="bene-storico-info">
+                    <div class="bene-titolo" title="${esc(b.descrizione)}">${esc(b.descrizione)}</div>
+                    <div class="bene-meta">
+                        <span><i class="fas fa-calendar-alt"></i> ${b.annoInizio}–${b.annoFine} (${b.anniAmm} ${b.anniAmm === 1 ? 'anno' : 'anni'})</span>
+                        <span class="meta-quota"><i class="fas fa-coins"></i> Quota: €${b.quota.toFixed(2)}/anno</span>
+                        <span class="meta-scadenza"><i class="fas fa-clock"></i> Scadenza: ${b.annoFine}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+// ============================================================================
+
 
 // ==================== AGGIORNA HANDLESECTIONSECTIONACTIONS ====================
 // Aggiungi questo caso nella funzione handleSectionSpecificActions esistente:

@@ -1017,6 +1017,17 @@
                     <button type="button" onclick="aggiungiBeneDurevoleCosti()" style="margin-top: 10px; padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">
                         <i class="fas fa-plus"></i> Aggiungi Bene Durevole
                     </button>
+                </div>
+                <!-- ✅ Storico beni durevoli del lotto (tutti i beni mai registrati, attivi + terminati) -->
+                <div class="beni-storico-wrapper" style="margin-top: 24px; padding-top: 18px; border-top: 2px dashed #e1bee7;">
+                    <div class="beni-storico-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                        <h4 style="margin: 0; color: #6A1B9A; font-size: 1rem;">
+                            <i class="fas fa-history"></i> Storico Beni Registrati
+                        </h4>
+                        <span id="beni-storico-counter" class="beni-storico-counter" style="font-size: 0.78rem; color: #666; background: #f3e5f5; padding: 3px 10px; border-radius: 12px; font-weight: 600;">—</span>
+                    </div>
+                    <div id="beni-durevoli-storico" class="beni-durevoli-storico"></div>
+                </div>
                     <!-- Template per singolo bene durevole -->
 <template id="bene-durevole-template">
     <div class="bene-durevole-item" style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fafafa;">
