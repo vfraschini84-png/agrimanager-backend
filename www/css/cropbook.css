@@ -240,6 +240,10 @@ h1 {
     padding: 25px;
     margin-bottom: 30px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    /* Coerenza layout: anche le sezioni fuori dal .container restano larghe come quelle dentro */
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .section.active {
@@ -557,7 +561,7 @@ input:valid, select:valid {
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 10px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     background: #fff;
     border: 1px solid #e0e0e0;
     border-left: 4px solid #9C27B0;
@@ -627,6 +631,34 @@ input:valid, select:valid {
 .bene-storico-info .bene-meta span { white-space: nowrap; }
 .bene-storico-info .bene-meta .meta-quota { color: #6A1B9A; font-weight: 600; }
 .bene-storico-info .bene-meta .meta-scadenza { color: #d84315; font-weight: 600; }
+
+.bene-storico-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+.bene-storico-delete-btn {
+    background: #fff;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    padding: 0;
+}
+.bene-storico-delete-btn:hover {
+    background: #ef5350;
+    color: #fff;
+    border-color: #ef5350;
+    transform: scale(1.08);
+}
+.bene-storico-delete-btn:active { transform: scale(0.95); }
 
 .bene-storico-empty {
     padding: 16px;

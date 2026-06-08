@@ -2900,15 +2900,32 @@ function updateLotGPS(lotId, gpsUrl) {
                 return;
             }
             
-            const kgTotali = lotActivities
-                .filter(attivita => {
-                    const annoAttivita = new Date(attivita.date).getFullYear();
+            // ✅ Fallback: se lotActivities non è popolato per QUESTO lotto, leggi direttamente da localStorage
+            //   (evita di chiamare loadLotActivities che invocherebbe displayActivities su un container non visibile)
+            let attivita = lotActivities;
+            const currentLotIdDom = document.getElementById('current-lot-id')?.value;
+            if (!Array.isArray(attivita) || attivita.length === 0 || String(currentLotIdDom) !== String(lotId)) {
+                try {
+                    const saved = localStorage.getItem(`agriManager_activities_${lotId}`);
+                    attivita = saved ? JSON.parse(saved) : [];
+                } catch (e) {
+                    attivita = [];
+                }
+            }
+            
+            const kgTotali = (attivita || [])
+                .filter(att => {
+                    const annoAttivita = new Date(att.date).getFullYear();
                     return annoAttivita === parseInt(stagione);
                 })
-                .reduce((totale, attivita) => totale + (parseFloat(attivita.kg) || 0), 0);
+                .reduce((totale, att) => totale + (parseFloat(att.kg) || 0), 0);
             
             document.getElementById('totale-kg-raccolti').value = kgTotali.toFixed(1);
-            showNotification(`Calcolati automaticamente ${kgTotali} kg per la stagione ${stagione}`, 'success');
+            if (kgTotali === 0) {
+                showNotification(`Nessuna attività di raccolta registrata per la stagione ${stagione}`, 'warning');
+            } else {
+                showNotification(`Calcolati automaticamente ${kgTotali} kg per la stagione ${stagione}`, 'success');
+            }
         }
 
 // ==================== GESTIONE METODO DI CALCOLO PREZZO ====================
@@ -3486,11 +3503,6 @@ async function importaCostoPersonaleDaGestioneCosti() {
         return;
     }
     
-    if (bilancioContainer) bilancioContainer.style.display = 'block';
-    // ✅ Counter mostra solo registrazioni di vendita "reali", non i record fantasma dei beni durevoli
-    const isFantasmaPre = (r) => (Number(r.ricavi_totali || 0) === 0) && (Number(r.totale_kg || 0) === 0) && (Number(r.prezzo_kg || 0) === 0);
-    if (countBadge) countBadge.textContent = registrazioniFiltrate.filter(r => !isFantasmaPre(r)).length;
-    
     calcolaEBilanciaBilancio(registrazioniFiltrate);
     
     // ✅ HELPER: calcola costi REALI da componenti (single source of truth)
@@ -3682,6 +3694,20 @@ function toggleGruppoStagione(header) {
     }
 }
 
+// ✅ FUNZIONE TOGGLE GRUPPO GIORNALIERO (registri Personale + Mezzi Tecnici)
+function toggleGruppoGiornaliero(header) {
+    const content = header.nextElementSibling;
+    const chevron = header.querySelector('.gruppo-chevron-gp');
+    if (!content) return;
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+        content.style.display = 'none';
+        if (chevron) chevron.style.transform = 'rotate(-90deg)';
+    }
+}
+
 async function eliminaStagioneEconomica(stagione, lotId) {
     // Filtra le registrazioni di questa stagione
     const registrazioniStagione = registrazioniEconomiche.filter(
@@ -3741,6 +3767,8 @@ async function eliminaStagioneEconomica(stagione, lotId) {
 
         function calcolaEBilanciaBilancio(registrazioni) {
     const bilancioContainer = document.getElementById('bilancio-dettaglio');
+    // ✅ Container rimosso (ridondante con sezione "Bilancio & Report"). Se non esiste, no-op.
+    if (!bilancioContainer) return;
     
     // ✅ Ricalcola totali da componenti (single source of truth) — niente più discrepanze
     const totaleRicavi = registrazioni.reduce((sum, reg) => sum + Number(reg.ricavi_totali || 0), 0);
@@ -6649,16 +6677,21 @@ async function aggiornaDashboardBilancio(lotId, stagione) {
         if (stagione) records = records.filter(r => r.stagione_agricola === stagione);
         ricaviTotali = records.reduce((sum, r) => sum + (r.ricavi_totali || 0), 0);
         
-        // Costi personale
-        if (stagione) {
-            const persResponse = await apiCall(`/costi/personale/${lotId}/${stagione}`);
-            costiPersonale = persResponse.totale || 0;
-        }
+        // ✅ Costi personale + mezzi tecnici: se stagione specifica → un solo fetch,
+        //   se "Tutte le stagioni" → fetch su TUTTE le stagioni presenti nei record e somma.
+        const stagioniDaSommare = stagione
+            ? [stagione]
+            : [...new Set(records.map(r => r.stagione_agricola).filter(Boolean))];
         
-        // Costi mezzi tecnici
-        if (stagione) {
-            const mezziResponse = await apiCall(`/costi/mezzi/${lotId}/${stagione}`);
-            costiMezziTecnici = mezziResponse.totale || 0;
+        if (stagioniDaSommare.length > 0) {
+            const totaliPersonale = await Promise.all(
+                stagioniDaSommare.map(s => apiCall(`/costi/personale/${lotId}/${s}`).catch(() => ({ totale: 0 })))
+            );
+            const totaliMezzi = await Promise.all(
+                stagioniDaSommare.map(s => apiCall(`/costi/mezzi/${lotId}/${s}`).catch(() => ({ totale: 0 })))
+            );
+            costiPersonale = totaliPersonale.reduce((s, r) => s + Number(r.totale || 0), 0);
+            costiMezziTecnici = totaliMezzi.reduce((s, r) => s + Number(r.totale || 0), 0);
         }
         
         // Ammortamenti dalle registrazioni economiche
@@ -7241,15 +7274,22 @@ function displayRegistroPersonale(records, vista = 'giornaliera') {
             gruppi[data].push(r);
         });
         
-        html = Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs]) => {
+        html = Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs], gIdx) => {
             const totaleGiorno = recs.reduce((sum, r) => sum + (r.costo_totale || 0), 0);
+            const aperto = gIdx === 0; // ✅ solo il primo giorno espanso di default → vista compatta
             return `
-                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                    <div style="background: #FF5722; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
-                        <strong>📅 ${new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})}</strong>
-                        <span>Totale: €${totaleGiorno.toFixed(2)}</span>
+                <div style="margin-bottom: 8px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div onclick="toggleGruppoGiornaliero(this)" style="background: #FF5722; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                        <strong style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-chevron-down gruppo-chevron-gp" style="transition: transform 0.2s ease; transform: rotate(${aperto ? 0 : -90}deg); font-size: 0.8rem;"></i>
+                            📅 ${new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'})}
+                        </strong>
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 0.78rem;">${recs.length} att.</span>
+                            <strong>€${totaleGiorno.toFixed(2)}</strong>
+                        </span>
                     </div>
-                    <div style="padding: 10px;">
+                    <div class="gruppo-content-gp" style="padding: 10px; display: ${aperto ? 'block' : 'none'};">
                         ${recs.map(r => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
                                 <div>
@@ -7479,15 +7519,22 @@ function displayMezziTecniciRegistro(records, vista = 'giornaliera') {
             gruppi[data].push(r);
         });
         
-        html += Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs]) => {
+        html += Object.entries(gruppi).sort((a, b) => b[0].localeCompare(a[0])).map(([data, recs], gIdx) => {
             const totaleGiorno = recs.reduce((sum, r) => sum + (r.importo || 0), 0);
+            const aperto = gIdx === 0; // ✅ solo primo giorno espanso → vista compatta
             return `
-                <div style="margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                    <div style="background: #2196F3; color: white; padding: 8px 12px; display: flex; justify-content: space-between;">
-                        <strong>📅 ${data !== 'Senza data' ? new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'}) : 'Senza data'}</strong>
-                        <span>Totale: €${totaleGiorno.toFixed(2)}</span>
+                <div style="margin-bottom: 8px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <div onclick="toggleGruppoGiornaliero(this)" style="background: #2196F3; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+                        <strong style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-chevron-down gruppo-chevron-gp" style="transition: transform 0.2s ease; transform: rotate(${aperto ? 0 : -90}deg); font-size: 0.8rem;"></i>
+                            📅 ${data !== 'Senza data' ? new Date(data).toLocaleDateString('it-IT', {weekday: 'long', day: 'numeric', month: 'long'}) : 'Senza data'}
+                        </strong>
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="background: rgba(255,255,255,0.25); padding: 2px 8px; border-radius: 10px; font-size: 0.78rem;">${recs.length} reg.</span>
+                            <strong>€${totaleGiorno.toFixed(2)}</strong>
+                        </span>
                     </div>
-                    <div style="padding: 10px;">
+                    <div class="gruppo-content-gp" style="padding: 10px; display: ${aperto ? 'block' : 'none'};">
                         ${recs.map(r => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #eee;">
                                 <div>
@@ -7892,7 +7939,7 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
     if (!container) return;
     
     const stagioneRef = parseInt(stagioneRiferimento) || new Date().getFullYear();
-    const beniMap = new Map(); // chiave univoca → bene
+    const beniMap = new Map(); // chiave univoca → bene + riferimento al record sorgente
     
     (records || []).forEach(reg => {
         if (!reg.beni_durevoli) return;
@@ -7901,7 +7948,7 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
             beni = typeof reg.beni_durevoli === 'string' ? JSON.parse(reg.beni_durevoli) : reg.beni_durevoli;
         } catch (e) { return; }
         if (!Array.isArray(beni)) return;
-        beni.forEach(bene => {
+        beni.forEach((bene, idx) => {
             const descrizione = (bene.descrizione || '').trim() || '(Senza nome)';
             const annoInizio = parseInt(bene.anno_inizio) || parseInt(reg.stagione_agricola) || stagioneRef;
             const anniAmm = parseInt(bene.anni_ammortamento) || 1;
@@ -7911,7 +7958,7 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
             const chiave = `${descrizione.toLowerCase()}__${annoInizio}__${costo}`;
             // Mantieni il primo che incontri (i record sono ordinati per data nelle altre logiche; qui basta dedupe)
             if (!beniMap.has(chiave)) {
-                beniMap.set(chiave, { descrizione, annoInizio, anniAmm, costo, quota, annoFine });
+                beniMap.set(chiave, { descrizione, annoInizio, anniAmm, costo, quota, annoFine, recordId: reg.id, indexInRecord: idx });
             }
         });
     });
@@ -7971,9 +8018,78 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
                         <span class="meta-scadenza"><i class="fas fa-clock"></i> Scadenza: ${b.annoFine}</span>
                     </div>
                 </div>
+                <div class="bene-storico-actions">
+                    <button type="button" class="bene-storico-delete-btn" data-testid="bene-storico-delete-btn"
+                            onclick="eliminaBeneStorico(${b.recordId}, ${b.indexInRecord}, '${esc(b.descrizione)}')"
+                            title="Elimina questo bene durevole">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </div>
         `;
     }).join('');
+}
+
+/**
+ * Elimina un bene durevole dalla relativa registrazione economica.
+ * Richiede conferma; aggiorna il record via PUT /api/economic/:id e refresha lo storico.
+ */
+async function eliminaBeneStorico(recordId, indexInRecord, descrizione) {
+    if (!confirm(`⚠️ Sei sicuro di voler eliminare il bene "${descrizione}"?\n\nQuesta azione è IRREVERSIBILE.`)) {
+        return;
+    }
+    try {
+        showNotification('Eliminazione bene...', 'loading');
+        // 1. Recupera il record sorgente
+        const lotId = currentCostiLotId;
+        if (!lotId) {
+            showNotification('Lotto non disponibile', 'error');
+            return;
+        }
+        const economicResp = await apiCall(`/economic/${lotId}`);
+        const allRecords = economicResp.data || [];
+        const record = allRecords.find(r => r.id === Number(recordId));
+        if (!record) {
+            showNotification('Registrazione non trovata', 'error');
+            return;
+        }
+        // 2. Decodifica array beni, rimuovi quello all'indice
+        let beni = [];
+        try {
+            beni = typeof record.beni_durevoli === 'string' ? JSON.parse(record.beni_durevoli) : (record.beni_durevoli || []);
+        } catch (e) {
+            beni = [];
+        }
+        if (!Array.isArray(beni) || indexInRecord >= beni.length) {
+            showNotification('Bene non trovato nel record', 'error');
+            return;
+        }
+        beni.splice(indexInRecord, 1);
+        // 3. Ricalcola quota_ammortamento del record (somma quote rimaste)
+        const nuovaQuotaAmm = beni.reduce((s, b) => s + Number(b.quota_annuale || 0), 0);
+        // 4. PUT del record aggiornato
+        const payload = {
+            ...record,
+            beni_durevoli: beni,
+            quota_ammortamento: nuovaQuotaAmm,
+            costi_totali: Number(record.costo_personale || 0) + Number(record.costo_mezzi_tecnici || 0) + nuovaQuotaAmm,
+            bilancio: Number(record.ricavi_totali || 0) - (Number(record.costo_personale || 0) + Number(record.costo_mezzi_tecnici || 0) + nuovaQuotaAmm)
+        };
+        // Se il record diventa completamente vuoto (era fantasma e ora niente beni) → eliminalo
+        const restaFantasma = Number(payload.ricavi_totali || 0) === 0 && Number(payload.totale_kg || 0) === 0 && beni.length === 0;
+        if (restaFantasma) {
+            await apiCall(`/economic/${record.id}`, { method: 'DELETE' });
+        } else {
+            await apiCall(`/economic/${record.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        }
+        // 5. Refresh storico
+        const stagione = currentCostiStagione || new Date().getFullYear();
+        await loadBeniDurevoliCosti(lotId, stagione);
+        showNotification(`Bene "${descrizione}" eliminato`, 'success');
+    } catch (err) {
+        console.error('eliminaBeneStorico errore:', err);
+        showNotification('Errore eliminazione bene: ' + err.message, 'error');
+    }
 }
 // ============================================================================
 

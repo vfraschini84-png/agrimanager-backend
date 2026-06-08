@@ -102,6 +102,16 @@
 | 3 | **"Aggiorna da Costi" → ammortamenti=0** anche con beni attivi: leggeva `r.quota_ammortamento` (campo a livello record, non popolato dal flusso beni). Ora chiama `caricaBeniDurevoliAttivi(allRecords, stagione)` e somma le quote dei beni attivi nella stagione | `js/cropbook.js` |
 | 4 | **Voce "Ammortamenti" nei dettagli storico** ora visibile e allineata grazie al salvataggio corretto di `quota_ammortamento` sul record economico (fix sessione 6 + fix Bug 3) | `js/cropbook.js` |
 
+### Sessione 9 (2026-06-08 sera): 6 ottimizzazioni UX
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Pulsante elimina bene** nello Storico Beni Registrati: icona cestino con conferma, PUT del record economico aggiornato; se il record diventa vuoto (era fantasma + niente beni) → DELETE automatico | `js/cropbook.js`, `css/cropbook.css` |
+| 2 | **Layout Bilancio & Report normalizzato**: `.section` ora ha `max-width: 800px` + `margin auto` → le 3 sezioni out-of-container (lista/costi/bilancio) hanno larghezza identica alle altre. Grafici a `repeat(auto-fit, minmax(260px, 1fr))` per stackare su mobile | `css/cropbook.css`, `index.html` |
+| 3 | **Registri Personale + Mezzi Tecnici (vista giornaliera)**: accordion collapsibile → solo il primo giorno espanso di default, riga compatta con counter "X att." e totale €. Click sull'header apre/chiude il dettaglio. Helper `toggleGruppoGiornaliero` | `js/cropbook.js` |
+| 4 | **Rimossa sezione "Bilancio Economico" globale** dallo Storico Registrazioni Economiche (ridondante con sezione dedicata "Bilancio & Report"; il riepilogo per stagione resta dentro ogni accordion). Counter registrazioni esclude i fantasma | `index.html`, `js/cropbook.js` |
+| 5 | **Bug "Tutte le stagioni" in Bilancio & Report**: gli `if (stagione)` saltavano completamente il calcolo costi personale/mezzi → solo ammortamenti. Ora se nessuna stagione è selezionata, somma su tutte le stagioni distinte presenti nei record economici (Promise.all sui fetch /costi/personale e /costi/mezzi). Test live: Ricavi €6750 / Costi €2000 (era €300) / Bilancio €4750 | `js/cropbook.js` |
+| 6 | **"Calcola Auto kg" tornava 0** se l'utente non aveva ancora visitato la sezione attività di raccolta: ora legge direttamente da `localStorage[agriManager_activities_{lotId}]` come fallback quando `lotActivities` non corrisponde al lotto corrente. Aggiunto messaggio "Nessuna attività di raccolta registrata" se totale=0 | `js/cropbook.js` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

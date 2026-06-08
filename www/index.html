@@ -776,14 +776,7 @@
                 </div>
                 
                 <div class="section-content expanded">
-                    <!-- Bilancio Economico -->
-                    <div id="bilancio-container" style="margin-bottom: 20px; display: none;">
-                        <h4 style="color: #607D8B; margin-bottom: 15px;">
-                            <i class="fas fa-chart-pie"></i> Bilancio Economico
-                        </h4>
-                        <div id="bilancio-dettaglio" class="financial-summary"></div>
-                    </div>
-                    
+                    <!-- ℹ️ Il bilancio aggregato è disponibile nella sezione dedicata "Bilancio & Report" -->
                     <!-- Lista Registrazioni -->
                     <div id="registrazioni-economiche-list"></div>
                 </div>
@@ -1234,7 +1227,7 @@
     </div>
 
     <!-- Grafici -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+    <div class="bilancio-grafici-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 25px;">
         <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
             <h4 style="text-align: center; color: #333;">🍩 Ricavi vs Costi</h4>
             <canvas id="chart-ricavi-costi" width="300" height="300"></canvas>
