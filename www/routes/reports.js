@@ -182,7 +182,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-        const doc = new PDFDocument({ size: 'A4', margin: 50, info: {
+        const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true, info: {
             Title: `Bilancio ${lot.company_name}`,
             Author: 'Cropbook',
             Subject: 'Report Bilancio Stagione'
@@ -223,20 +223,32 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         doc.text(`Quantità totale venduta: ${fmtKg(tot.kg)}    ·    Prezzo medio: ${fmtEur(tot.prezzoMedio)}/kg    ·    Kg raccolti: ${fmtKg(totKgRaccolto)}`);
         doc.moveDown(0.5);
 
-        // Grafici
+        // Grafici (riga 1: due grafici a torta affiancati)
+        // Riserva 195pt verticali per la riga grafici
+        const PAGE_BOTTOM = doc.page.height - 60; // margine sicurezza per footer
+        const ensureSpace = (h) => {
+            if (doc.y + h > PAGE_BOTTOM) {
+                doc.addPage();
+                doc.y = doc.page.margins.top;
+                doc.x = 50;
+            }
+        };
+        
+        ensureSpace(200);
         doc.image(chartRicaviCosti, 50, doc.y, { width: 240 });
         doc.image(chartCostiBreakdown, 305, doc.y, { width: 240 });
         doc.y += 195;
         doc.x = 50;
 
-        // ✅ Grafico confronto ultime 5 stagioni (full-width)
+        // ✅ Grafico confronto ultime 5 stagioni — su pagina nuova se non c'è spazio
+        ensureSpace(260);
         doc.image(chartMultiStagione, 50, doc.y, { width: 495 });
         doc.y += 250;
         doc.x = 50;
 
-        // Tabella record economici
-        doc.moveDown(0.5);
-        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Registrazioni economiche');
+        // ============ Tabella record economici con paginazione manuale ============
+        ensureSpace(40);  // titolo + header tabella
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Registrazioni economiche', 50, doc.y);
         doc.moveDown(0.3);
 
         const cols = [
@@ -248,27 +260,31 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             { label: 'Costi', w: 70 },
             { label: 'Bilancio', w: 70 }
         ];
-        // Header riga: rettangolo verde + testo bianco DENTRO (non sopra)
-        const headerY = doc.y;
-        doc.rect(50, headerY, 450, 18).fill('#2E7D32');
-        let cx = 50;
-        doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
-        cols.forEach(c => {
-            doc.fillColor('#FFFFFF').text(
-                c.label,
-                cx + 4,
-                headerY + 5,
-                {
-                    width: c.w - 8,
-                    align: (c.label === 'Stagione' || c.label === 'Data') ? 'left' : 'right',
-                    lineBreak: false
-                }
-            );
-            cx += c.w;
-        });
-        doc.y = headerY + 18;
-        doc.x = 50;
-        doc.font('Helvetica').fontSize(9).fillColor('#222');
+        
+        const drawTableHeader = () => {
+            const headerY = doc.y;
+            doc.rect(50, headerY, 450, 18).fill('#2E7D32');
+            let cx = 50;
+            doc.fontSize(9).font('Helvetica-Bold');
+            cols.forEach(c => {
+                doc.fillColor('#FFFFFF').text(
+                    c.label,
+                    cx + 4,
+                    headerY + 5,
+                    {
+                        width: c.w - 8,
+                        align: (c.label === 'Stagione' || c.label === 'Data') ? 'left' : 'right',
+                        lineBreak: false
+                    }
+                );
+                cx += c.w;
+            });
+            doc.y = headerY + 18;
+            doc.x = 50;
+            doc.font('Helvetica').fontSize(9).fillColor('#222');
+        };
+        
+        drawTableHeader();
 
         if (records.length === 0) {
             doc.moveDown(0.5);
@@ -279,11 +295,20 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                 !((Number(r.ricavi_totali || 0) === 0) && (Number(r.totale_kg || 0) === 0) && (Number(r.prezzo_kg || 0) === 0))
             );
             const sorgente = visibili.length > 0 ? visibili : records;
+            const ROW_H = 16;
+            
             sorgente.forEach((r, idx) => {
+                // ✅ Page break manuale PRIMA di disegnare la riga (evita celle spaccate su pagine diverse)
+                if (doc.y + ROW_H > PAGE_BOTTOM) {
+                    doc.addPage();
+                    doc.y = doc.page.margins.top;
+                    doc.x = 50;
+                    drawTableHeader();
+                }
+                
                 const rowY = doc.y;
-                if (idx % 2 === 0) doc.rect(50, rowY, 450, 16).fill('#f5f5f5');
-                cx = 50;
-                // ✅ Costi ricalcolati da componenti (allineati con KPI)
+                if (idx % 2 === 0) doc.rect(50, rowY, 450, ROW_H).fill('#f5f5f5');
+                let cx = 50;
                 const costiRiga = Number(r.costo_personale || 0) + Number(r.costo_mezzi_tecnici || 0) + Number(r.quota_ammortamento || 0);
                 const bilancioRiga = Number(r.ricavi_totali || 0) - costiRiga;
                 const cells = [
@@ -299,20 +324,26 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                     doc.fillColor('#222').text(c.v, cx + 4, rowY + 4, { width: cols[i].w - 8, align: c.align, lineBreak: false });
                     cx += cols[i].w;
                 });
-                doc.y = rowY + 16;
+                // ✅ Forza la y dopo la riga (NON usare moveDown perché PDFKit potrebbe aver alterato doc.y dentro text())
+                doc.y = rowY + ROW_H;
+                doc.x = 50;
             });
         }
 
-        // Footer
+        // Footer su ogni pagina (no addPage spurio: forzo posizione assoluta + lineBreak false)
         doc.fontSize(8).fillColor('#888').font('Helvetica');
         const range = doc.bufferedPageRange();
         for (let i = 0; i < range.count; i++) {
             doc.switchToPage(range.start + i);
+            const yFooter = doc.page.height - 35;
             doc.text(
                 `Cropbook · ${lot.company_name} · pag. ${i + 1}/${range.count}`,
-                50, doc.page.height - 35, { width: 495, align: 'center' }
+                50, yFooter,
+                { width: 495, align: 'center', lineBreak: false, height: 20 }
             );
         }
+        // ✅ Flush solo le pagine create finora (evita pagine vuote da addPage spurio in fase finale)
+        doc.flushPages();
 
         doc.end();
     } catch (error) {

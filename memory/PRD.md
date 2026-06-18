@@ -126,6 +126,13 @@
 |---|------|------|
 | 1 | **Sostituito stacked bar chart** (illeggibile su smartphone) con **lista di card verticali**: una card per stagione con bilancio prominente (▲verde/▼rosso), barre orizzontali proporzionali (Ricavi/Costi), chip colorati breakdown (👥 Personale, 🧪 Mezzi, 📦 Ammortamenti). Layout responsive a 3 breakpoint (default / 600px / 380px) | `index.html`, `js/cropbook.js`, `css/cropbook.css` |
 
+### Sessione 12 (2026-06-18 sera): fix paginazione PDF Report
+| # | Bug → Fix | File |
+|---|------|------|
+| 1 | **PDF lotto "Pozzo vivo" generava 9 pagine** con riga 2026 spaccata su 7 pagine vuote: PDFKit auto-paginava al raggiungimento del margine durante `doc.text(value, x, rowY+4)` creando una pagina per ogni cella. **Fix**: paginazione manuale con `ensureSpace(h)` PRIMA di ogni elemento (grafici e righe tabella) + funzione `drawTableHeader()` ridisegnata su ogni nuova pagina | `routes/reports.js` |
+| 2 | **2 pagine vuote per il footer**: il `doc.text(footer, ..., page.height - 35)` senza `lineBreak: false` e `height: 20` faceva supporre a PDFKit che il footer occupasse spazio → addPage. Fix: parametri espliciti + `doc.flushPages()` finale | `routes/reports.js` |
+| 3 | Risultato: PDF "Pozzo vivo" (3 record) ora 2 pagine pulite (era 9) con footer "pag. 1/2", "pag. 2/2"; PDF mono-stagione resta 1 pagina con 3 grafici embedded; nessun overlap di celle | — |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
