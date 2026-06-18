@@ -133,6 +133,14 @@
 | 2 | **2 pagine vuote per il footer**: il `doc.text(footer, ..., page.height - 35)` senza `lineBreak: false` e `height: 20` faceva supporre a PDFKit che il footer occupasse spazio → addPage. Fix: parametri espliciti + `doc.flushPages()` finale | `routes/reports.js` |
 | 3 | Risultato: PDF "Pozzo vivo" (3 record) ora 2 pagine pulite (era 9) con footer "pag. 1/2", "pag. 2/2"; PDF mono-stagione resta 1 pagina con 3 grafici embedded; nessun overlap di celle | — |
 
+### Sessione 13 (2026-06-18 sera tardi): card multi-stagione nel PDF + tabella sempre su pagina nuova
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Sostituito stacked bar chart server-side** con **3 card disegnate in PDFKit** (rettangoli + barre proporzionali + badge bilancio ▲/▼). Stesso stile visivo della versione web mobile-friendly → coerenza UI/PDF | `routes/reports.js` |
+| 2 | **Tabella "Registrazioni economiche" sempre su pagina nuova** (`doc.addPage()` esplicito prima del titolo) → elimina sovrapposizione testo segnalata dall'utente | `routes/reports.js` |
+| 3 | Aggiunta legenda colori sotto le card (Personale arancione, Mezzi tecnici blu, Ammortamenti viola) | `routes/reports.js` |
+| 4 | Verifica visiva con `pdftoppm` + `analyze_file_tool`: zero sovrapposizioni, card leggibili, layout pulito | — |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

@@ -124,58 +124,34 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             }
         });
 
-        // ==== Grafico confronto ultime 5 stagioni (recupera dati di TUTTE le stagioni) ====
+        // ==== Dati confronto ultime 5 stagioni (saranno renderizzate come card in PDFKit) ====
         const allRecordsLotto = await db.allAsync(
             `SELECT * FROM economic_records WHERE lot_id = ? ORDER BY stagione_agricola`,
             [lot.id]
         );
         const stagioniSet = new Set(allRecordsLotto.map(r => r.stagione_agricola).filter(Boolean));
         stagioniSet.add(String(new Date().getFullYear()));
-        const stagioniMulti = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5).reverse();
+        // ✅ Ordine cronologico DESCENDING (più recente in alto)
+        const stagioniMulti = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5);
         
-        const multiRicavi = [];
-        const multiPersonale = [];
-        const multiMezzi = [];
-        const multiAmm = [];
+        const datiStagioni = [];
         for (const s of stagioniMulti) {
             const recsS = allRecordsLotto.filter(r => String(r.stagione_agricola) === String(s));
-            multiRicavi.push(recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0));
+            const ricavi = recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
             const persRow = await db.getAsync(
                 `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ? AND stagione = ?`,
                 [lot.id, s]
             ).catch(() => null);
-            multiPersonale.push(Number(persRow?.tot || 0));
+            const personale = Number(persRow?.tot || 0);
             const mezziRow = await db.getAsync(
                 `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ? AND stagione = ?`,
                 [lot.id, s]
             ).catch(() => null);
-            multiMezzi.push(Number(mezziRow?.tot || 0));
-            // Ammortamenti dalla quota_ammortamento dei record della stagione
-            multiAmm.push(recsS.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0));
+            const mezzi = Number(mezziRow?.tot || 0);
+            const amm = recsS.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0);
+            const costi = personale + mezzi + amm;
+            datiStagioni.push({ stagione: s, ricavi, personale, mezzi, amm, costi, bilancio: ricavi - costi });
         }
-        
-        const chartMultiStagione = await chartCanvas.renderToBuffer({
-            type: 'bar',
-            data: {
-                labels: stagioniMulti,
-                datasets: [
-                    { label: 'Ricavi', data: multiRicavi, backgroundColor: '#4CAF50', stack: 'ricavi' },
-                    { label: 'Personale', data: multiPersonale, backgroundColor: '#FF5722', stack: 'costi' },
-                    { label: 'Mezzi tecnici', data: multiMezzi, backgroundColor: '#2196F3', stack: 'costi' },
-                    { label: 'Ammortamenti', data: multiAmm, backgroundColor: '#9C27B0', stack: 'costi' }
-                ]
-            },
-            options: {
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 12 } } },
-                    title: { display: true, text: 'Confronto Ultime 5 Stagioni', font: { size: 16 } }
-                },
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, beginAtZero: true, ticks: { callback: v => '€' + v } }
-                }
-            }
-        });
 
         // ==== PDF ====
         const filename = `bilancio_${lot.company_name.replace(/[^a-z0-9]/gi, '_')}_${stagione || 'tutte'}.pdf`;
@@ -240,14 +216,93 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         doc.y += 195;
         doc.x = 50;
 
-        // ✅ Grafico confronto ultime 5 stagioni — su pagina nuova se non c'è spazio
-        ensureSpace(260);
-        doc.image(chartMultiStagione, 50, doc.y, { width: 495 });
-        doc.y += 250;
+        // ✅ Confronto Ultime 5 Stagioni — card list (stesso stile web mobile-friendly)
+        ensureSpace(40);
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Confronto Ultime 5 Stagioni', 50, doc.y);
+        doc.moveDown(0.4);
+        
+        const CARD_H = 60;
+        const CARD_W = 495;
+        const maxValoreSt = Math.max(...datiStagioni.flatMap(d => [d.ricavi, d.costi]), 1);
+        
+        datiStagioni.forEach((d, idx) => {
+            ensureSpace(CARD_H + 8);
+            const cardY = doc.y;
+            // Card background
+            doc.roundedRect(50, cardY, CARD_W, CARD_H, 6).fillAndStroke('#FFFFFF', '#e0e0e0');
+            
+            // Stagione (titolo)
+            doc.fillColor('#2E7D32').fontSize(11).font('Helvetica-Bold')
+               .text(`Stagione ${d.stagione}`, 60, cardY + 8, { width: 120, lineBreak: false });
+            
+            // Bilancio badge (top-right)
+            const bilancioPositivo = d.bilancio >= 0;
+            const badgeColor = bilancioPositivo ? '#E8F5E9' : '#FFEBEE';
+            const badgeText = bilancioPositivo ? '#2E7D32' : '#c62828';
+            const badgeLabel = (bilancioPositivo ? '▲ ' : '▼ ') + fmtEur(d.bilancio);
+            const badgeWidth = 110;
+            doc.roundedRect(50 + CARD_W - badgeWidth - 8, cardY + 6, badgeWidth, 18, 9).fillAndStroke(badgeColor, badgeColor);
+            doc.fillColor(badgeText).fontSize(9).font('Helvetica-Bold')
+               .text(badgeLabel, 50 + CARD_W - badgeWidth - 8, cardY + 11, { width: badgeWidth, align: 'center', lineBreak: false });
+            
+            // Riga Ricavi: label + barra + valore
+            const labelW = 55;
+            const valueW = 80;
+            const barX = 60 + labelW + 6;
+            const barW = CARD_W - labelW - valueW - 30;
+            const ricaviRowY = cardY + 30;
+            doc.fillColor('#555').fontSize(8).font('Helvetica').text('Ricavi', 60, ricaviRowY + 2, { width: labelW, lineBreak: false });
+            // sfondo barra
+            doc.rect(barX, ricaviRowY, barW, 8).fill('#f5f5f5');
+            // riempimento barra ricavi (verde)
+            const wR = barW * (d.ricavi / maxValoreSt);
+            if (wR > 0.5) doc.rect(barX, ricaviRowY, wR, 8).fill('#4CAF50');
+            doc.fillColor('#222').fontSize(8).font('Helvetica-Bold')
+               .text(fmtEur(d.ricavi), 50 + CARD_W - valueW - 8, ricaviRowY + 2, { width: valueW, align: 'right', lineBreak: false });
+            
+            // Riga Costi: label + barra segmentata + valore
+            const costiRowY = cardY + 44;
+            doc.fillColor('#555').fontSize(8).font('Helvetica').text('Costi', 60, costiRowY + 2, { width: labelW, lineBreak: false });
+            doc.rect(barX, costiRowY, barW, 8).fill('#f5f5f5');
+            const wC = barW * (d.costi / maxValoreSt);
+            if (wC > 0.5 && d.costi > 0) {
+                // Segmenti proporzionali
+                const wP = wC * (d.personale / d.costi);
+                const wM = wC * (d.mezzi / d.costi);
+                const wA = wC * (d.amm / d.costi);
+                let segX = barX;
+                if (wP > 0) { doc.rect(segX, costiRowY, wP, 8).fill('#FF5722'); segX += wP; }
+                if (wM > 0) { doc.rect(segX, costiRowY, wM, 8).fill('#2196F3'); segX += wM; }
+                if (wA > 0) { doc.rect(segX, costiRowY, wA, 8).fill('#9C27B0'); }
+            }
+            doc.fillColor('#222').fontSize(8).font('Helvetica-Bold')
+               .text(fmtEur(d.costi), 50 + CARD_W - valueW - 8, costiRowY + 2, { width: valueW, align: 'right', lineBreak: false });
+            
+            doc.y = cardY + CARD_H + 6;
+            doc.x = 50;
+        });
+        
+        // Legenda colori
+        ensureSpace(20);
+        const legendY = doc.y + 4;
+        const legendItems = [
+            { color: '#FF5722', label: 'Personale' },
+            { color: '#2196F3', label: 'Mezzi tecnici' },
+            { color: '#9C27B0', label: 'Ammortamenti' }
+        ];
+        let legX = 60;
+        legendItems.forEach(it => {
+            doc.rect(legX, legendY + 2, 8, 8).fill(it.color);
+            doc.fillColor('#555').fontSize(8).font('Helvetica').text(it.label, legX + 12, legendY + 2, { lineBreak: false });
+            legX += 110;
+        });
+        doc.y = legendY + 16;
         doc.x = 50;
 
-        // ============ Tabella record economici con paginazione manuale ============
-        ensureSpace(40);  // titolo + header tabella
+        // ============ Tabella record economici (SEMPRE su pagina nuova, no overlap) ============
+        doc.addPage();
+        doc.x = 50;
+        doc.y = doc.page.margins.top;
         doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Registrazioni economiche', 50, doc.y);
         doc.moveDown(0.3);
 
