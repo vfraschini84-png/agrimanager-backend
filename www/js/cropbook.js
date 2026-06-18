@@ -6945,110 +6945,92 @@ function aggiornaGrafici(ricavi, personale, mezzi, ammortamenti) {
     }
 }
 
-// ✅ GRAFICO CONFRONTO ULTIME 5 STAGIONI
+// ✅ CONFRONTO ULTIME 5 STAGIONI — Card list (mobile-friendly, no canvas illeggibile)
 async function aggiornaGraficoMultiStagione(lotId) {
-    const ctx = document.getElementById('chart-multi-stagione')?.getContext('2d');
-    if (!ctx) return;
+    const container = document.getElementById('multi-stagione-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;"><i class="fas fa-spinner fa-spin"></i> Caricamento confronto stagioni...</div>';
     
     // Recupera tutte le registrazioni del lotto
     const resp = await apiCall(`/economic/${lotId}`);
     const records = resp.data || [];
     
-    // Identifica tutte le stagioni distinte (max 5 più recenti)
     const stagioniSet = new Set(records.map(r => r.stagione_agricola).filter(Boolean));
     const annoCorrente = new Date().getFullYear();
-    // Aggiungi anno corrente se non c'è
     stagioniSet.add(String(annoCorrente));
-    const stagioni = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5).reverse();
+    const stagioni = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5);
     
-    // Per ogni stagione: ricavi + personale + mezzi + ammortamenti
-    const ricaviArr = [];
-    const personaleArr = [];
-    const mezziArr = [];
-    const ammArr = [];
-    
+    const datiStagioni = [];
     for (const s of stagioni) {
         const recsS = records.filter(r => String(r.stagione_agricola) === String(s));
         const ricavi = recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
-        // Personale + mezzi: API
         let personale = 0, mezzi = 0;
-        try {
-            const p = await apiCall(`/costi/personale/${lotId}/${s}`);
-            personale = Number(p.totale || 0);
-        } catch (_) {}
-        try {
-            const m = await apiCall(`/costi/mezzi/${lotId}/${s}`);
-            mezzi = Number(m.totale || 0);
-        } catch (_) {}
-        // Ammortamenti: dai beni durevoli attivi nella stagione
+        try { personale = Number((await apiCall(`/costi/personale/${lotId}/${s}`)).totale || 0); } catch (_) {}
+        try { mezzi = Number((await apiCall(`/costi/mezzi/${lotId}/${s}`)).totale || 0); } catch (_) {}
         let amm = 0;
         if (typeof caricaBeniDurevoliAttivi === 'function') {
             const attivi = caricaBeniDurevoliAttivi(records, parseInt(s));
             amm = attivi.reduce((sum, b) => sum + Number(b.quota_annuale || 0), 0);
         }
-        ricaviArr.push(ricavi);
-        personaleArr.push(personale);
-        mezziArr.push(mezzi);
-        ammArr.push(amm);
+        const costi = personale + mezzi + amm;
+        datiStagioni.push({ stagione: s, ricavi, personale, mezzi, amm, costi, bilancio: ricavi - costi });
     }
     
-    if (chartMultiStagione) chartMultiStagione.destroy();
-    chartMultiStagione = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: stagioni,
-            datasets: [
-                {
-                    label: 'Ricavi',
-                    data: ricaviArr,
-                    backgroundColor: '#4CAF50',
-                    borderRadius: 4,
-                    stack: 'ricavi'
-                },
-                {
-                    label: 'Personale',
-                    data: personaleArr,
-                    backgroundColor: '#FF5722',
-                    borderRadius: 4,
-                    stack: 'costi'
-                },
-                {
-                    label: 'Mezzi tecnici',
-                    data: mezziArr,
-                    backgroundColor: '#2196F3',
-                    borderRadius: 4,
-                    stack: 'costi'
-                },
-                {
-                    label: 'Ammortamenti',
-                    data: ammArr,
-                    backgroundColor: '#9C27B0',
-                    borderRadius: 4,
-                    stack: 'costi'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { padding: 12, font: { size: 12 }, usePointStyle: true } },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: €${Number(ctx.raw).toFixed(2)}`
-                    }
-                }
-            },
-            scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: { callback: (v) => '€' + v.toLocaleString('it-IT') }
-                }
-            }
-        }
-    });
+    if (datiStagioni.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#888; font-style: italic;">Nessuna stagione da confrontare.</div>';
+        return;
+    }
+    
+    // Trova il valore max per scalare le barre orizzontali in modo proporzionale
+    const maxValore = Math.max(...datiStagioni.flatMap(d => [d.ricavi, d.costi]), 1);
+    
+    container.innerHTML = datiStagioni.map(d => {
+        const wRicavi = (d.ricavi / maxValore * 100).toFixed(1);
+        const wCosti = (d.costi / maxValore * 100).toFixed(1);
+        const bilancioPositivo = d.bilancio >= 0;
+        // Breakdown costi: percentuali sulla larghezza dei costi totali
+        const pctPersonale = d.costi > 0 ? (d.personale / d.costi * 100) : 0;
+        const pctMezzi = d.costi > 0 ? (d.mezzi / d.costi * 100) : 0;
+        const pctAmm = d.costi > 0 ? (d.amm / d.costi * 100) : 0;
+        
+        return `
+            <div class="multi-stagione-card">
+                <div class="ms-card-header">
+                    <span class="ms-card-title">📆 ${d.stagione}</span>
+                    <span class="ms-card-bilancio ${bilancioPositivo ? 'positivo' : 'negativo'}">
+                        ${bilancioPositivo ? '▲' : '▼'} €${d.bilancio.toFixed(2)}
+                    </span>
+                </div>
+                <div class="ms-card-body">
+                    <div class="ms-row">
+                        <span class="ms-label"><i class="fas fa-arrow-up" style="color:#4CAF50;"></i> Ricavi</span>
+                        <div class="ms-bar-wrapper">
+                            <div class="ms-bar ms-bar-ricavi" style="width: ${wRicavi}%;"></div>
+                        </div>
+                        <span class="ms-value">€${d.ricavi.toFixed(2)}</span>
+                    </div>
+                    <div class="ms-row">
+                        <span class="ms-label"><i class="fas fa-arrow-down" style="color:#f44336;"></i> Costi</span>
+                        <div class="ms-bar-wrapper">
+                            <div class="ms-bar-stack" style="width: ${wCosti}%;">
+                                ${d.personale > 0 ? `<div class="ms-bar-segment seg-personale" style="width: ${pctPersonale}%;" title="Personale €${d.personale.toFixed(2)}"></div>` : ''}
+                                ${d.mezzi > 0 ? `<div class="ms-bar-segment seg-mezzi" style="width: ${pctMezzi}%;" title="Mezzi tecnici €${d.mezzi.toFixed(2)}"></div>` : ''}
+                                ${d.amm > 0 ? `<div class="ms-bar-segment seg-amm" style="width: ${pctAmm}%;" title="Ammortamenti €${d.amm.toFixed(2)}"></div>` : ''}
+                            </div>
+                        </div>
+                        <span class="ms-value">€${d.costi.toFixed(2)}</span>
+                    </div>
+                    <div class="ms-breakdown">
+                        ${d.personale > 0 ? `<span class="ms-chip chip-personale">👥 Pers. €${d.personale.toFixed(0)}</span>` : ''}
+                        ${d.mezzi > 0 ? `<span class="ms-chip chip-mezzi">🧪 Mezzi €${d.mezzi.toFixed(0)}</span>` : ''}
+                        ${d.amm > 0 ? `<span class="ms-chip chip-amm">📦 Amm. €${d.amm.toFixed(0)}</span>` : ''}
+                        ${(d.personale + d.mezzi + d.amm) === 0 ? '<span class="ms-chip ms-chip-empty">Nessun costo</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // ==================== ESPORTAZIONE PDF (Report Bilancio) ====================

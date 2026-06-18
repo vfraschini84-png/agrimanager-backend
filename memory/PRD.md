@@ -121,6 +121,11 @@
 | 4 | **Grafico "Confronto Ultime 5 Stagioni"** in Bilancio & Report: stacked bar chart (ricavi vs costi componenti per stagione) con dati live (Promise.all su `/costi/personale` e `/costi/mezzi` per ogni stagione + quote ammortamento dai beni attivi) | `index.html`, `js/cropbook.js` |
 | 5 | **PDF Report v2**: aggiunto terzo grafico full-width "Confronto Ultime 5 Stagioni" (chartjs-node-canvas) calcolato server-side da `costi_personale` + `costi_mezzi_tecnici` + `quota_ammortamento`. PDF ora 44KB / 2 pagine / 3 grafici embedded (era 29KB / 1 pagina / 2 grafici) | `routes/reports.js` |
 
+### Sessione 11 (2026-06-18 dopo): refactor confronto multi-stagione mobile-friendly
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Sostituito stacked bar chart** (illeggibile su smartphone) con **lista di card verticali**: una card per stagione con bilancio prominente (▲verde/▼rosso), barre orizzontali proporzionali (Ricavi/Costi), chip colorati breakdown (👥 Personale, 🧪 Mezzi, 📦 Ammortamenti). Layout responsive a 3 breakpoint (default / 600px / 380px) | `index.html`, `js/cropbook.js`, `css/cropbook.css` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

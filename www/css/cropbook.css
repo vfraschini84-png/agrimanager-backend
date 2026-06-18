@@ -3462,3 +3462,133 @@ input[type="radio"]:checked + span {
         font-size: 0.65rem !important;
     }
 }
+
+/* ============ Multi-stagione cards (mobile-first) ============ */
+.multi-stagione-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.multi-stagione-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.multi-stagione-card:hover {
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+}
+.ms-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.ms-card-title {
+    font-weight: 700;
+    color: #2E7D32;
+    font-size: 1.05rem;
+}
+.ms-card-bilancio {
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 4px 12px;
+    border-radius: 14px;
+    white-space: nowrap;
+}
+.ms-card-bilancio.positivo {
+    background: #E8F5E9;
+    color: #2E7D32;
+    border: 1px solid #A5D6A7;
+}
+.ms-card-bilancio.negativo {
+    background: #FFEBEE;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+.ms-card-body { display: flex; flex-direction: column; gap: 8px; }
+.ms-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 90px;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+}
+.ms-label { color: #555; font-size: 0.82rem; white-space: nowrap; }
+.ms-bar-wrapper {
+    background: #f5f5f5;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+}
+.ms-bar {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+.ms-bar-ricavi { background: linear-gradient(90deg, #66BB6A, #2E7D32); }
+.ms-bar-stack {
+    display: flex;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    min-width: 2px;
+}
+.ms-bar-segment { height: 100%; transition: opacity 0.15s ease; }
+.ms-bar-segment:hover { opacity: 0.85; }
+.seg-personale { background: #FF5722; }
+.seg-mezzi     { background: #2196F3; }
+.seg-amm       { background: #9C27B0; }
+.ms-value {
+    font-weight: 600;
+    color: #333;
+    text-align: right;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+.ms-breakdown {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 90px;
+}
+.ms-chip {
+    font-size: 0.72rem;
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: #f5f5f5;
+    color: #555;
+    font-weight: 600;
+}
+.chip-personale { background: #FFCCBC; color: #BF360C; }
+.chip-mezzi     { background: #BBDEFB; color: #0D47A1; }
+.chip-amm       { background: #E1BEE7; color: #4A148C; }
+.ms-chip-empty  { background: #fafafa; color: #999; font-style: italic; font-weight: 400; }
+
+@media (max-width: 600px) {
+    .ms-card-title { font-size: 0.95rem; }
+    .ms-card-bilancio { font-size: 0.85rem; padding: 3px 10px; }
+    .ms-row {
+        grid-template-columns: 64px 1fr 78px;
+        gap: 8px;
+        font-size: 0.82rem;
+    }
+    .ms-label { font-size: 0.74rem; }
+    .ms-value { font-size: 0.78rem; }
+    .ms-breakdown { padding-left: 0; justify-content: center; }
+    .ms-chip { font-size: 0.68rem; padding: 2px 7px; }
+}
+@media (max-width: 380px) {
+    .ms-row { grid-template-columns: 50px 1fr 72px; gap: 6px; }
+    .ms-label { font-size: 0.7rem; }
+    .ms-value { font-size: 0.72rem; }
+}
+/* ============================================================== */
+

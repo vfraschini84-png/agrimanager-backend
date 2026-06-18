@@ -1251,10 +1251,11 @@
         </div>
     </div>
     
-    <!-- ✅ Grafico confronto multi-stagione -->
+    <!-- ✅ Confronto multi-stagione: card list (mobile-first) + grafico opzionale (desktop) -->
     <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 25px;">
-        <h4 style="text-align: center; color: #333; margin-bottom: 12px;">📈 Confronto Ultime 5 Stagioni</h4>
-        <canvas id="chart-multi-stagione" width="600" height="280"></canvas>
+        <h4 style="text-align: center; color: #333; margin: 0 0 16px 0;">📈 Confronto Ultime 5 Stagioni</h4>
+        <!-- Lista card (sempre visibile, perfetta su mobile) -->
+        <div id="multi-stagione-list" class="multi-stagione-list"></div>
     </div>
 
     <!-- Esportazione: Excel + PDF -->
