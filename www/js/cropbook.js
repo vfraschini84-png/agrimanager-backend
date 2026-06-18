@@ -6695,6 +6695,7 @@ function initGestioneCosti() {
 let currentBilancioLotId = null;
 let chartRicaviCosti = null;
 let chartDettaglioCosti = null;
+let chartMultiStagione = null;
 
 // ==================== INIZIALIZZAZIONE BILANCIO ====================
 function initBilancioSection() {
@@ -6834,6 +6835,9 @@ async function aggiornaDashboardBilancio(lotId, stagione) {
     // Aggiorna grafici
     aggiornaGrafici(ricaviTotali, costiPersonale, costiMezziTecnici, costiAmmortamenti);
     
+    // ✅ Grafico multi-stagione (ultime 5) — fire-and-forget, non blocca
+    aggiornaGraficoMultiStagione(lotId).catch(err => console.error('multi-stagione error:', err));
+    
     showNotification('Dati caricati!', 'success');
 }
 
@@ -6939,6 +6943,112 @@ function aggiornaGrafici(ricavi, personale, mezzi, ammortamenti) {
             }
         });
     }
+}
+
+// ✅ GRAFICO CONFRONTO ULTIME 5 STAGIONI
+async function aggiornaGraficoMultiStagione(lotId) {
+    const ctx = document.getElementById('chart-multi-stagione')?.getContext('2d');
+    if (!ctx) return;
+    
+    // Recupera tutte le registrazioni del lotto
+    const resp = await apiCall(`/economic/${lotId}`);
+    const records = resp.data || [];
+    
+    // Identifica tutte le stagioni distinte (max 5 più recenti)
+    const stagioniSet = new Set(records.map(r => r.stagione_agricola).filter(Boolean));
+    const annoCorrente = new Date().getFullYear();
+    // Aggiungi anno corrente se non c'è
+    stagioniSet.add(String(annoCorrente));
+    const stagioni = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5).reverse();
+    
+    // Per ogni stagione: ricavi + personale + mezzi + ammortamenti
+    const ricaviArr = [];
+    const personaleArr = [];
+    const mezziArr = [];
+    const ammArr = [];
+    
+    for (const s of stagioni) {
+        const recsS = records.filter(r => String(r.stagione_agricola) === String(s));
+        const ricavi = recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
+        // Personale + mezzi: API
+        let personale = 0, mezzi = 0;
+        try {
+            const p = await apiCall(`/costi/personale/${lotId}/${s}`);
+            personale = Number(p.totale || 0);
+        } catch (_) {}
+        try {
+            const m = await apiCall(`/costi/mezzi/${lotId}/${s}`);
+            mezzi = Number(m.totale || 0);
+        } catch (_) {}
+        // Ammortamenti: dai beni durevoli attivi nella stagione
+        let amm = 0;
+        if (typeof caricaBeniDurevoliAttivi === 'function') {
+            const attivi = caricaBeniDurevoliAttivi(records, parseInt(s));
+            amm = attivi.reduce((sum, b) => sum + Number(b.quota_annuale || 0), 0);
+        }
+        ricaviArr.push(ricavi);
+        personaleArr.push(personale);
+        mezziArr.push(mezzi);
+        ammArr.push(amm);
+    }
+    
+    if (chartMultiStagione) chartMultiStagione.destroy();
+    chartMultiStagione = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: stagioni,
+            datasets: [
+                {
+                    label: 'Ricavi',
+                    data: ricaviArr,
+                    backgroundColor: '#4CAF50',
+                    borderRadius: 4,
+                    stack: 'ricavi'
+                },
+                {
+                    label: 'Personale',
+                    data: personaleArr,
+                    backgroundColor: '#FF5722',
+                    borderRadius: 4,
+                    stack: 'costi'
+                },
+                {
+                    label: 'Mezzi tecnici',
+                    data: mezziArr,
+                    backgroundColor: '#2196F3',
+                    borderRadius: 4,
+                    stack: 'costi'
+                },
+                {
+                    label: 'Ammortamenti',
+                    data: ammArr,
+                    backgroundColor: '#9C27B0',
+                    borderRadius: 4,
+                    stack: 'costi'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 12, font: { size: 12 }, usePointStyle: true } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: €${Number(ctx.raw).toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { callback: (v) => '€' + v.toLocaleString('it-IT') }
+                }
+            }
+        }
+    });
 }
 
 // ==================== ESPORTAZIONE PDF (Report Bilancio) ====================

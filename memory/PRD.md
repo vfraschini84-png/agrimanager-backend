@@ -112,6 +112,15 @@
 | 5 | **Bug "Tutte le stagioni" in Bilancio & Report**: gli `if (stagione)` saltavano completamente il calcolo costi personale/mezzi → solo ammortamenti. Ora se nessuna stagione è selezionata, somma su tutte le stagioni distinte presenti nei record economici (Promise.all sui fetch /costi/personale e /costi/mezzi). Test live: Ricavi €6750 / Costi €2000 (era €300) / Bilancio €4750 | `js/cropbook.js` |
 | 6 | **"Calcola Auto kg" tornava 0** se l'utente non aveva ancora visitato la sezione attività di raccolta: ora legge direttamente da `localStorage[agriManager_activities_{lotId}]` come fallback quando `lotActivities` non corrisponde al lotto corrente. Aggiunto messaggio "Nessuna attività di raccolta registrata" se totale=0 | `js/cropbook.js` |
 
+### Sessione 10 (2026-06-18): 5 nuove feature (selettore stagione, Calcola Auto, vista anno, grafico multi-stagione, PDF v2)
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Selettore stagione in Dettagli Lotto**: dropdown anno popolato da dati esistenti + ±3 anni, filtra `displayActivities()` e `displayAnalyses()` per stagione, pre-imposta data raccolta e anno analisi. Conferma utente se data attività diverge dalla stagione | `index.html`, `js/cropbook.js` |
+| 2 | **Fix "Calcola Auto" kg raccolti**: la funzione effettivamente chiamata dal bottone era `calcolaKgRaccoltiAutomaticoCompleto` (non quella che avevo fixato in sessione 9). Ora legge da `localStorage[agriManager_activities_{lotId}]` come fallback quando `lotActivities` è vuoto o appartiene ad altro lotto | `js/cropbook.js` |
+| 3 | **Vista "Anno"** aggiunta ai registri Personale + Mezzi Tecnici (oltre a Giorno/Settimana/Mese). Cards con totale €, conteggio attività, ore tot., €/ora media (personale) o breakdown per categoria (mezzi tecnici) | `index.html`, `js/cropbook.js` |
+| 4 | **Grafico "Confronto Ultime 5 Stagioni"** in Bilancio & Report: stacked bar chart (ricavi vs costi componenti per stagione) con dati live (Promise.all su `/costi/personale` e `/costi/mezzi` per ogni stagione + quote ammortamento dai beni attivi) | `index.html`, `js/cropbook.js` |
+| 5 | **PDF Report v2**: aggiunto terzo grafico full-width "Confronto Ultime 5 Stagioni" (chartjs-node-canvas) calcolato server-side da `costi_personale` + `costi_mezzi_tecnici` + `quota_ammortamento`. PDF ora 44KB / 2 pagine / 3 grafici embedded (era 29KB / 1 pagina / 2 grafici) | `routes/reports.js` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

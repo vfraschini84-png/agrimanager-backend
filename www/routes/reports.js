@@ -124,6 +124,59 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             }
         });
 
+        // ==== Grafico confronto ultime 5 stagioni (recupera dati di TUTTE le stagioni) ====
+        const allRecordsLotto = await db.allAsync(
+            `SELECT * FROM economic_records WHERE lot_id = ? ORDER BY stagione_agricola`,
+            [lot.id]
+        );
+        const stagioniSet = new Set(allRecordsLotto.map(r => r.stagione_agricola).filter(Boolean));
+        stagioniSet.add(String(new Date().getFullYear()));
+        const stagioniMulti = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5).reverse();
+        
+        const multiRicavi = [];
+        const multiPersonale = [];
+        const multiMezzi = [];
+        const multiAmm = [];
+        for (const s of stagioniMulti) {
+            const recsS = allRecordsLotto.filter(r => String(r.stagione_agricola) === String(s));
+            multiRicavi.push(recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0));
+            const persRow = await db.getAsync(
+                `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ? AND stagione = ?`,
+                [lot.id, s]
+            ).catch(() => null);
+            multiPersonale.push(Number(persRow?.tot || 0));
+            const mezziRow = await db.getAsync(
+                `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ? AND stagione = ?`,
+                [lot.id, s]
+            ).catch(() => null);
+            multiMezzi.push(Number(mezziRow?.tot || 0));
+            // Ammortamenti dalla quota_ammortamento dei record della stagione
+            multiAmm.push(recsS.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0));
+        }
+        
+        const chartMultiStagione = await chartCanvas.renderToBuffer({
+            type: 'bar',
+            data: {
+                labels: stagioniMulti,
+                datasets: [
+                    { label: 'Ricavi', data: multiRicavi, backgroundColor: '#4CAF50', stack: 'ricavi' },
+                    { label: 'Personale', data: multiPersonale, backgroundColor: '#FF5722', stack: 'costi' },
+                    { label: 'Mezzi tecnici', data: multiMezzi, backgroundColor: '#2196F3', stack: 'costi' },
+                    { label: 'Ammortamenti', data: multiAmm, backgroundColor: '#9C27B0', stack: 'costi' }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 12 } } },
+                    title: { display: true, text: 'Confronto Ultime 5 Stagioni', font: { size: 16 } }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, ticks: { callback: v => '€' + v } }
+                }
+            }
+        });
+
         // ==== PDF ====
         const filename = `bilancio_${lot.company_name.replace(/[^a-z0-9]/gi, '_')}_${stagione || 'tutte'}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
@@ -174,6 +227,11 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         doc.image(chartRicaviCosti, 50, doc.y, { width: 240 });
         doc.image(chartCostiBreakdown, 305, doc.y, { width: 240 });
         doc.y += 195;
+        doc.x = 50;
+
+        // ✅ Grafico confronto ultime 5 stagioni (full-width)
+        doc.image(chartMultiStagione, 50, doc.y, { width: 495 });
+        doc.y += 250;
         doc.x = 50;
 
         // Tabella record economici
