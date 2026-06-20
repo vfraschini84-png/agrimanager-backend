@@ -187,6 +187,24 @@
 | 6 | **handleSectionSpecificActions** estesa con casi `aziende-section` (loadAziendeDashboard) e `registrazione-section` (loadCompaniesIntoSelect) | `js/cropbook.js` |
 | 7 | **Nav bar inter-sezione** della dashboard aziende include pulsanti per Lista Lotti + Nuovo Lotto | `index.html` |
 
+### Sessione 16 (2026-06-20 sera): Unificazione Lista Lotti + Dashboard Aziende + Fix bug registrazione
+| # | Modifica | File |
+|---|------|------|
+| 1 | **🐛 Fix bug registrazione lotto**: `validateLotForm()` chiamava `validateField('company-name', 2)` che falliva quando si selezionava un'azienda esistente (campo nascosto/vuoto). Ora valida `#company-select`: deve avere un valore; se `__new__` valida il nome inline | `js/cropbook.js` |
+| 2 | **Lista Lotti ora include la Dashboard Aziende** come vista di default. Toggle "📋 Per Azienda" / "📋 Tutti i lotti" + pulsante "+ Nuova Azienda" sempre visibile. Click "Lotti" su una card → drill-down ai lotti di quell'azienda con pulsante "← Torna alle aziende" | `index.html`, `js/cropbook.js` |
+| 3 | **Card aziende semplificate**: rimosso il pulsante "Report PDF" (sarà nella sezione Bilancio & Report). Restano solo "👁️ Lotti" e "✏️ Modifica" come richiesto | `js/cropbook.js` |
+| 4 | **Rimossa sezione separata `#aziende-section`** (ora unificata in `lista-section`). Rimossa voce "Aziende" dal menu home. Modal editor azienda spostato fuori dalla sezione (globale) | `index.html`, `js/cropbook.js` |
+| 5 | Variabili globali `currentVistaLotti` + `currentAziendaFilter` per memorizzare lo stato della vista tra navigazioni | `js/cropbook.js` |
+
+### Stato delle 4 richieste utente
+
+| # | Richiesta | Stato |
+|---|-----------|-------|
+| 1 | Card aziende dentro Lista Lotti con solo "Lotti" + "Modifica" | ✅ Completato |
+| 2 | Selettore Azienda→Lotto nelle altre sezioni (Dettagli/Costi/Bilancio) per cambio lotto | 🟡 Backlog prossima sessione |
+| 3 | Bug registrazione lotto risolto | ✅ Completato |
+| 4 | Bilancio & Report con vista per azienda + report stagione totale + dettaglio lotti | 🟡 Backlog prossima sessione |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

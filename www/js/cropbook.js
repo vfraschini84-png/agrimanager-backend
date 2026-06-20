@@ -1473,11 +1473,20 @@ function optimizeMobileLoad() {
 
         function validateLotForm() {
     let isValid = true;
-    isValid = validateField('company-name', 2) && isValid;
+    // ✅ Validazione azienda: deve esserci una selezione (esistente o nuova con nome valido)
+    const cs = document.getElementById('company-select');
+    const csVal = cs ? cs.value : '';
+    if (!csVal) {
+        showNotification('Seleziona un\'azienda dal menù a tendina', 'error');
+        isValid = false;
+    } else if (csVal === '__new__') {
+        // Per la nuova azienda valida il nome inline
+        isValid = validateField('company-name', 2) && isValid;
+    }
+    // (per azienda esistente, nessun campo nome da validare)
     isValid = validateField('location', 2) && isValid;
-    isValid = validateOptionalGoogleMapsUrl() && isValid; // GPS ORA OPZIONALE
+    isValid = validateOptionalGoogleMapsUrl() && isValid;
     isValid = validateField('product-type', 1) && isValid;
-    // VARIETÀ NON PIÙ OBBLIGATORIA - rimossa la validazione
     return isValid;
 }
 
@@ -4568,14 +4577,11 @@ if (sezioneUtenti && sectionId !== 'user-management-section') {
 // ==================== GESTIONE AZIONI SPECIFICHE SEZIONI ====================
 function handleSectionSpecificActions(sectionId) {
     switch(sectionId) {
-        case 'aziende-section':
-            loadAziendeDashboard();
-            break;
         case 'lista-section':
-            loadLots();
+            // ✅ All'apertura mostra vista Aziende; se l'utente l'ha usata di recente, riusa lo stato
+            setVistaLotti(currentVistaLotti || 'aziende', currentAziendaFilter);
             break;
         case 'registrazione-section':
-            // ✅ Popola dropdown aziende quando si entra nel form
             if (typeof loadCompaniesIntoSelect === 'function') loadCompaniesIntoSelect();
             break;
         case 'gestione-economica-section':
@@ -8444,25 +8450,80 @@ function renderAziendeGrid(items) {
         return `
             <div class="azienda-card" data-testid="azienda-card-${c.id}">
                 <div class="azienda-card-header">
-                    <h3 class="azienda-name" onclick="apriDettagliAzienda(${c.id})">📋 ${esc(c.name)}</h3>
+                    <h3 class="azienda-name" onclick="apriLottiAzienda(${c.id})">📋 ${esc(c.name)}</h3>
                     <span class="azienda-lots-badge ${c.lots_count === 0 ? 'empty' : ''}">${c.lots_count} ${c.lots_count === 1 ? 'lotto' : 'lotti'}</span>
                 </div>
                 <div class="azienda-sectors">${sectorsHtml}</div>
                 ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
                 <div class="azienda-actions">
-                    <button class="azienda-action-btn view" onclick="apriDettagliAzienda(${c.id})" title="Vedi lotti">
+                    <button class="azienda-action-btn view" onclick="apriLottiAzienda(${c.id})" title="Vedi lotti">
                         <i class="fas fa-eye"></i> Lotti
                     </button>
-                    <button class="azienda-action-btn report" onclick="scaricaBilancioAzienda(${c.id})" title="Scarica PDF bilancio azienda">
-                        <i class="fas fa-file-pdf"></i> Report
-                    </button>
                     <button class="azienda-action-btn edit" onclick="openCompanyEditor(${c.id})" title="Modifica azienda">
-                        <i class="fas fa-edit"></i>
+                        <i class="fas fa-edit"></i> Modifica
                     </button>
                 </div>
             </div>
         `;
     }).join('');
+}
+
+// ✅ Vista corrente di lista-section: 'aziende' | 'tutti' | 'azienda-lotti'
+let currentVistaLotti = 'aziende';
+let currentAziendaFilter = null;
+
+function setVistaLotti(vista, companyId = null) {
+    currentVistaLotti = vista;
+    currentAziendaFilter = companyId;
+    const grid = document.getElementById('aziende-grid');
+    const search = document.getElementById('lots-search-wrapper');
+    const list = document.getElementById('lots-list');
+    const btnAz = document.getElementById('vista-aziende-btn');
+    const btnTutti = document.getElementById('vista-tutti-btn');
+    const btnBack = document.getElementById('back-aziende-btn');
+    const btnAdd = document.getElementById('btn-add-azienda');
+    
+    if (vista === 'aziende') {
+        if (grid) grid.style.display = '';
+        if (search) search.style.display = 'none';
+        if (list) list.style.display = 'none';
+        if (btnAz) { btnAz.style.background = '#4CAF50'; btnAz.style.color = 'white'; }
+        if (btnTutti) { btnTutti.style.background = '#fff'; btnTutti.style.color = '#555'; }
+        if (btnBack) btnBack.style.display = 'none';
+        if (btnAdd) btnAdd.style.display = '';
+        loadAziendeDashboard();
+    } else if (vista === 'tutti') {
+        if (grid) grid.style.display = 'none';
+        if (search) search.style.display = '';
+        if (list) list.style.display = '';
+        if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
+        if (btnTutti) { btnTutti.style.background = '#4CAF50'; btnTutti.style.color = 'white'; }
+        if (btnBack) btnBack.style.display = 'none';
+        if (btnAdd) btnAdd.style.display = '';
+        currentAziendaFilter = null;
+        if (typeof loadLots === 'function') loadLots();
+    } else if (vista === 'azienda-lotti') {
+        // Drill-down: lista lotti di una azienda specifica
+        if (grid) grid.style.display = 'none';
+        if (search) search.style.display = '';
+        if (list) list.style.display = '';
+        if (btnBack) btnBack.style.display = '';
+        if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
+        if (btnTutti) { btnTutti.style.background = '#fff'; btnTutti.style.color = '#555'; }
+        if (btnAdd) btnAdd.style.display = 'none';
+        if (typeof loadLots === 'function') loadLots();
+    }
+}
+
+async function apriLottiAzienda(companyId) {
+    const c = cachedCompanies.find(x => x.id === companyId);
+    if (!c) return;
+    setVistaLotti('azienda-lotti', companyId);
+    // Pre-imposta search
+    setTimeout(() => {
+        const search = document.getElementById('search-lots');
+        if (search) { search.value = c.name; if (typeof filterLots === 'function') filterLots(); }
+    }, 100);
 }
 
 function filterAziendeList() {
