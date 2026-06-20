@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-05-29
-**Versione**: 1.5.1
+**Ultimo aggiornamento**: 2026-06-20
+**Versione**: 1.7.0
 
 ---
 
@@ -265,17 +265,31 @@
 ## Test credentials
 - Vedi `/app/memory/test_credentials.md`. Admin: `admin` / `96a0761f3943`.
 
+### Sessione 5 (2026-06-20): Cascade Azienda→Lotto + Vista Bilancio per Azienda
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Cascade selectors Azienda→Lotto**: aggiunto un `<select id="cascade-az-{ctx}">` accanto a ogni dropdown lotti nelle 4 sezioni (`dettagli-section`, `gestione-economica-section`, `gestione-costi-section`, `bilancio-section`). State globale `cascadeCompanyFilter` per contesto. Filtra `allLots` per `company_id` quando l'utente seleziona un'azienda. | `index.html`, `js/cropbook.js` |
+| 2 | **Vista Bilancio "Per Azienda"** (nuova default): toggle `[Vista Aziende] [Vista Singolo Lotto]` in `#bilancio-section`. La modalità "Aziende" mostra una griglia di card per ogni azienda con lotti → drill-down con 4 KPI aggregati (Ricavi, Costi, Bilancio, N° Lotti) + tabella confronto lotti con riga TOTALE. La modalità "Singolo Lotto" è la classica vista esistente. | `index.html`, `js/cropbook.js` |
+| 3 | **PDF Bilancio Azienda dal drill-down**: pulsante `bilancio-azienda-pdf-btn` chiama `/api/reports/bilancio-azienda/:id` (già esistente) e scarica il PDF aggregato per l'azienda corrente. | `js/cropbook.js` |
+| 4 | **Funzione `aggregaCostiERicaviLotto(lotId)`**: helper client-side che aggrega ricavi, costi personale, mezzi tecnici e ammortamenti su tutte le stagioni di un lotto. Riutilizzata per generare i KPI aziendali. | `js/cropbook.js` |
+| 5 | **Helper unificato**: `getLotsByCascadeContext(ctx)`, `popolaSelectAziendeCascade(ctx)`, `onCambioAziendaCascade(ctx)`. Le 4 funzioni `populateDropdownMenu`/`populateEconomicDropdownMenu`/`initGestioneCosti`/`initBilancioSection` ora filtrano via cascade-state. | `js/cropbook.js` |
+| 6 | **Pulizia**: rimosse `setupCascadeSelector`/`refreshCascadeLots` legacy (non più necessarie). | `js/cropbook.js` |
+
+**Test**: 48/48 Jest + 9/9 pytest (testing agent v3) + UI Playwright PASS. Tutti i selettori, drill-down e PDF verificati end-to-end.
+
 ## Backlog / Next steps
 
 ### P1 (importanti)
-- [ ] CSP: rimuovere `'unsafe-inline'`/`'unsafe-eval'` (richiede refactor frontend monolitico)
-- [ ] Refactor `index.html` (11k+ righe) → Vite + componenti
+- [ ] **Modularizzare `js/cropbook.js`** (8.9k+ righe): split in moduli ES per dominio (auth, lots, cascade, bilancio, charts, pdf-export). Aumenta manutenibilità e riduce rischio regressione.
+- [ ] **Notifiche email automatiche** (agenda agricola): promemoria attività + alert rese basse via SMTP esistente.
+- [ ] CSP: rimuovere `'unsafe-inline'`/`'unsafe-eval'` (ora che CSS/JS sono estratti)
 - [ ] HSTS in produzione
 - [ ] Validazione password con zxcvbn
 - [ ] Refresh token + endpoint logout
 - [ ] CI con GitHub Actions
 - [ ] Sostituire `console.log` residui con `logger.*` in routes minori
 - [ ] CSRF protection se passi a cookie auth
+- [ ] Ottimizzare PDF `bilancio-azienda`: N+1 queries → singola GROUP BY per costi_personale/costi_mezzi/economic_records
 
 ### P2 (nice-to-have)
 - [ ] Docker / docker-compose
