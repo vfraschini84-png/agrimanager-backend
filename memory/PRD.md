@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-06-20
-**Versione**: 1.7.0
+**Versione**: 1.8.0
 
 ---
 
@@ -277,10 +277,24 @@
 
 **Test**: 48/48 Jest + 9/9 pytest (testing agent v3) + UI Playwright PASS. Tutti i selettori, drill-down e PDF verificati end-to-end.
 
+### Sessione 6 (2026-06-20): Ottimizzazione PDF + analisi dettagliate
+| # | Modifica | File |
+|---|---|---|
+| 1 | **PDF `bilancio-azienda` ottimizzato**: rimosse query N+1 (era 1 SELECT + 3 query per lotto, ora 4 SELECT bulk con `WHERE lot_id IN (...) GROUP BY lot_id` indipendentemente dal numero di lotti). Aggiunto query string `?stagione=YYYY` che filtra ricavi/personale/mezzi/ammortamenti. | `routes/reports.js` |
+| 2 | **Stagione di riferimento** nel PDF aziendale (header): mostra "Stagione di riferimento: YYYY" o "Periodo: Tutte le stagioni". Filename del PDF include la stagione (`bilancio-azienda-Nome_YYYY.pdf`). | `routes/reports.js` |
+| 3 | **Selettore stagione drill-down**: `<select id="bilancio-azienda-stagione">` popolato dalle stagioni reali dei record economici dei lotti dell'azienda. Filtra KPI, tabella e PDF. | `index.html`, `js/cropbook.js` |
+| 4 | **FIX bug critico**: "Confronto Ultime 5 Stagioni" nel PDF singolo lotto mostrava sempre Personale=0 e Mezzi=0 (la query usava `WHERE stagione = ?` invece di `stagione_agricola = ?`, l'errore veniva ingoiato dal `.catch(()=>null)`). Ora usa una bulk GROUP BY su `stagione_agricola` e match perfetto con i numeri della dashboard. | `routes/reports.js` |
+| 5 | **FIX ammortamenti incoerenti**: il PDF sommava `quota_ammortamento` dai record economici, la dashboard usava la finestra di attivazione dei beni durevoli (`anno_inizio` + `anni_ammortamento`). Aggiunto helper server-side `estraiBeniAttivi()` che replica esattamente la logica del frontend. Anche i totali principali del PDF ora usano la stessa fonte. | `routes/reports.js` |
+| 6 | **3 nuove sezioni dettagliate nel PDF singolo lotto**: ognuna su pagina dedicata, banner colorato + sottotitolo + grafico a barre orizzontale (Chart.js) + tabella con riga TOTALE e colonna **Incidenza %**. <br>• **Costi Personale per Attività** (gruppo `attivita` + `qualifica` da `costi_personale`) con colonne Interventi, Ore-uomo, Totale, Incidenza. <br>• **Mezzi Tecnici per Categoria** (`categoria` da `costi_mezzi_tecnici`) + tabella secondaria top-10 per descrizione. <br>• **Ammortamenti per Bene Durevole** (parsed da `beni_durevoli` JSON, deduplica per chiave) con Costo, Anni, Quota/anno, Anni nel periodo, Totale, Incidenza. | `routes/reports.js` |
+| 7 | **Helper `aggregaAmmortamentiPerBene(records, anniFiltro)`** server-side: somma quota annuale × anni in cui il bene è attivo. | `routes/reports.js` |
+| 8 | **Rimossi emoji** dal PDF aziendale (PDFKit Helvetica non li renderizza, si vedevano caratteri tipo `Ø=ÜA`). | `routes/reports.js` |
+
+**Test**: 48/48 Jest + 15/15 pytest (iteration_2) + UI Playwright PASS. Analisi PDF (Gemini) conferma tutte le 3 sezioni con grafico+tabella+Incidenza.
+
 ## Backlog / Next steps
 
 ### P1 (importanti)
-- [ ] **Modularizzare `js/cropbook.js`** (8.9k+ righe): split in moduli ES per dominio (auth, lots, cascade, bilancio, charts, pdf-export). Aumenta manutenibilità e riduce rischio regressione.
+- [ ] **Modularizzare `js/cropbook.js`** (~9.1k righe): split in moduli ES per dominio (auth, lots, cascade, bilancio, charts, pdf-export). Aumenta manutenibilità e riduce rischio regressione.
 - [ ] **Notifiche email automatiche** (agenda agricola): promemoria attività + alert rese basse via SMTP esistente.
 - [ ] CSP: rimuovere `'unsafe-inline'`/`'unsafe-eval'` (ora che CSS/JS sono estratti)
 - [ ] HSTS in produzione
@@ -289,7 +303,6 @@
 - [ ] CI con GitHub Actions
 - [ ] Sostituire `console.log` residui con `logger.*` in routes minori
 - [ ] CSRF protection se passi a cookie auth
-- [ ] Ottimizzare PDF `bilancio-azienda`: N+1 queries → singola GROUP BY per costi_personale/costi_mezzi/economic_records
 
 ### P2 (nice-to-have)
 - [ ] Docker / docker-compose
