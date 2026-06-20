@@ -4591,19 +4591,23 @@ function handleSectionSpecificActions(sectionId) {
             break;
         case 'gestione-economica-section':
             initGestioneEconomica();
+            if (typeof popolaSelectAziendeCascade === 'function') popolaSelectAziendeCascade('economica');
             break;
         case 'gestione-costi-section':  // ✅ AGGIUNGI QUESTO CASO
             initGestioneCosti();
+            if (typeof popolaSelectAziendeCascade === 'function') popolaSelectAziendeCascade('costi');
             break;
         case 'dettagli-section':
             setTimeout(() => {
                 if (allLots && allLots.length > 0) {
                     populateDropdownMenu();
                 }
+                if (typeof popolaSelectAziendeCascade === 'function') popolaSelectAziendeCascade('dettagli');
             }, 100);
             break;
             case 'bilancio-section':
     initBilancioSection();
+    if (typeof popolaSelectAziendeCascade === 'function') popolaSelectAziendeCascade('bilancio');
     break;
         case 'user-management-section':
             loadUserManagement();
@@ -5315,10 +5319,16 @@ function closeAllDropdowns() {
         return;
     }
     
-    console.log('Popolando dropdown dettagli con', allLots.length, 'lotti');
+    const lotsFiltrati = getLotsByCascadeContext('dettagli');
+    console.log('Popolando dropdown dettagli con', lotsFiltrati.length, 'lotti');
     dropdownMenu.innerHTML = '';
     
-    allLots.forEach((lot, index) => {
+    if (lotsFiltrati.length === 0) {
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        return;
+    }
+    
+    lotsFiltrati.forEach((lot, index) => {
         const dropdownItem = document.createElement('button');
         dropdownItem.className = 'dropdown-item';
         dropdownItem.type = 'button';
@@ -5370,10 +5380,16 @@ function closeAllDropdowns() {
         return;
     }
     
-    console.log('Popolando dropdown economico con', allLots.length, 'lotti');
+    const lotsFiltrati = getLotsByCascadeContext('economica');
+    console.log('Popolando dropdown economico con', lotsFiltrati.length, 'lotti');
     dropdownMenu.innerHTML = '';
     
-    allLots.forEach((lot, index) => {
+    if (lotsFiltrati.length === 0) {
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        return;
+    }
+    
+    lotsFiltrati.forEach((lot, index) => {
         const dropdownItem = document.createElement('button');
         dropdownItem.className = 'dropdown-item';
         dropdownItem.type = 'button';
@@ -6719,9 +6735,17 @@ function initGestioneCosti() {
     const dropdownMenu = document.getElementById('costi-lot-dropdown-menu');
     if (!dropdownMenu || allLots.length === 0) return;
     
+    const lotsFiltrati = getLotsByCascadeContext('costi');
     dropdownMenu.innerHTML = '';
     
-    allLots.forEach(lot => {
+    if (lotsFiltrati.length === 0) {
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        initCostiLotDropdown();
+        initBeniDurevoliCosti();
+        return;
+    }
+    
+    lotsFiltrati.forEach(lot => {
         const dropdownItem = document.createElement('button');
         dropdownItem.className = 'dropdown-item';
         dropdownItem.type = 'button';
@@ -6758,29 +6782,43 @@ let chartMultiStagione = null;
 
 // ==================== INIZIALIZZAZIONE BILANCIO ====================
 function initBilancioSection() {
+    // Quando si entra nella sezione Bilancio, di default mostra la vista "Per Azienda"
+    if (typeof setBilancioMode === 'function') {
+        setBilancioMode(currentBilancioMode || 'azienda');
+    }
+    
     const dropdownMenu = document.getElementById('bilancio-lot-dropdown-menu');
     if (!dropdownMenu || allLots.length === 0) return;
     
+    const lotsFiltrati = getLotsByCascadeContext('bilancio');
     dropdownMenu.innerHTML = '';
-    allLots.forEach(lot => {
-        const item = document.createElement('button');
-        item.className = 'dropdown-item';
-        item.type = 'button';
-        item.innerHTML = `<strong>${lot.company_name}</strong><br><small>${lot.location}</small>`;
-        item.addEventListener('click', () => {
-            loadBilancioData(lot.id);
-            dropdownMenu.classList.remove('show');
-        });
-        dropdownMenu.appendChild(item);
-    });
     
-    // Inizializza dropdown click
+    if (lotsFiltrati.length === 0) {
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+    } else {
+        lotsFiltrati.forEach(lot => {
+            const item = document.createElement('button');
+            item.className = 'dropdown-item';
+            item.type = 'button';
+            item.innerHTML = `<strong>${lot.company_name}</strong><br><small>${lot.location}</small>`;
+            item.addEventListener('click', () => {
+                loadBilancioData(lot.id);
+                dropdownMenu.classList.remove('show');
+            });
+            dropdownMenu.appendChild(item);
+        });
+    }
+    
+    // Inizializza dropdown click (solo una volta)
     const dropdownBtn = document.getElementById('bilancioLotDropdown');
     const dropdown = document.getElementById('bilancio-lot-dropdown-menu');
-    dropdownBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-    });
+    if (dropdownBtn && !dropdownBtn.dataset.cascadeBound) {
+        dropdownBtn.dataset.cascadeBound = '1';
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
+    }
 }
 
 // ==================== CARICA DATI BILANCIO ====================
@@ -8661,6 +8699,367 @@ async function loadCompaniesIntoSelect() {
             + '<option value="__new__">➕ Nuova Azienda</option>';
         if (current && Array.from(select.options).some(o => o.value === current)) select.value = current;
     } catch (_) {}
+}
+
+// ===== Cascade Azienda → Lotto (riutilizzabile in Dettagli/Costi/Economica/Bilancio) =====
+// Stato: company_id filtro corrente per ciascun contesto. null/'' = tutte
+const cascadeCompanyFilter = { dettagli: '', economica: '', costi: '', bilancio: '' };
+
+/**
+ * Ritorna i lotti filtrati per l'azienda selezionata nel contesto specificato.
+ * Usa allLots globale come fonte dati.
+ */
+function getLotsByCascadeContext(ctx) {
+    if (!Array.isArray(allLots)) return [];
+    const cid = cascadeCompanyFilter[ctx];
+    if (!cid) return allLots;
+    return allLots.filter(l => Number(l.company_id) === Number(cid));
+}
+
+/**
+ * Popola il <select id="cascade-az-{ctx}"> con la lista delle aziende disponibili.
+ * Esclude aziende senza lotti (per evitare scelte morte).
+ */
+async function popolaSelectAziendeCascade(ctx) {
+    const sel = document.getElementById(`cascade-az-${ctx}`);
+    if (!sel) return;
+    try {
+        let companies = cachedCompanies;
+        if (!companies || companies.length === 0) {
+            const resp = await apiCall('/companies');
+            cachedCompanies = resp.data || [];
+            companies = cachedCompanies;
+        }
+        const withLots = (companies || []).filter(c => Number(c.lots_count) > 0);
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">— Tutte le aziende —</option>'
+            + withLots.map(c => `<option value="${c.id}">${c.name} (${c.lots_count})</option>`).join('');
+        // Ripristina selezione precedente se ancora valida
+        const restore = prev || cascadeCompanyFilter[ctx] || '';
+        if (restore && Array.from(sel.options).some(o => o.value === String(restore))) {
+            sel.value = restore;
+            cascadeCompanyFilter[ctx] = restore;
+        } else {
+            sel.value = '';
+            cascadeCompanyFilter[ctx] = '';
+        }
+    } catch (err) {
+        console.error('popolaSelectAziendeCascade error:', err);
+    }
+}
+
+/**
+ * Handler onchange del select Azienda di un contesto: aggiorna il filtro
+ * e ri-popola il dropdown lotti del contesto.
+ */
+function onCambioAziendaCascade(ctx) {
+    const sel = document.getElementById(`cascade-az-${ctx}`);
+    if (!sel) return;
+    cascadeCompanyFilter[ctx] = sel.value || '';
+    
+    switch (ctx) {
+        case 'dettagli':
+            if (typeof populateDropdownMenu === 'function') populateDropdownMenu();
+            break;
+        case 'economica':
+            if (typeof populateEconomicDropdownMenu === 'function') populateEconomicDropdownMenu();
+            break;
+        case 'costi':
+            if (typeof initGestioneCosti === 'function') initGestioneCosti();
+            break;
+        case 'bilancio':
+            if (typeof initBilancioSection === 'function') initBilancioSection();
+            break;
+    }
+}
+
+// ==================== VISTA BILANCIO "PER AZIENDA" ====================
+let currentBilancioMode = 'azienda';   // 'azienda' | 'lotto'
+let currentBilancioAziendaId = null;   // azienda attualmente in drill-down (modalità azienda)
+
+function setBilancioMode(mode) {
+    currentBilancioMode = mode;
+    const viewAz = document.getElementById('bilancio-aziende-view');
+    const viewLot = document.getElementById('bilancio-lotto-view');
+    const btnAz = document.getElementById('bilancio-mode-azienda-btn');
+    const btnLot = document.getElementById('bilancio-mode-lotto-btn');
+    const hint = document.getElementById('bilancio-mode-hint');
+    
+    if (mode === 'azienda') {
+        if (viewAz) viewAz.style.display = '';
+        if (viewLot) viewLot.style.display = 'none';
+        if (btnAz) { btnAz.style.background = '#00BCD4'; btnAz.style.color = 'white'; }
+        if (btnLot) { btnLot.style.background = 'white'; btnLot.style.color = '#00BCD4'; }
+        if (hint) hint.textContent = "Scegli un'azienda per vedere il bilancio consolidato di tutti i suoi lotti";
+        // Mostra griglia aziende (chiudi eventuale drill-down)
+        chiudiBilancioAziendaDetail();
+        renderBilancioAziendeGrid();
+    } else {
+        if (viewAz) viewAz.style.display = 'none';
+        if (viewLot) viewLot.style.display = '';
+        if (btnAz) { btnAz.style.background = 'white'; btnAz.style.color = '#00BCD4'; }
+        if (btnLot) { btnLot.style.background = '#00BCD4'; btnLot.style.color = 'white'; }
+        if (hint) hint.textContent = "Analizza il bilancio di un singolo lotto con confronto multi-stagione";
+        // Popola select Azienda della modalità lotto
+        popolaSelectAziendeCascade('bilancio');
+    }
+}
+
+async function renderBilancioAziendeGrid() {
+    const grid = document.getElementById('bilancio-aziende-grid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Caricamento aziende...</div>';
+    try {
+        const resp = await apiCall('/companies');
+        cachedCompanies = resp.data || [];
+        const conLotti = cachedCompanies.filter(c => Number(c.lots_count) > 0);
+        if (conLotti.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;background:white;border-radius:12px;">
+                    <i class="fas fa-building" style="font-size:3rem;color:#ddd;display:block;margin-bottom:12px;"></i>
+                    <p>Nessuna azienda con lotti registrati.</p>
+                    <p style="font-size:0.85rem;">Crea un'azienda e aggiungi almeno un lotto per visualizzare il bilancio aggregato.</p>
+                </div>`;
+            return;
+        }
+        const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        grid.innerHTML = conLotti.map(c => {
+            const sectors = (c.sectors || '').split(',').map(s => s.trim()).filter(Boolean);
+            const sectorsHtml = sectors.length > 0
+                ? sectors.slice(0, 3).map(s => `<span class="azienda-sector-chip">${esc(s)}</span>`).join('')
+                : '<span style="font-size:0.75rem;color:#999;font-style:italic;">Settori non specificati</span>';
+            return `
+                <div class="azienda-card bilancio-azienda-card" data-testid="bilancio-az-card-${c.id}"
+                     onclick="apriBilancioAziendaDetail(${c.id})"
+                     style="cursor:pointer;transition:transform .15s,box-shadow .15s;"
+                     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,188,212,0.2)';"
+                     onmouseout="this.style.transform='';this.style.boxShadow='';">
+                    <div class="azienda-card-header">
+                        <h3 class="azienda-name" style="color:#00838F;">
+                            <i class="fas fa-building" style="color:#00BCD4;"></i> ${esc(c.name)}
+                        </h3>
+                        <span class="azienda-lots-badge">${c.lots_count} ${c.lots_count === 1 ? 'lotto' : 'lotti'}</span>
+                    </div>
+                    <div class="azienda-sectors">${sectorsHtml}</div>
+                    ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;text-align:center;color:#00BCD4;font-weight:700;font-size:0.9rem;">
+                        <i class="fas fa-chart-pie"></i> Vedi Bilancio Consolidato →
+                    </div>
+                </div>`;
+        }).join('');
+    } catch (err) {
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:#c62828;">Errore caricamento aziende: ${err.message}</div>`;
+    }
+}
+
+async function apriBilancioAziendaDetail(companyId) {
+    currentBilancioAziendaId = Number(companyId);
+    const grid = document.getElementById('bilancio-aziende-grid');
+    const detail = document.getElementById('bilancio-azienda-detail');
+    if (grid) grid.style.display = 'none';
+    if (detail) detail.style.display = '';
+    
+    const titleEl = document.getElementById('bilancio-azienda-detail-title');
+    const kpiEl = document.getElementById('bilancio-azienda-kpi');
+    const tableEl = document.getElementById('bilancio-azienda-lotti-table');
+    
+    if (kpiEl) kpiEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:18px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Calcolo bilancio in corso...</div>';
+    if (tableEl) tableEl.innerHTML = '';
+    if (titleEl) titleEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Caricamento...';
+    
+    try {
+        // Carica i lotti dell'azienda
+        const company = cachedCompanies.find(c => Number(c.id) === currentBilancioAziendaId);
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-building"></i> ${company ? company.name : 'Azienda #' + companyId}`;
+        
+        const lotsOfCompany = (allLots || []).filter(l => Number(l.company_id) === currentBilancioAziendaId);
+        if (lotsOfCompany.length === 0) {
+            // Ricarica lotti se vuoto
+            try {
+                const resp = await apiCall('/lots?limit=1000');
+                allLots = resp.data || [];
+            } catch (_) {}
+        }
+        const lots = (allLots || []).filter(l => Number(l.company_id) === currentBilancioAziendaId);
+        
+        // Aggrega per ogni lotto
+        const rows = [];
+        let totRicavi = 0, totPersonale = 0, totMezzi = 0, totAmm = 0;
+        for (const lot of lots) {
+            const agg = await aggregaCostiERicaviLotto(lot.id);
+            rows.push({ lot, ...agg });
+            totRicavi += agg.ricavi;
+            totPersonale += agg.personale;
+            totMezzi += agg.mezzi;
+            totAmm += agg.ammortamenti;
+        }
+        const totCosti = totPersonale + totMezzi + totAmm;
+        const totBilancio = totRicavi - totCosti;
+        
+        const fmt = (n) => `€ ${Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        // Render KPI aggregati
+        if (kpiEl) {
+            kpiEl.innerHTML = `
+                <div style="background:linear-gradient(135deg,#4CAF50,#2E7D32);color:white;padding:18px;border-radius:12px;text-align:center;">
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">💰 Ricavi Totali</h4>
+                    <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-ricavi">${fmt(totRicavi)}</p>
+                </div>
+                <div style="background:linear-gradient(135deg,#f44336,#c62828);color:white;padding:18px;border-radius:12px;text-align:center;">
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">💸 Costi Totali</h4>
+                    <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-costi">${fmt(totCosti)}</p>
+                </div>
+                <div style="background:linear-gradient(135deg,${totBilancio >= 0 ? '#2196F3,#1565C0' : '#f44336,#c62828'});color:white;padding:18px;border-radius:12px;text-align:center;">
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">⚖️ Bilancio</h4>
+                    <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-finale">${fmt(totBilancio)}</p>
+                </div>
+                <div style="background:linear-gradient(135deg,#FF9800,#E65100);color:white;padding:18px;border-radius:12px;text-align:center;">
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">🌱 N° Lotti</h4>
+                    <p style="font-size:1.6rem;font-weight:bold;margin:0;">${lots.length}</p>
+                </div>`;
+        }
+        
+        // Tabella lotti
+        if (tableEl) {
+            if (rows.length === 0) {
+                tableEl.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Nessun lotto disponibile.</p>';
+            } else {
+                tableEl.innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;font-size:.92rem;min-width:600px;">
+                        <thead>
+                            <tr style="background:#2E7D32;color:white;">
+                                <th style="padding:10px;text-align:left;">Lotto</th>
+                                <th style="padding:10px;text-align:left;">Prodotto</th>
+                                <th style="padding:10px;text-align:right;">Ricavi</th>
+                                <th style="padding:10px;text-align:right;">Personale</th>
+                                <th style="padding:10px;text-align:right;">Mezzi</th>
+                                <th style="padding:10px;text-align:right;">Amm.</th>
+                                <th style="padding:10px;text-align:right;">Bilancio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.map((r, i) => {
+                                const bil = r.ricavi - (r.personale + r.mezzi + r.ammortamenti);
+                                return `
+                                <tr style="background:${i % 2 === 0 ? '#f5f5f5' : 'white'};border-bottom:1px solid #e0e0e0;">
+                                    <td style="padding:9px;font-weight:600;">#${r.lot.id} ${(r.lot.location || '')}</td>
+                                    <td style="padding:9px;">${r.lot.product_type || ''}${r.lot.variety ? ' / ' + r.lot.variety : ''}</td>
+                                    <td style="padding:9px;text-align:right;color:#2E7D32;">${fmt(r.ricavi)}</td>
+                                    <td style="padding:9px;text-align:right;">${fmt(r.personale)}</td>
+                                    <td style="padding:9px;text-align:right;">${fmt(r.mezzi)}</td>
+                                    <td style="padding:9px;text-align:right;">${fmt(r.ammortamenti)}</td>
+                                    <td style="padding:9px;text-align:right;font-weight:700;color:${bil >= 0 ? '#2E7D32' : '#c62828'};">${fmt(bil)}</td>
+                                </tr>`;
+                            }).join('')}
+                            <tr style="background:#E8F5E9;font-weight:700;">
+                                <td style="padding:11px;color:#1B5E20;">TOTALE</td>
+                                <td style="padding:11px;"></td>
+                                <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totRicavi)}</td>
+                                <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totPersonale)}</td>
+                                <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totMezzi)}</td>
+                                <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totAmm)}</td>
+                                <td style="padding:11px;text-align:right;color:${totBilancio >= 0 ? '#1B5E20' : '#c62828'};">${fmt(totBilancio)}</td>
+                            </tr>
+                        </tbody>
+                    </table>`;
+            }
+        }
+    } catch (err) {
+        if (kpiEl) kpiEl.innerHTML = `<div style="grid-column:1/-1;color:#c62828;padding:18px;">Errore: ${err.message}</div>`;
+    }
+}
+
+function chiudiBilancioAziendaDetail() {
+    currentBilancioAziendaId = null;
+    const grid = document.getElementById('bilancio-aziende-grid');
+    const detail = document.getElementById('bilancio-azienda-detail');
+    if (grid) grid.style.display = '';
+    if (detail) detail.style.display = 'none';
+}
+
+/**
+ * Aggrega ricavi, personale, mezzi, ammortamenti per UN lotto (tutte le stagioni).
+ * Restituisce { ricavi, personale, mezzi, ammortamenti }.
+ */
+async function aggregaCostiERicaviLotto(lotId) {
+    let ricavi = 0, personale = 0, mezzi = 0, ammortamenti = 0;
+    try {
+        const econResp = await apiCall(`/economic/${lotId}`);
+        const records = econResp.data || [];
+        ricavi = records.reduce((s, r) => s + Number(r.ricavi_totali || 0), 0);
+        
+        const stagioniSet = new Set(records.map(r => r.stagione_agricola).filter(Boolean));
+        const stagioni = [...stagioniSet];
+        
+        if (stagioni.length > 0) {
+            const persResults = await Promise.all(stagioni.map(s =>
+                apiCall(`/costi/personale/${lotId}/${s}`).catch(() => ({ totale: 0 }))
+            ));
+            const mezziResults = await Promise.all(stagioni.map(s =>
+                apiCall(`/costi/mezzi/${lotId}/${s}`).catch(() => ({ totale: 0 }))
+            ));
+            personale = persResults.reduce((s, r) => s + Number(r.totale || 0), 0);
+            mezzi = mezziResults.reduce((s, r) => s + Number(r.totale || 0), 0);
+        }
+        
+        // Ammortamenti dai beni_durevoli
+        records.forEach(record => {
+            if (record.beni_durevoli) {
+                try {
+                    const beni = typeof record.beni_durevoli === 'string'
+                        ? JSON.parse(record.beni_durevoli) : record.beni_durevoli;
+                    if (Array.isArray(beni)) {
+                        beni.forEach(bene => {
+                            const anno = parseInt(record.stagione_agricola) || new Date().getFullYear();
+                            const inizio = bene.anno_inizio || anno;
+                            const fine = inizio + (bene.anni_ammortamento || 1) - 1;
+                            if (anno >= inizio && anno <= fine) {
+                                ammortamenti += Number(bene.quota_annuale || 0);
+                            }
+                        });
+                    }
+                } catch(_) {}
+            }
+        });
+    } catch (err) {
+        console.error('aggregaCostiERicaviLotto error per lot', lotId, err);
+    }
+    return { ricavi, personale, mezzi, ammortamenti };
+}
+
+/**
+ * Scarica il PDF "Bilancio Azienda" per l'azienda attualmente in drill-down.
+ */
+async function esportaBilancioAziendaPDF() {
+    if (!currentBilancioAziendaId) {
+        showNotification('Seleziona prima un\'azienda', 'error');
+        return;
+    }
+    try {
+        showSpinner('Generazione PDF aziendale...');
+        const token = localStorage.getItem('auth_token');
+        const url = `${API_BASE_URL}/reports/bilancio-azienda/${currentBilancioAziendaId}`;
+        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.error || `HTTP ${resp.status}`);
+        }
+        const blob = await resp.blob();
+        const company = cachedCompanies.find(c => Number(c.id) === currentBilancioAziendaId);
+        const fname = `bilancio-azienda-${(company?.name || 'export').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fname;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        hideSpinner();
+        showNotification('PDF scaricato', 'success');
+    } catch (err) {
+        hideSpinner();
+        showNotification(`Errore PDF: ${err.message}`, 'error');
+    }
 }
 
 function onCompanySelectChange() {

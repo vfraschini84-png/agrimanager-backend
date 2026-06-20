@@ -524,12 +524,24 @@
                         <!-- Popolato via JS -->
                     </select>
                 </div>
-                <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="lotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-list"></i> Seleziona Lotto
-                    </button>
-                    <div class="dropdown-menu" aria-labelledby="lotDropdown" id="lot-dropdown-menu">
-                        <!-- I lotti verranno aggiunti qui via JavaScript -->
+                <div class="cascade-selettori" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
+                        <label for="cascade-az-dettagli" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
+                            <i class="fas fa-building" style="color:#4CAF50;"></i> Azienda:
+                        </label>
+                        <select id="cascade-az-dettagli" data-testid="cascade-az-dettagli"
+                                onchange="onCambioAziendaCascade('dettagli')"
+                                style="padding:7px 10px;border:1.5px solid #4CAF50;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
+                            <option value="">— Tutte —</option>
+                        </select>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="lotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-list"></i> Seleziona Lotto
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="lotDropdown" id="lot-dropdown-menu">
+                            <!-- I lotti verranno aggiunti qui via JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -707,7 +719,17 @@
                             onclick="navigateToSection('lista-section')" title="Lista Lotti"><i class="fas fa-list"></i></button>
                 </div>
             </div>
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
+                    <label for="cascade-az-economica" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
+                        <i class="fas fa-building" style="color:#9C27B0;"></i> Azienda:
+                    </label>
+                    <select id="cascade-az-economica" data-testid="cascade-az-economica"
+                            onchange="onCambioAziendaCascade('economica')"
+                            style="padding:7px 10px;border:1.5px solid #9C27B0;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
+                        <option value="">— Tutte —</option>
+                    </select>
+                </div>
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="economicLotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fas fa-list"></i> Seleziona Lotto
@@ -873,11 +895,23 @@
     
     <!-- Dropdown selezione lotto -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-        <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" id="costiLotDropdown" data-toggle="dropdown">
-                <i class="fas fa-list"></i> Seleziona Lotto
-            </button>
-            <div class="dropdown-menu" id="costi-lot-dropdown-menu"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
+                <label for="cascade-az-costi" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
+                    <i class="fas fa-building" style="color:#FF5722;"></i> Azienda:
+                </label>
+                <select id="cascade-az-costi" data-testid="cascade-az-costi"
+                        onchange="onCambioAziendaCascade('costi')"
+                        style="padding:7px 10px;border:1.5px solid #FF5722;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
+                    <option value="">— Tutte —</option>
+                </select>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="costiLotDropdown" data-toggle="dropdown">
+                    <i class="fas fa-list"></i> Seleziona Lotto
+                </button>
+                <div class="dropdown-menu" id="costi-lot-dropdown-menu"></div>
+            </div>
         </div>
         <div id="costi-lot-info" class="read-only-info" style="display: none;"></div>
     </div>
@@ -1268,8 +1302,68 @@
         </div>
     </div>
     
+    <!-- Toggle modalità Bilancio: Per Azienda (default) o Per Lotto -->
+    <div id="bilancio-mode-toggle" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="bilancio-mode-azienda-btn" data-testid="bilancio-mode-azienda-btn"
+                onclick="setBilancioMode('azienda')"
+                class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:#00BCD4;color:white;border-radius:8px;font-weight:700;cursor:pointer;">
+            <i class="fas fa-building"></i> Vista Aziende
+        </button>
+        <button type="button" id="bilancio-mode-lotto-btn" data-testid="bilancio-mode-lotto-btn"
+                onclick="setBilancioMode('lotto')"
+                class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:white;color:#00BCD4;border-radius:8px;font-weight:700;cursor:pointer;">
+            <i class="fas fa-seedling"></i> Vista Singolo Lotto
+        </button>
+        <span id="bilancio-mode-hint" style="color:#666;font-size:0.85rem;font-style:italic;flex:1;min-width:200px;text-align:right;">
+            Scegli un'azienda per vedere il bilancio consolidato di tutti i suoi lotti
+        </span>
+    </div>
+
+    <!-- ============ MODALITÀ "PER AZIENDA": griglia card + drill-down ============ -->
+    <div id="bilancio-aziende-view">
+        <div id="bilancio-aziende-grid" class="aziende-grid"
+             style="display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:16px;margin-bottom:24px;"></div>
+        
+        <!-- Dettaglio Azienda (drill-down) -->
+        <div id="bilancio-azienda-detail" style="display:none;">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+                <button type="button" onclick="chiudiBilancioAziendaDetail()" data-testid="bilancio-azienda-back-btn"
+                        class="btn btn-secondary" style="padding:8px 14px;">
+                    <i class="fas fa-arrow-left"></i> Torna alle Aziende
+                </button>
+                <h3 id="bilancio-azienda-detail-title" style="margin:0;color:#2E7D32;flex:1;min-width:200px;"></h3>
+                <button type="button" id="bilancio-azienda-pdf-btn" data-testid="bilancio-azienda-pdf-btn"
+                        onclick="esportaBilancioAziendaPDF()" class="btn btn-primary" style="background:#d32f2f;padding:10px 16px;">
+                    <i class="fas fa-file-pdf"></i> PDF Bilancio Azienda
+                </button>
+            </div>
+            
+            <!-- KPI aggregati azienda -->
+            <div id="bilancio-azienda-kpi"
+                 style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:20px;"></div>
+            
+            <!-- Tabella lotti con bilanci individuali -->
+            <div style="background:white;padding:18px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+                <h4 style="margin:0 0 12px 0;color:#333;"><i class="fas fa-table"></i> Bilancio per Lotto</h4>
+                <div id="bilancio-azienda-lotti-table" style="overflow-x:auto;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ MODALITÀ "PER LOTTO": selettori e card classiche ============ -->
+    <div id="bilancio-lotto-view" style="display:none;">
     <!-- Selettori -->
     <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center;">
+        <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
+            <label for="cascade-az-bilancio" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
+                <i class="fas fa-building" style="color:#00BCD4;"></i> Azienda:
+            </label>
+            <select id="cascade-az-bilancio" data-testid="cascade-az-bilancio"
+                    onchange="onCambioAziendaCascade('bilancio')"
+                    style="padding:7px 10px;border:1.5px solid #00BCD4;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
+                <option value="">— Tutte —</option>
+            </select>
+        </div>
         <div class="dropdown">
             <button class="btn btn-secondary dropdown-toggle" type="button" id="bilancioLotDropdown">
                 <i class="fas fa-list"></i> Seleziona Lotto
@@ -1342,6 +1436,7 @@
             </p>
         </div>
     </div>
+    </div> <!-- /#bilancio-lotto-view -->
 </div>
 
 <!-- Chart.js CDN -->

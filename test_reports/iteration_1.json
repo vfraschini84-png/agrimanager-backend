@@ -1,0 +1,47 @@
+{
+  "summary": "End-to-end testing of Cropbook cascade selectors (Dettagli / Economica / Costi / Bilancio) and new Vista Bilancio per Azienda. Backend pytest suite (9 tests) and Playwright UI flow both PASS. All cascade dropdowns, mode toggle, company grid, drill-down (KPI + lots table with TOTALE), back button, Vista Singolo Lotto toggle, and PDF endpoint behave as specified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cropbook_bilancio_cascade.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/www/js/cropbook.js exceeds 8950 lines — extremely large monolithic file. Consider splitting into modules (sections, cascade, bilancio, charts, pdf-export, etc.) for maintainability. Not blocking, but increases regression risk.",
+    "Bilancio mode buttons (#bilancio-mode-azienda-btn / #bilancio-mode-lotto-btn) — the default active state appears visually applied via styling but the .active class is not set on the default-active button on first load (`bilancio_az_btn_active_default` was false in DOM while screenshot showed Vista Aziende highlighted). Likely cosmetic / driven by another class; verify class naming consistency to avoid future test flakiness.",
+    "/app/www/routes/reports.js bilancio-azienda PDF generation issues N+1 queries (one SELECT per lot for each of economic_records / costi_personale / costi_mezzi_tecnici). For companies with many lots this could be slow. Consider a single GROUP BY query per cost source."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cropbook_bilancio_cascade.py (new)"
+  ],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all assertions passed)"},
+  "test_credentials": "admin / 96a0761f3943 (from /app/memory/test_credentials.md, verified working)",
+  "seed_data_creation": "No persistent seed data created. The 400-empty-company test creates a TEST_EmptyCompany_pytest and deletes it in finally.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Login button does NOT have type=submit; use button text 'Accedi' or click via get_by_role. Section navigation is via `navigateToSection('<id>-section')` JS function (NOT showSection). Sections are: dettagli-section, gestione-economica-section, gestione-costi-section, bilancio-section, lista-section. Section nav circles (.section-nav-btn) appear inside each section's header. From main menu, click h3.menu-title text (Dettagli Lotti / Gestione Ricavi / Gestione Costi / Bilancio & Report). Cascade options format: `— Tutte le aziende —` + `Name (N)` per company.",
+  "verified_features": [
+    "Admin login (admin/96a0761f3943) → main menu visible",
+    "#cascade-az-dettagli: 4 options, filters #lot-dropdown-menu correctly (2 entries after filter)",
+    "#cascade-az-economica: 4 options, filters #economic-lot-dropdown-menu (3 children)",
+    "#cascade-az-costi: 4 options, filters #costi-lot-dropdown-menu (1 child)",
+    "Bilancio default mode shows #bilancio-aziende-grid with 3 .bilancio-azienda-card",
+    "Card click drills down: title 'Demo PDF Final', 3 KPI testids (ricavi/costi/finale) present + 4th 'N° Lotti' card visible in screenshot, lots table with 2 rows including TOTALE row",
+    "[data-testid=bilancio-azienda-back-btn] returns to the grid",
+    "[data-testid=bilancio-azienda-pdf-btn] present in drill-down",
+    "Vista Singolo Lotto toggle: #cascade-az-bilancio appears with 4 options, grid hidden",
+    "GET /api/companies → 200, returns list with lots_count, requires auth (401 without)",
+    "GET /api/reports/bilancio-azienda/:id → 200 application/pdf for company with lots (verified %PDF magic header)",
+    "GET /api/reports/bilancio-azienda/:id → 400 JSON {error} for company with no lots",
+    "GET /api/reports/bilancio-azienda/99999999 → 404",
+    "Regression: GET /api/reports/bilancio?lotId=... still returns PDF"
+  ]
+}
