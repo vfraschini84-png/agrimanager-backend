@@ -193,6 +193,7 @@ const mountRoute = (mountPath, modulePath) => {
 
 mountRoute('/api/auth', './routes/auth');
 mountRoute('/api/lots', './routes/lots');
+mountRoute('/api/companies', './routes/companies');
 mountRoute('/api/activities', './routes/activities');
 mountRoute('/api/analyses', './routes/analyses');
 mountRoute('/api/economic', './routes/economic');

@@ -72,9 +72,25 @@ db.withTransaction = async function(fn) {
 async function initializeDatabase() {
     const tables = [
         {
+            name: 'companies',
+            sql: `CREATE TABLE IF NOT EXISTS companies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                sectors TEXT,
+                address TEXT,
+                owner_id INTEGER,
+                owner_username TEXT,
+                created_by TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(owner_id, name)
+            )`
+        },
+        {
             name: 'lots',
             sql: `CREATE TABLE IF NOT EXISTS lots (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER,
                 company_name TEXT NOT NULL,
                 location TEXT NOT NULL,
                 gps_coordinates TEXT,
@@ -87,7 +103,8 @@ async function initializeDatabase() {
                 owner_username TEXT,
                 created_by TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE SET NULL
             )`
         },
         {
@@ -291,6 +308,44 @@ async function initializeDatabase() {
         }
     }
     logger.info('✅ Indici verificati');
+    
+    // ✅ Migrazione idempotente: aggiungi company_id a lots se non esiste
+    try {
+        const lotsCols = await db.allAsync(`PRAGMA table_info(lots)`);
+        const hasCompanyId = lotsCols.some(c => c.name === 'company_id');
+        if (!hasCompanyId) {
+            await db.runAsync(`ALTER TABLE lots ADD COLUMN company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL`);
+            logger.info('✅ Migrazione: aggiunta colonna lots.company_id');
+        }
+    } catch (err) {
+        logger.warn('Migrazione lots.company_id', { error: err.message });
+    }
+    
+    // ✅ Auto-migrate: per ogni lotto orfano (company_id NULL), crea/associa l'azienda dal company_name
+    try {
+        const orphanLots = await db.allAsync(`SELECT id, company_name, owner_id, owner_username, created_by FROM lots WHERE company_id IS NULL AND company_name IS NOT NULL`);
+        for (const lot of orphanLots) {
+            // Cerca azienda esistente per stesso owner + nome
+            let company = await db.getAsync(
+                `SELECT id FROM companies WHERE owner_id = ? AND LOWER(name) = LOWER(?)`,
+                [lot.owner_id, lot.company_name]
+            );
+            if (!company) {
+                const ins = await db.runAsync(
+                    `INSERT INTO companies (name, owner_id, owner_username, created_by) VALUES (?, ?, ?, ?)`,
+                    [lot.company_name, lot.owner_id, lot.owner_username, lot.created_by]
+                );
+                company = { id: ins.id };
+                logger.info(`✅ Azienda creata: ${lot.company_name} (owner ${lot.owner_id})`);
+            }
+            await db.runAsync(`UPDATE lots SET company_id = ? WHERE id = ?`, [company.id, lot.id]);
+        }
+        if (orphanLots.length > 0) {
+            logger.info(`✅ Migrazione: ${orphanLots.length} lotti associati ad aziende`);
+        }
+    } catch (err) {
+        logger.warn('Migrazione lotti→aziende', { error: err.message });
+    }
 
     // Seed admin + attività predefinite (idempotenti)
     await createDefaultAdmin();

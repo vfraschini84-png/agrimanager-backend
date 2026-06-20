@@ -57,10 +57,13 @@ const isValidGoogleMapsUrl = (url) => {
 // Validazione lotto
 const validateLot = (lotData, isUpdate = false) => {
     const errors = [];
+    // ✅ company_name richiesto SOLO se non viene fornito company_id
     if (!isUpdate || lotData.company_name !== undefined) {
-        const companyName = (lotData.company_name || '').trim();
-        if (!companyName || companyName.length < 2) {
-            errors.push('Nome azienda deve avere almeno 2 caratteri');
+        if (!lotData.company_id) {
+            const companyName = (lotData.company_name || '').trim();
+            if (!companyName || companyName.length < 2) {
+                errors.push('Indicare un\'azienda esistente (company_id) o un nome valido (company_name)');
+            }
         }
     }
     if (!isUpdate || lotData.location !== undefined) {
@@ -314,7 +317,7 @@ router.get('/:id', authenticateToken, requirePermission('lots:read'), async (req
 // POST /api/lots - Crea nuovo lotto
 router.post('/', authenticateToken, requirePermission('lots:create'), async (req, res) => {
     try {
-        const { company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, createdBy } = req.body;
+        const { company_id, company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, createdBy } = req.body;
 
         const ownerId = req.user.id;
         let ownerUsername = req.user.username;
@@ -333,11 +336,37 @@ router.post('/', authenticateToken, requirePermission('lots:create'), async (req
         if (errors.length > 0) {
             return res.status(400).json({ error: 'Dati non validi', details: errors });
         }
+        
+        // ✅ Gestione azienda: company_id se fornito, altrimenti crea/recupera da company_name
+        let resolvedCompanyId = company_id || null;
+        let resolvedCompanyName = company_name;
+        if (resolvedCompanyId) {
+            const c = await db.getAsync(`SELECT id, name FROM companies WHERE id = ? AND owner_id = ?`, [resolvedCompanyId, finalOwnerId]);
+            if (!c) {
+                return res.status(400).json({ error: 'Azienda non valida o non autorizzata' });
+            }
+            resolvedCompanyName = c.name; // snapshot
+        } else if (company_name) {
+            // Auto-crea o riusa
+            const existing = await db.getAsync(
+                `SELECT id FROM companies WHERE owner_id = ? AND LOWER(name) = LOWER(?)`,
+                [finalOwnerId, company_name.trim()]
+            );
+            if (existing) {
+                resolvedCompanyId = existing.id;
+            } else {
+                const insC = await db.runAsync(
+                    `INSERT INTO companies (name, owner_id, owner_username, created_by) VALUES (?, ?, ?, ?)`,
+                    [company_name.trim(), finalOwnerId, ownerUsername, createdBy || ownerUsername]
+                );
+                resolvedCompanyId = insC.id;
+            }
+        }
 
         const result = await db.runAsync(
-            `INSERT INTO lots (company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, owner_id, owner_username, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [company_name, location, gps_coordinates, product_type, product_category || null, variety || null, field_lot || null, field_size || null, finalOwnerId, ownerUsername, createdBy || ownerUsername]
+            `INSERT INTO lots (company_id, company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, owner_id, owner_username, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [resolvedCompanyId, resolvedCompanyName, location, gps_coordinates, product_type, product_category || null, variety || null, field_lot || null, field_size || null, finalOwnerId, ownerUsername, createdBy || ownerUsername]
         );
 
         const newLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [result.id]);

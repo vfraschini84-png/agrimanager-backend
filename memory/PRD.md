@@ -141,6 +141,41 @@
 | 3 | Aggiunta legenda colori sotto le card (Personale arancione, Mezzi tecnici blu, Ammortamenti viola) | `routes/reports.js` |
 | 4 | Verifica visiva con `pdftoppm` + `analyze_file_tool`: zero sovrapposizioni, card leggibili, layout pulito | — |
 
+### Sessione 14 (2026-06-20): rifondazione architettura → Azienda → Lotti — FASE 1 (Backend)
+**Decisioni di design** (confermate dall'utente):
+- 1c: indirizzo solo sul LOTTO (`location`), azienda ha `address` opzionale come sede legale
+- 2b: settori = lista multipla salvata come CSV in `companies.sectors` (un'azienda può avere vino + olio + carne)
+- 3a: nuovo PDF aziendale dedicato (da implementare in FASE 3)
+- 4a: anagrafica minimale (name + sectors + address opzionale)
+- Migrazione automatica dei 2 lotti test esistenti → 2 aziende auto-create
+
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Nuova tabella `companies`**: `id, name, sectors, address, owner_id, owner_username, created_by, timestamps` + UNIQUE(owner_id, name) | `database.js` |
+| 2 | **`lots.company_id`** (FK companies, ON DELETE SET NULL): aggiunto via ALTER TABLE idempotente | `database.js` |
+| 3 | **Migrazione automatica al boot**: per ogni lotto con `company_id NULL` → crea/recupera azienda con stesso `company_name` + `owner_id` e collega. Test eseguito: 2 lotti → 2 aziende ✓ | `database.js` |
+| 4 | **Nuovo router `routes/companies.js`**: GET (lista + lots_count), GET/:id (azienda + array lotti), POST, PUT (snapshot company_name sui lotti), DELETE (protetto se ci sono lotti). RBAC identico a lots (super-admin, admin, sotto-utente con parent_id) | `routes/companies.js` (nuovo) |
+| 5 | **`routes/lots.js POST`** modificato: accetta `company_id` opzionale; se assente ma `company_name` presente → auto-crea/recupera azienda. `validateLot` ora richiede uno dei due | `routes/lots.js` |
+| 6 | Endpoint registrato: `mountRoute('/api/companies', './routes/companies')` | `server.js` |
+
+**Test backend** (tutti passano):
+- GET /api/companies → 2 aziende migrate ✓
+- POST /api/companies con sectors=["olio","vino"] → salvato come "olio,vino" ✓
+- POST /api/lots con company_id=3 → lotto creato con company_name snapshot ✓
+- POST /api/lots con company_name="nuova" → auto-crea azienda + collega ✓
+- 48/48 Jest passano ✓
+
+### FASE 2 (prossima sessione): Frontend
+- Dashboard "Aziende" come homepage (sostituisce "Lista Lotti" come primo livello)
+- Card per azienda → click → drill-down ai lotti
+- Form registrazione lotto: select "Azienda esistente" + bottone "+ Nuova"
+- Adattare nav bar inter-sezione per includere nuovo livello azienda
+- Mobile-first per dashboard
+
+### FASE 3 (sessione successiva): PDF "Bilancio Azienda"
+- Endpoint `/api/reports/bilancio-azienda/:id` (somma tutti i lotti)
+- Tabella confronto per lotto + grafici aggregati
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
