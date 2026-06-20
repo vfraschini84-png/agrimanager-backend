@@ -37,6 +37,93 @@ const chartCanvas = new ChartJSNodeCanvas({
 
 const fmtEur = (n) => `€ ${(Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtKg = (n) => `${(Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg`;
+const fmtPct = (n) => `${(Number(n) || 0).toFixed(1)}%`;
+
+/**
+ * Estrae beni durevoli attivi dato un set di registrazioni economiche e l'anno.
+ * Replica server-side della funzione caricaBeniDurevoliAttivi del frontend.
+ * Dedupe per chiave: `${descrizione}_${anno_inizio}_${costo_totale}`.
+ */
+function estraiBeniAttivi(registrazioni, anno) {
+    if (!Array.isArray(registrazioni)) return [];
+    const annoNum = parseInt(anno);
+    const beniAttivi = [];
+    const visti = new Set();
+    
+    const ordinate = [...registrazioni].sort((a, b) =>
+        (parseInt(a.stagione_agricola) || 0) - (parseInt(b.stagione_agricola) || 0)
+    );
+    
+    for (const reg of ordinate) {
+        if (!reg.beni_durevoli) continue;
+        let beni;
+        try {
+            beni = typeof reg.beni_durevoli === 'string'
+                ? JSON.parse(reg.beni_durevoli)
+                : reg.beni_durevoli;
+        } catch (_) { continue; }
+        if (!Array.isArray(beni)) continue;
+        
+        for (const bene of beni) {
+            const descrizione = bene.descrizione || 'Bene durevole';
+            const annoInizio = parseInt(bene.anno_inizio) || parseInt(reg.stagione_agricola) || annoNum;
+            const anniAmm = parseInt(bene.anni_ammortamento) || 1;
+            const annoFine = annoInizio + anniAmm - 1;
+            const costo = Number(bene.costo_totale) || 0;
+            const quota = Number(bene.quota_annuale) || (anniAmm > 0 ? costo / anniAmm : 0);
+            
+            if (annoNum >= annoInizio && annoNum <= annoFine) {
+                const chiave = `${descrizione}_${annoInizio}_${costo}`;
+                if (!visti.has(chiave)) {
+                    visti.add(chiave);
+                    beniAttivi.push({
+                        descrizione, costo_totale: costo, anni_ammortamento: anniAmm,
+                        quota_annuale: quota, anno_inizio: annoInizio, anno_fine: annoFine
+                    });
+                }
+            }
+        }
+    }
+    return beniAttivi;
+}
+
+/**
+ * Aggrega beni durevoli su un set di registrazioni considerando per ogni anno
+ * solo i beni attivi. Restituisce array { descrizione, quota_totale } sommata
+ * su tutti gli anni in cui il bene è attivo (ammortamento cumulato lifetime).
+ * Se `anniFiltro` è null aggrega sull'unione di tutti gli anni delle registrazioni.
+ */
+function aggregaAmmortamentiPerBene(registrazioni, anniFiltro = null) {
+    const anniSet = anniFiltro && anniFiltro.length > 0
+        ? new Set(anniFiltro.map(a => parseInt(a)))
+        : new Set(registrazioni.map(r => parseInt(r.stagione_agricola)).filter(Boolean));
+    
+    const perBene = new Map(); // chiave -> { descrizione, quota_annuale, anni_attivi: Set }
+    for (const anno of anniSet) {
+        const attivi = estraiBeniAttivi(registrazioni, anno);
+        for (const b of attivi) {
+            const k = `${b.descrizione}_${b.anno_inizio}_${b.costo_totale}`;
+            if (!perBene.has(k)) {
+                perBene.set(k, {
+                    descrizione: b.descrizione,
+                    quota_annuale: b.quota_annuale,
+                    costo_totale: b.costo_totale,
+                    anni_ammortamento: b.anni_ammortamento,
+                    anni_conteggio: 0
+                });
+            }
+            perBene.get(k).anni_conteggio += 1;
+        }
+    }
+    return Array.from(perBene.values()).map(b => ({
+        descrizione: b.descrizione,
+        quota_totale: b.quota_annuale * b.anni_conteggio,
+        quota_annuale: b.quota_annuale,
+        anni_conteggio: b.anni_conteggio,
+        costo_totale: b.costo_totale,
+        anni_ammortamento: b.anni_ammortamento
+    }));
+}
 
 /**
  * GET /api/reports/bilancio/:lotId?stagione=YYYY
@@ -64,15 +151,43 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             );
         }
 
-        // Aggregazioni
+        // ✅ Aggregazioni: ricavi/kg dai record economici (snapshot), MA costi reali dalle tabelle dedicate
+        // (allinea il PDF alla dashboard "Bilancio & Report" che usa le stesse fonti)
         const tot = records.reduce((acc, r) => {
             acc.ricavi += Number(r.ricavi_totali || 0);
             acc.kg += Number(r.totale_kg || 0);
-            acc.mezzi += Number(r.costo_mezzi_tecnici || 0);
-            acc.personale += Number(r.costo_personale || 0);
-            acc.ammortamento += Number(r.quota_ammortamento || 0);
             return acc;
         }, { ricavi: 0, kg: 0, mezzi: 0, personale: 0, ammortamento: 0 });
+        
+        // Costi personale e mezzi: SUM dalle tabelle reali (filtro stagione se richiesto)
+        const persFiltro = stagione ? 'AND stagione_agricola = ?' : '';
+        const persParams = stagione ? [lot.id, stagione] : [lot.id];
+        const persSum = await db.getAsync(
+            `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ? ${persFiltro}`,
+            persParams
+        ).catch(() => null);
+        tot.personale = Number(persSum?.tot || 0);
+        const mezziSum = await db.getAsync(
+            `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ? ${persFiltro}`,
+            persParams
+        ).catch(() => null);
+        tot.mezzi = Number(mezziSum?.tot || 0);
+        
+        // Ammortamenti: stessa logica della dashboard (beni attivi per ciascun anno)
+        // Carica TUTTI i record economici del lotto per calcolare il timeline dei beni
+        const recordsCompleti = await db.allAsync(
+            `SELECT * FROM economic_records WHERE lot_id = ? ORDER BY stagione_agricola`,
+            [lot.id]
+        );
+        const anniDaConsiderare = stagione
+            ? [parseInt(stagione)]
+            : Array.from(new Set(records.map(r => parseInt(r.stagione_agricola)).filter(Boolean)));
+        let ammTot = 0;
+        for (const anno of anniDaConsiderare) {
+            const attivi = estraiBeniAttivi(recordsCompleti, anno);
+            ammTot += attivi.reduce((s, b) => s + Number(b.quota_annuale || 0), 0);
+        }
+        tot.ammortamento = ammTot;
         tot.costiTotali = tot.mezzi + tot.personale + tot.ammortamento;
         tot.bilancio = tot.ricavi - tot.costiTotali;
         tot.prezzoMedio = tot.kg > 0 ? tot.ricavi / tot.kg : 0;
@@ -125,33 +240,136 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         });
 
         // ==== Dati confronto ultime 5 stagioni (saranno renderizzate come card in PDFKit) ====
-        const allRecordsLotto = await db.allAsync(
-            `SELECT * FROM economic_records WHERE lot_id = ? ORDER BY stagione_agricola`,
-            [lot.id]
-        );
+        // ✅ Riutilizza recordsCompleti già caricato
+        const allRecordsLotto = recordsCompleti;
         const stagioniSet = new Set(allRecordsLotto.map(r => r.stagione_agricola).filter(Boolean));
         stagioniSet.add(String(new Date().getFullYear()));
         // ✅ Ordine cronologico DESCENDING (più recente in alto)
         const stagioniMulti = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a)).slice(0, 5);
         
-        const datiStagioni = [];
-        for (const s of stagioniMulti) {
+        // ✅ Bulk query (no N+1): personale e mezzi raggruppati per stagione_agricola
+        const personalePerStag = new Map();
+        const mezziPerStag = new Map();
+        try {
+            const rowsP = await db.allAsync(
+                `SELECT stagione_agricola AS s, COALESCE(SUM(costo_totale), 0) AS tot
+                 FROM costi_personale WHERE lot_id = ? GROUP BY stagione_agricola`,
+                [lot.id]
+            );
+            rowsP.forEach(r => personalePerStag.set(String(r.s), Number(r.tot || 0)));
+        } catch (_) {}
+        try {
+            const rowsM = await db.allAsync(
+                `SELECT stagione_agricola AS s, COALESCE(SUM(importo), 0) AS tot
+                 FROM costi_mezzi_tecnici WHERE lot_id = ? GROUP BY stagione_agricola`,
+                [lot.id]
+            );
+            rowsM.forEach(r => mezziPerStag.set(String(r.s), Number(r.tot || 0)));
+        } catch (_) {}
+        
+        const datiStagioni = stagioniMulti.map(s => {
             const recsS = allRecordsLotto.filter(r => String(r.stagione_agricola) === String(s));
             const ricavi = recsS.reduce((sum, r) => sum + Number(r.ricavi_totali || 0), 0);
-            const persRow = await db.getAsync(
-                `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ? AND stagione = ?`,
-                [lot.id, s]
-            ).catch(() => null);
-            const personale = Number(persRow?.tot || 0);
-            const mezziRow = await db.getAsync(
-                `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ? AND stagione = ?`,
-                [lot.id, s]
-            ).catch(() => null);
-            const mezzi = Number(mezziRow?.tot || 0);
-            const amm = recsS.reduce((sum, r) => sum + Number(r.quota_ammortamento || 0), 0);
+            const personale = personalePerStag.get(String(s)) || 0;
+            const mezzi = mezziPerStag.get(String(s)) || 0;
+            // ✅ Ammortamenti: usa la stessa logica della dashboard (beni attivi per anno)
+            const beniAttivi = estraiBeniAttivi(allRecordsLotto, parseInt(s));
+            const amm = beniAttivi.reduce((sum, b) => sum + Number(b.quota_annuale || 0), 0);
             const costi = personale + mezzi + amm;
-            datiStagioni.push({ stagione: s, ricavi, personale, mezzi, amm, costi, bilancio: ricavi - costi });
-        }
+            return { stagione: s, ricavi, personale, mezzi, amm, costi, bilancio: ricavi - costi };
+        });
+
+        // ==== Dettaglio Personale per Attività (raggruppato) ====
+        const personalePerAttivita = await db.allAsync(
+            `SELECT COALESCE(NULLIF(TRIM(attivita), ''), 'Non specificata') AS attivita,
+                    COALESCE(NULLIF(qualifica, ''), 'standard') AS qualifica,
+                    COALESCE(SUM(costo_totale), 0) AS totale,
+                    COALESCE(SUM(ore_lavorate * numero_operatori), 0) AS ore_uomo,
+                    COUNT(*) AS interventi
+             FROM costi_personale
+             WHERE lot_id = ? ${persFiltro}
+             GROUP BY attivita, qualifica
+             ORDER BY totale DESC`,
+            persParams
+        ).catch(() => []);
+        const totalePersonaleDett = personalePerAttivita.reduce((s, r) => s + Number(r.totale || 0), 0);
+
+        // ==== Dettaglio Mezzi Tecnici per Categoria ====
+        const mezziPerCategoria = await db.allAsync(
+            `SELECT COALESCE(NULLIF(categoria, ''), 'altro') AS categoria,
+                    COALESCE(SUM(importo), 0) AS totale,
+                    COUNT(*) AS interventi
+             FROM costi_mezzi_tecnici
+             WHERE lot_id = ? ${persFiltro}
+             GROUP BY categoria
+             ORDER BY totale DESC`,
+            persParams
+        ).catch(() => []);
+        const totaleMezziDett = mezziPerCategoria.reduce((s, r) => s + Number(r.totale || 0), 0);
+        
+        // Dettaglio mezzi tecnici per Descrizione (top 10 per leggibilità del grafico)
+        const mezziPerDescrizione = await db.allAsync(
+            `SELECT COALESCE(NULLIF(TRIM(descrizione), ''), '(senza descrizione)') AS descrizione,
+                    COALESCE(SUM(importo), 0) AS totale,
+                    COUNT(*) AS interventi
+             FROM costi_mezzi_tecnici
+             WHERE lot_id = ? ${persFiltro}
+             GROUP BY descrizione
+             ORDER BY totale DESC
+             LIMIT 10`,
+            persParams
+        ).catch(() => []);
+
+        // ==== Dettaglio Ammortamenti per Bene Durevole ====
+        const ammortamentiPerBene = aggregaAmmortamentiPerBene(recordsCompleti, anniDaConsiderare);
+        ammortamentiPerBene.sort((a, b) => b.quota_totale - a.quota_totale);
+        const totaleAmmDett = ammortamentiPerBene.reduce((s, r) => s + Number(r.quota_totale || 0), 0);
+
+        // ==== Grafici dettagliati (PNG) — generati solo se ci sono dati ====
+        const palette = ['#FF5722', '#FF9800', '#FFC107', '#4CAF50', '#00BCD4', '#2196F3', '#3F51B5', '#9C27B0', '#E91E63', '#795548'];
+        const truncateLabel = (s, n = 18) => {
+            const str = String(s || '');
+            return str.length > n ? str.substring(0, n - 1) + '…' : str;
+        };
+        const buildHbarChart = async (labels, data, title, colors) => {
+            if (labels.length === 0) return null;
+            return chartCanvas.renderToBuffer({
+                type: 'bar',
+                data: {
+                    labels: labels.map(l => truncateLabel(l, 22)),
+                    datasets: [{ label: '€', data, backgroundColor: colors, borderWidth: 0 }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: title, font: { size: 14, weight: 'bold' } }
+                    },
+                    scales: {
+                        x: { beginAtZero: true, ticks: { callback: v => '€' + v } },
+                        y: { ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        };
+        const chartPersonale = await buildHbarChart(
+            personalePerAttivita.map(r => `${r.attivita} (${r.qualifica})`),
+            personalePerAttivita.map(r => Number(r.totale)),
+            'Costi Personale per Attività',
+            personalePerAttivita.map((_, i) => palette[i % palette.length])
+        );
+        const chartMezzi = await buildHbarChart(
+            mezziPerCategoria.map(r => r.categoria),
+            mezziPerCategoria.map(r => Number(r.totale)),
+            'Mezzi Tecnici per Categoria',
+            mezziPerCategoria.map((_, i) => palette[i % palette.length])
+        );
+        const chartAmm = await buildHbarChart(
+            ammortamentiPerBene.map(b => b.descrizione),
+            ammortamentiPerBene.map(b => Number(b.quota_totale)),
+            'Ammortamenti per Bene Durevole',
+            ammortamentiPerBene.map((_, i) => palette[i % palette.length])
+        );
 
         // ==== PDF ====
         const filename = `bilancio_${lot.company_name.replace(/[^a-z0-9]/gi, '_')}_${stagione || 'tutte'}.pdf`;
@@ -299,6 +517,195 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         doc.y = legendY + 16;
         doc.x = 50;
 
+        // ============ DETTAGLI ANALITICI (Personale / Mezzi / Ammortamenti) ============
+        // Helper: renderizza una sezione "Dettaglio voce di costo" con grafico + tabella incidenza
+        const renderDettaglioCosto = (titolo, colorTema, righe, chartBuf, totale, labelCols) => {
+            // Pagina nuova per ogni sezione di dettaglio (header chiaro e niente overlap)
+            doc.addPage();
+            doc.x = 50;
+            doc.y = doc.page.margins.top;
+            
+            // Banner titolo
+            const bannerY = doc.y;
+            doc.rect(50, bannerY, 495, 28).fill(colorTema);
+            doc.fillColor('#FFFFFF').fontSize(14).font('Helvetica-Bold')
+               .text(titolo, 58, bannerY + 8, { width: 487, lineBreak: false });
+            doc.y = bannerY + 36;
+            doc.x = 50;
+            
+            // Sottotitolo con totale + nota stagione
+            doc.fillColor('#555').fontSize(10).font('Helvetica')
+               .text(`Totale voce: ${fmtEur(totale)}  ·  Periodo: ${stagione || 'tutte le stagioni'}  ·  ${righe.length} ${righe.length === 1 ? 'voce' : 'voci'}`,
+                     50, doc.y, { width: 495 });
+            doc.moveDown(0.6);
+            
+            if (righe.length === 0) {
+                doc.fillColor('#888').fontSize(11).font('Helvetica-Oblique')
+                   .text('Nessun dato disponibile per questa voce nel periodo selezionato.', { align: 'center' });
+                return;
+            }
+            
+            // Grafico (se presente)
+            if (chartBuf) {
+                const chartH = Math.max(140, Math.min(320, 40 + righe.length * 24));
+                ensureSpace(chartH + 10);
+                doc.image(chartBuf, 50, doc.y, { width: 495, height: chartH });
+                doc.y += chartH + 10;
+                doc.x = 50;
+            }
+            
+            // Tabella
+            const colWs = labelCols.map(c => c.w);
+            const tableW = colWs.reduce((s, w) => s + w, 0);
+            const drawDettHeader = () => {
+                const headerY = doc.y;
+                doc.rect(50, headerY, tableW, 18).fill(colorTema);
+                let cx = 50;
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+                labelCols.forEach(c => {
+                    doc.fillColor('#FFFFFF').text(c.label, cx + 4, headerY + 5,
+                        { width: c.w - 8, align: c.align || 'left', lineBreak: false });
+                    cx += c.w;
+                });
+                doc.y = headerY + 18;
+                doc.x = 50;
+                doc.font('Helvetica').fontSize(9).fillColor('#222');
+            };
+            drawDettHeader();
+            
+            const ROW_H = 18;
+            righe.forEach((r, idx) => {
+                if (doc.y + ROW_H > PAGE_BOTTOM) {
+                    doc.addPage(); doc.y = doc.page.margins.top; doc.x = 50; drawDettHeader();
+                }
+                const rowY = doc.y;
+                if (idx % 2 === 0) doc.rect(50, rowY, tableW, ROW_H).fill('#f5f5f5');
+                let cx = 50;
+                labelCols.forEach((c) => {
+                    const v = r[c.field] != null ? r[c.field] : '';
+                    doc.fillColor('#222').text(String(v), cx + 4, rowY + 5,
+                        { width: c.w - 8, align: c.align || 'left', lineBreak: false });
+                    cx += c.w;
+                });
+                doc.y = rowY + ROW_H;
+                doc.x = 50;
+            });
+            
+            // Riga totale
+            const totRowY = doc.y;
+            doc.rect(50, totRowY, tableW, ROW_H).fill('#E8F5E9');
+            let cx = 50;
+            doc.fillColor('#1B5E20').font('Helvetica-Bold').fontSize(9);
+            labelCols.forEach((c, i) => {
+                let v = '';
+                if (i === 0) v = 'TOTALE';
+                else if (c.field === 'totale_str') v = fmtEur(totale);
+                else if (c.field === 'incidenza_str') v = '100%';
+                doc.fillColor('#1B5E20').text(v, cx + 4, totRowY + 5,
+                    { width: c.w - 8, align: c.align || 'left', lineBreak: false });
+                cx += c.w;
+            });
+            doc.y = totRowY + ROW_H;
+            doc.x = 50;
+        };
+        
+        // --- PERSONALE per Attività ---
+        const righePersonale = personalePerAttivita.map(r => ({
+            attivita: String(r.attivita || ''),
+            qualifica: String(r.qualifica || ''),
+            interventi: String(r.interventi || 0),
+            ore: Number(r.ore_uomo || 0).toFixed(1),
+            totale_str: fmtEur(r.totale),
+            incidenza_str: totalePersonaleDett > 0
+                ? fmtPct((Number(r.totale) / totalePersonaleDett) * 100) : '0%'
+        }));
+        renderDettaglioCosto(
+            'Dettaglio Costo Personale per Attività', '#FF5722',
+            righePersonale, chartPersonale, totalePersonaleDett,
+            [
+                { label: 'Attività',   field: 'attivita',      w: 170, align: 'left'  },
+                { label: 'Qualifica',  field: 'qualifica',     w: 75,  align: 'left'  },
+                { label: 'Interventi', field: 'interventi',    w: 70,  align: 'right' },
+                { label: 'Ore-uomo',   field: 'ore',           w: 65,  align: 'right' },
+                { label: 'Totale',     field: 'totale_str',    w: 75,  align: 'right' },
+                { label: 'Incidenza',  field: 'incidenza_str', w: 60,  align: 'right' }
+            ]
+        );
+        
+        // --- MEZZI TECNICI per Categoria (+ top descrizioni) ---
+        const righeMezzi = mezziPerCategoria.map(r => ({
+            categoria: String(r.categoria || ''),
+            interventi: String(r.interventi || 0),
+            totale_str: fmtEur(r.totale),
+            incidenza_str: totaleMezziDett > 0
+                ? fmtPct((Number(r.totale) / totaleMezziDett) * 100) : '0%'
+        }));
+        renderDettaglioCosto(
+            'Dettaglio Costo Mezzi Tecnici per Categoria', '#2196F3',
+            righeMezzi, chartMezzi, totaleMezziDett,
+            [
+                { label: 'Categoria',   field: 'categoria',     w: 230, align: 'left'  },
+                { label: 'Interventi',  field: 'interventi',    w: 100, align: 'right' },
+                { label: 'Totale',      field: 'totale_str',    w: 100, align: 'right' },
+                { label: 'Incidenza',   field: 'incidenza_str', w: 65,  align: 'right' }
+            ]
+        );
+        
+        // Aggiungi tabella secondaria "top 10 descrizioni" se >1 descrizione
+        if (mezziPerDescrizione.length > 1 && totaleMezziDett > 0) {
+            ensureSpace(40);
+            doc.moveDown(0.8);
+            doc.fillColor('#222').fontSize(11).font('Helvetica-Bold')
+               .text('Top 10 mezzi tecnici per descrizione', 50, doc.y, { lineBreak: false });
+            doc.moveDown(0.3);
+            const subColsW = [305, 90, 100];
+            const subHeaderY = doc.y;
+            doc.rect(50, subHeaderY, 495, 16).fill('#1565C0');
+            doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
+               .text('Descrizione', 54, subHeaderY + 4, { width: subColsW[0] - 8, lineBreak: false })
+               .text('Interventi', 50 + subColsW[0] + 4, subHeaderY + 4, { width: subColsW[1] - 8, align: 'right', lineBreak: false })
+               .text('Totale', 50 + subColsW[0] + subColsW[1] + 4, subHeaderY + 4, { width: subColsW[2] - 8, align: 'right', lineBreak: false });
+            doc.y = subHeaderY + 16;
+            doc.x = 50;
+            doc.font('Helvetica').fontSize(9).fillColor('#222');
+            mezziPerDescrizione.forEach((r, idx) => {
+                if (doc.y + 16 > PAGE_BOTTOM) { doc.addPage(); doc.y = doc.page.margins.top; doc.x = 50; }
+                const rowY = doc.y;
+                if (idx % 2 === 0) doc.rect(50, rowY, 495, 16).fill('#f5f5f5');
+                doc.fillColor('#222')
+                   .text(String(r.descrizione || ''), 54, rowY + 4, { width: subColsW[0] - 8, lineBreak: false })
+                   .text(String(r.interventi || 0), 50 + subColsW[0] + 4, rowY + 4, { width: subColsW[1] - 8, align: 'right', lineBreak: false })
+                   .text(fmtEur(r.totale), 50 + subColsW[0] + subColsW[1] + 4, rowY + 4, { width: subColsW[2] - 8, align: 'right', lineBreak: false });
+                doc.y = rowY + 16;
+                doc.x = 50;
+            });
+        }
+        
+        // --- AMMORTAMENTI per Bene ---
+        const righeAmm = ammortamentiPerBene.map(b => ({
+            descrizione: String(b.descrizione || ''),
+            costo_str: fmtEur(b.costo_totale),
+            anni: `${b.anni_ammortamento}`,
+            quota_str: fmtEur(b.quota_annuale),
+            anni_conteggio: String(b.anni_conteggio),
+            totale_str: fmtEur(b.quota_totale),
+            incidenza_str: totaleAmmDett > 0
+                ? fmtPct((Number(b.quota_totale) / totaleAmmDett) * 100) : '0%'
+        }));
+        renderDettaglioCosto(
+            'Dettaglio Ammortamenti per Bene Durevole', '#9C27B0',
+            righeAmm, chartAmm, totaleAmmDett,
+            [
+                { label: 'Bene',             field: 'descrizione',     w: 165, align: 'left'  },
+                { label: 'Costo',            field: 'costo_str',       w: 65,  align: 'right' },
+                { label: 'Anni',             field: 'anni',            w: 35,  align: 'right' },
+                { label: 'Quota/anno',       field: 'quota_str',       w: 70,  align: 'right' },
+                { label: 'Anni nel periodo', field: 'anni_conteggio',  w: 75,  align: 'right' },
+                { label: 'Totale',           field: 'totale_str',      w: 70,  align: 'right' },
+                { label: 'Incidenza',        field: 'incidenza_str',   w: 60,  align: 'right' }
+            ]
+        );
+
         // ============ Tabella record economici (SEMPRE su pagina nuova, no overlap) ============
         doc.addPage();
         doc.x = 50;
@@ -425,43 +832,92 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         const access = await assertCompanyAccess(req, req.params.id);
         if (access.error) return res.status(access.error).json({ error: access.message });
         const company = access.company;
+        const stagione = req.query.stagione ? String(req.query.stagione).trim() : null;
         const lots = await db.allAsync('SELECT * FROM lots WHERE company_id = ? ORDER BY id', [company.id]);
         if (lots.length === 0) {
             return res.status(400).json({ error: 'L\'azienda non ha lotti registrati' });
         }
         const fmtEur = (v) => `€ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
         
-        // Aggrega dati per ogni lotto
+        // ✅ Bulk queries: una SELECT GROUP BY lot_id invece di N+1 (N=numero lotti)
+        const lotIds = lots.map(l => l.id);
+        const ph = lotIds.map(() => '?').join(',');
+        
+        // Economic records (filtrabili per stagione)
+        const econFiltro = stagione ? `AND stagione_agricola = ?` : '';
+        const econParams = stagione ? [...lotIds, stagione] : [...lotIds];
+        const ricaviRows = await db.allAsync(
+            `SELECT lot_id, COALESCE(SUM(ricavi_totali), 0) AS ricavi, COALESCE(SUM(totale_kg), 0) AS kg
+             FROM economic_records WHERE lot_id IN (${ph}) ${econFiltro}
+             GROUP BY lot_id`,
+            econParams
+        );
+        const ricaviMap = new Map(ricaviRows.map(r => [r.lot_id, { ricavi: Number(r.ricavi || 0), kg: Number(r.kg || 0) }]));
+        
+        // Per gli ammortamenti, serve l'intero set di record economici (per il calcolo finestra)
+        const allEconRows = await db.allAsync(
+            `SELECT * FROM economic_records WHERE lot_id IN (${ph}) ORDER BY lot_id, stagione_agricola`,
+            lotIds
+        );
+        const recordsPerLot = new Map();
+        for (const r of allEconRows) {
+            if (!recordsPerLot.has(r.lot_id)) recordsPerLot.set(r.lot_id, []);
+            recordsPerLot.get(r.lot_id).push(r);
+        }
+        
+        // Costi personale (bulk con filtro stagione opzionale)
+        const persRows = await db.allAsync(
+            `SELECT lot_id, COALESCE(SUM(costo_totale), 0) AS tot
+             FROM costi_personale WHERE lot_id IN (${ph}) ${stagione ? 'AND stagione_agricola = ?' : ''}
+             GROUP BY lot_id`,
+            stagione ? [...lotIds, stagione] : [...lotIds]
+        );
+        const persMap = new Map(persRows.map(r => [r.lot_id, Number(r.tot || 0)]));
+        
+        // Costi mezzi tecnici (bulk con filtro stagione opzionale)
+        const mezziRows = await db.allAsync(
+            `SELECT lot_id, COALESCE(SUM(importo), 0) AS tot
+             FROM costi_mezzi_tecnici WHERE lot_id IN (${ph}) ${stagione ? 'AND stagione_agricola = ?' : ''}
+             GROUP BY lot_id`,
+            stagione ? [...lotIds, stagione] : [...lotIds]
+        );
+        const mezziMap = new Map(mezziRows.map(r => [r.lot_id, Number(r.tot || 0)]));
+        
+        // Aggrega per ogni lotto in memoria (zero query in più nel loop)
         const lotsData = [];
-        let totalRicavi = 0, totalPersonale = 0, totalMezzi = 0, totalAmm = 0;
+        let totalRicavi = 0, totalPersonale = 0, totalMezzi = 0, totalAmm = 0, totalKg = 0;
         for (const lot of lots) {
-            const recs = await db.allAsync('SELECT * FROM economic_records WHERE lot_id = ?', [lot.id]);
-            const ricavi = recs.reduce((s, r) => s + Number(r.ricavi_totali || 0), 0);
-            const persRow = await db.getAsync(
-                `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ?`,
-                [lot.id]
-            ).catch(() => null);
-            const personale = Number(persRow?.tot || 0);
-            const mezziRow = await db.getAsync(
-                `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ?`,
-                [lot.id]
-            ).catch(() => null);
-            const mezzi = Number(mezziRow?.tot || 0);
-            const amm = recs.reduce((s, r) => s + Number(r.quota_ammortamento || 0), 0);
+            const r = ricaviMap.get(lot.id) || { ricavi: 0, kg: 0 };
+            const ricavi = r.ricavi;
+            const kg = r.kg;
+            const personale = persMap.get(lot.id) || 0;
+            const mezzi = mezziMap.get(lot.id) || 0;
+            // Ammortamenti: stessa logica della dashboard (beni attivi per ciascun anno)
+            const lotRecords = recordsPerLot.get(lot.id) || [];
+            const anniDaConsiderare = stagione
+                ? [parseInt(stagione)]
+                : Array.from(new Set(lotRecords.map(rr => parseInt(rr.stagione_agricola)).filter(Boolean)));
+            let amm = 0;
+            for (const anno of anniDaConsiderare) {
+                const attivi = estraiBeniAttivi(lotRecords, anno);
+                amm += attivi.reduce((s, b) => s + Number(b.quota_annuale || 0), 0);
+            }
             const costi = personale + mezzi + amm;
             const bilancio = ricavi - costi;
-            lotsData.push({ lot, ricavi, personale, mezzi, amm, costi, bilancio });
-            totalRicavi += ricavi; totalPersonale += personale; totalMezzi += mezzi; totalAmm += amm;
+            lotsData.push({ lot, ricavi, kg, personale, mezzi, amm, costi, bilancio });
+            totalRicavi += ricavi; totalPersonale += personale; totalMezzi += mezzi; totalAmm += amm; totalKg += kg;
         }
         const totalCosti = totalPersonale + totalMezzi + totalAmm;
         const totalBilancio = totalRicavi - totalCosti;
         
         const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true, info: {
-            Title: `Bilancio Azienda ${company.name}`,
+            Title: `Bilancio Azienda ${company.name}${stagione ? ' - Stagione ' + stagione : ''}`,
             Author: 'Cropbook'
         }});
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="bilancio-azienda-${company.name.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+        const sName = company.name.replace(/[^a-z0-9]/gi, '_');
+        const stSuffix = stagione ? `_${stagione}` : '';
+        res.setHeader('Content-Disposition', `attachment; filename="bilancio-azienda-${sName}${stSuffix}.pdf"`);
         doc.pipe(res);
         
         // HEADER
@@ -474,6 +930,10 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         if (company.address) {
             doc.fontSize(10).fillColor('#666').text(`Sede: ${company.address}`, { align: 'center' });
         }
+        // ✅ Stagione di riferimento (NEW) — niente emoji (PDFKit/Helvetica non li supporta)
+        const stagioneLabel = stagione ? `Stagione di riferimento: ${stagione}` : 'Periodo: Tutte le stagioni';
+        doc.fontSize(11).fillColor('#00838F').font('Helvetica-Bold').text(stagioneLabel, { align: 'center' });
+        doc.font('Helvetica');
         doc.fontSize(9).fillColor('#888').text(`Generato il ${new Date().toLocaleDateString('it-IT')} · ${lots.length} ${lots.length === 1 ? 'lotto' : 'lotti'}`, { align: 'center' });
         doc.moveDown(1);
         

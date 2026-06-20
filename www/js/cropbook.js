@@ -8776,6 +8776,7 @@ function onCambioAziendaCascade(ctx) {
 // ==================== VISTA BILANCIO "PER AZIENDA" ====================
 let currentBilancioMode = 'azienda';   // 'azienda' | 'lotto'
 let currentBilancioAziendaId = null;   // azienda attualmente in drill-down (modalità azienda)
+let currentBilancioAziendaStagione = ''; // stagione filtro per drill-down ('' = tutte)
 
 function setBilancioMode(mode) {
     currentBilancioMode = mode;
@@ -8854,11 +8855,56 @@ async function renderBilancioAziendeGrid() {
 
 async function apriBilancioAziendaDetail(companyId) {
     currentBilancioAziendaId = Number(companyId);
+    currentBilancioAziendaStagione = ''; // reset filtro a "tutte" sull'apertura
     const grid = document.getElementById('bilancio-aziende-grid');
     const detail = document.getElementById('bilancio-azienda-detail');
     if (grid) grid.style.display = 'none';
     if (detail) detail.style.display = '';
     
+    // Popola il selettore stagione raccogliendo le stagioni dai record economici di TUTTI i lotti dell'azienda
+    await popolaSelectStagioneBilancioAzienda();
+    
+    await renderBilancioAziendaDrilldown();
+}
+
+function onCambioStagioneBilancioAzienda() {
+    const sel = document.getElementById('bilancio-azienda-stagione');
+    currentBilancioAziendaStagione = sel ? (sel.value || '') : '';
+    renderBilancioAziendaDrilldown();
+}
+
+async function popolaSelectStagioneBilancioAzienda() {
+    const sel = document.getElementById('bilancio-azienda-stagione');
+    if (!sel) return;
+    // Trova tutti i lotti dell'azienda corrente
+    let lots = (allLots || []).filter(l => Number(l.company_id) === currentBilancioAziendaId);
+    if (lots.length === 0) {
+        try {
+            const resp = await apiCall('/lots?limit=1000');
+            allLots = resp.data || [];
+            lots = allLots.filter(l => Number(l.company_id) === currentBilancioAziendaId);
+        } catch (_) {}
+    }
+    // Raccogli stagioni dai record economici (parallelo)
+    const stagioniSet = new Set();
+    await Promise.all(lots.map(async (lot) => {
+        try {
+            const resp = await apiCall(`/economic/${lot.id}`);
+            (resp.data || []).forEach(r => {
+                if (r.stagione_agricola) stagioniSet.add(String(r.stagione_agricola));
+            });
+        } catch (_) {}
+    }));
+    const stagioni = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a));
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Tutte le stagioni —</option>'
+        + stagioni.map(s => `<option value="${s}">📅 Stagione ${s}</option>`).join('');
+    // Mantieni la selezione se ancora valida
+    if (prev && Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
+    else sel.value = currentBilancioAziendaStagione || '';
+}
+
+async function renderBilancioAziendaDrilldown() {
     const titleEl = document.getElementById('bilancio-azienda-detail-title');
     const kpiEl = document.getElementById('bilancio-azienda-kpi');
     const tableEl = document.getElementById('bilancio-azienda-lotti-table');
@@ -8868,13 +8914,14 @@ async function apriBilancioAziendaDetail(companyId) {
     if (titleEl) titleEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Caricamento...';
     
     try {
-        // Carica i lotti dell'azienda
         const company = cachedCompanies.find(c => Number(c.id) === currentBilancioAziendaId);
-        if (titleEl) titleEl.innerHTML = `<i class="fas fa-building"></i> ${company ? company.name : 'Azienda #' + companyId}`;
+        const stagioneLabel = currentBilancioAziendaStagione
+            ? ` · 📅 Stagione ${currentBilancioAziendaStagione}`
+            : ' · 📅 Tutte le stagioni';
+        if (titleEl) titleEl.innerHTML = `<i class="fas fa-building"></i> ${company ? company.name : 'Azienda #' + currentBilancioAziendaId}<span style="color:#00838F;font-size:0.85rem;font-weight:600;">${stagioneLabel}</span>`;
         
         const lotsOfCompany = (allLots || []).filter(l => Number(l.company_id) === currentBilancioAziendaId);
         if (lotsOfCompany.length === 0) {
-            // Ricarica lotti se vuoto
             try {
                 const resp = await apiCall('/lots?limit=1000');
                 allLots = resp.data || [];
@@ -8882,11 +8929,11 @@ async function apriBilancioAziendaDetail(companyId) {
         }
         const lots = (allLots || []).filter(l => Number(l.company_id) === currentBilancioAziendaId);
         
-        // Aggrega per ogni lotto
+        // Aggrega per ogni lotto, con eventuale filtro stagione
         const rows = [];
         let totRicavi = 0, totPersonale = 0, totMezzi = 0, totAmm = 0;
         for (const lot of lots) {
-            const agg = await aggregaCostiERicaviLotto(lot.id);
+            const agg = await aggregaCostiERicaviLotto(lot.id, currentBilancioAziendaStagione || null);
             rows.push({ lot, ...agg });
             totRicavi += agg.ricavi;
             totPersonale += agg.personale;
@@ -8898,7 +8945,6 @@ async function apriBilancioAziendaDetail(companyId) {
         
         const fmt = (n) => `€ ${Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         
-        // Render KPI aggregati
         if (kpiEl) {
             kpiEl.innerHTML = `
                 <div style="background:linear-gradient(135deg,#4CAF50,#2E7D32);color:white;padding:18px;border-radius:12px;text-align:center;">
@@ -8919,7 +8965,6 @@ async function apriBilancioAziendaDetail(companyId) {
                 </div>`;
         }
         
-        // Tabella lotti
         if (tableEl) {
             if (rows.length === 0) {
                 tableEl.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Nessun lotto disponibile.</p>';
@@ -8971,6 +9016,7 @@ async function apriBilancioAziendaDetail(companyId) {
 
 function chiudiBilancioAziendaDetail() {
     currentBilancioAziendaId = null;
+    currentBilancioAziendaStagione = '';
     const grid = document.getElementById('bilancio-aziende-grid');
     const detail = document.getElementById('bilancio-azienda-detail');
     if (grid) grid.style.display = '';
@@ -8978,18 +9024,23 @@ function chiudiBilancioAziendaDetail() {
 }
 
 /**
- * Aggrega ricavi, personale, mezzi, ammortamenti per UN lotto (tutte le stagioni).
+ * Aggrega ricavi, personale, mezzi, ammortamenti per UN lotto.
+ * Se `stagione` è fornita, filtra solo quella stagione.
  * Restituisce { ricavi, personale, mezzi, ammortamenti }.
  */
-async function aggregaCostiERicaviLotto(lotId) {
+async function aggregaCostiERicaviLotto(lotId, stagione = null) {
     let ricavi = 0, personale = 0, mezzi = 0, ammortamenti = 0;
     try {
         const econResp = await apiCall(`/economic/${lotId}`);
-        const records = econResp.data || [];
+        const allRecords = econResp.data || [];
+        const records = stagione
+            ? allRecords.filter(r => String(r.stagione_agricola) === String(stagione))
+            : allRecords;
         ricavi = records.reduce((s, r) => s + Number(r.ricavi_totali || 0), 0);
         
-        const stagioniSet = new Set(records.map(r => r.stagione_agricola).filter(Boolean));
-        const stagioni = [...stagioniSet];
+        const stagioni = stagione
+            ? [String(stagione)]
+            : [...new Set(records.map(r => r.stagione_agricola).filter(Boolean))];
         
         if (stagioni.length > 0) {
             const persResults = await Promise.all(stagioni.map(s =>
@@ -9002,25 +9053,18 @@ async function aggregaCostiERicaviLotto(lotId) {
             mezzi = mezziResults.reduce((s, r) => s + Number(r.totale || 0), 0);
         }
         
-        // Ammortamenti dai beni_durevoli
-        records.forEach(record => {
-            if (record.beni_durevoli) {
-                try {
-                    const beni = typeof record.beni_durevoli === 'string'
-                        ? JSON.parse(record.beni_durevoli) : record.beni_durevoli;
-                    if (Array.isArray(beni)) {
-                        beni.forEach(bene => {
-                            const anno = parseInt(record.stagione_agricola) || new Date().getFullYear();
-                            const inizio = bene.anno_inizio || anno;
-                            const fine = inizio + (bene.anni_ammortamento || 1) - 1;
-                            if (anno >= inizio && anno <= fine) {
-                                ammortamenti += Number(bene.quota_annuale || 0);
-                            }
-                        });
-                    }
-                } catch(_) {}
+        // Ammortamenti: per ogni anno richiesto, somma i beni attivi (lifecycle)
+        // ⚠ Usa allRecords (non records filtrati) per il calcolo del lifecycle
+        const anniDaConsiderare = stagione
+            ? [parseInt(stagione)]
+            : [...new Set(records.map(r => parseInt(r.stagione_agricola)).filter(Boolean))];
+        
+        if (typeof caricaBeniDurevoliAttivi === 'function') {
+            for (const anno of anniDaConsiderare) {
+                const attivi = caricaBeniDurevoliAttivi(allRecords, anno);
+                ammortamenti += attivi.reduce((s, b) => s + Number(b.quota_annuale || 0), 0);
             }
-        });
+        }
     } catch (err) {
         console.error('aggregaCostiERicaviLotto error per lot', lotId, err);
     }
@@ -9028,7 +9072,8 @@ async function aggregaCostiERicaviLotto(lotId) {
 }
 
 /**
- * Scarica il PDF "Bilancio Azienda" per l'azienda attualmente in drill-down.
+ * Scarica il PDF "Bilancio Azienda" per l'azienda attualmente in drill-down,
+ * passando la stagione di riferimento se selezionata.
  */
 async function esportaBilancioAziendaPDF() {
     if (!currentBilancioAziendaId) {
@@ -9038,7 +9083,8 @@ async function esportaBilancioAziendaPDF() {
     try {
         showSpinner('Generazione PDF aziendale...');
         const token = localStorage.getItem('auth_token');
-        const url = `${API_BASE_URL}/reports/bilancio-azienda/${currentBilancioAziendaId}`;
+        const qs = currentBilancioAziendaStagione ? `?stagione=${encodeURIComponent(currentBilancioAziendaStagione)}` : '';
+        const url = `${API_BASE_URL}/reports/bilancio-azienda/${currentBilancioAziendaId}${qs}`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!resp.ok) {
             const errData = await resp.json().catch(() => ({}));
@@ -9046,7 +9092,8 @@ async function esportaBilancioAziendaPDF() {
         }
         const blob = await resp.blob();
         const company = cachedCompanies.find(c => Number(c.id) === currentBilancioAziendaId);
-        const fname = `bilancio-azienda-${(company?.name || 'export').replace(/[^a-z0-9]/gi, '_')}.pdf`;
+        const stagioneSuffix = currentBilancioAziendaStagione ? `_${currentBilancioAziendaStagione}` : '';
+        const fname = `bilancio-azienda-${(company?.name || 'export').replace(/[^a-z0-9]/gi, '_')}${stagioneSuffix}.pdf`;
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = fname;

@@ -1,0 +1,44 @@
+{
+  "summary": "End-to-end testing of iteration 2 enhancements (Cropbook): bulk-query optimization, stagione filter on company PDF, fixed multi-season comparison in per-lot PDF, and 3 new analytical sections in per-lot PDF (Personale / Mezzi Tecnici / Ammortamenti). 15/15 backend pytest cases PASS. Playwright UI flow PASS. PDF content extraction confirms presence of all expected new sections and the 'Stagione di riferimento: YYYY' header line.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cropbook_bilancio_cascade.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/www/js/cropbook.js still very large (>8950 lines) — splitting into modules remains advisable.",
+    "Top 10 mezzi tecnici descrizioni sub-table is only emitted when >1 distinct descrizione exists; for lots with a single descrizione it is silently omitted (intentional, but worth documenting in UI tooltip)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cropbook_bilancio_cascade.py (added 6 new tests: company PDF w/wo stagione, bulk-query performance assertion <5s, invalid stagione graceful, per-lot PDF w/wo stagione)"
+  ],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% (all assertions passed)"},
+  "test_credentials": "admin / 96a0761f3943 (verified)",
+  "seed_data_creation": "None persistent. Empty-company test creates+deletes TEST_EmptyCompany_pytest.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Per-lot PDF for Ponterosa lot 12 generates ~69KB with all 3 new sections + 'Incidenza' column verified via pypdf text extraction. Company id=5 Ponterosa currently has only stagione 2026 data (single season), so the season-filter aggregation re-render check on KPI cards in UI returns identical totals (NOT a bug — single-season company). To exercise multi-season UI re-rendering visually, seed additional economic_records across 2023/2024/2025 first.",
+  "verified_features": [
+    "Backend: GET /api/reports/bilancio-azienda/5 → 200 PDF, body starts with %PDF, header 'Periodo: Tutte le stagioni'",
+    "Backend: GET /api/reports/bilancio-azienda/5?stagione=2024 → 200 PDF, header 'Stagione di riferimento: 2024' present",
+    "Backend: bulk-query company PDF generation completes in <5s for multi-lot company (no N+1)",
+    "Backend: GET /api/reports/bilancio-azienda/:id with empty company → 400 JSON {error}",
+    "Backend: GET /api/reports/bilancio-azienda/99999999 → 404",
+    "Backend: GET /api/reports/bilancio/12 → 200 PDF (69KB, 1481 chars), contains 'Confronto Ultime 5 Stagioni', 'Dettaglio Costo Personale', 'Dettaglio Costo Mezzi Tecnici', 'Dettaglio Ammortamenti', 'Incidenza'",
+    "Backend: GET /api/reports/bilancio/12?stagione=2024 → 200 PDF",
+    "Frontend: Bilancio default = Vista Aziende grid with 3 cards (Demo PDF Final, Ponterosa, Pozzo vivo)",
+    "Frontend: clicking Ponterosa card shows drill-down with #bilancio-azienda-stagione selector populated with '— Tutte le stagioni —' + '📅 Stagione 2026'",
+    "Frontend: data-testid bilancio-az-ricavi/costi/finale present and rendered (€33.719,00 / €21.010,50 / €12.708,50)",
+    "Frontend: changing #bilancio-azienda-stagione calls onCambioStagioneBilancioAzienda() (verified — KPIs re-render; values identical only because Ponterosa has a single season in DB)",
+    "Frontend: clicking [data-testid=bilancio-azienda-pdf-btn] with stagione=2026 selected → network request URL = /api/reports/bilancio-azienda/5?stagione=2026 ✓",
+    "Frontend regression: Vista Singolo Lotto toggle → #cascade-az-bilancio visible, grid hidden",
+    "Regression: per-lot PDF endpoint still returns valid PDF"
+  ],
+  "rca of the issue": "n/a - no defects found in this iteration"
+}

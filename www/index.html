@@ -1326,7 +1326,7 @@
         
         <!-- Dettaglio Azienda (drill-down) -->
         <div id="bilancio-azienda-detail" style="display:none;">
-            <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
                 <button type="button" onclick="chiudiBilancioAziendaDetail()" data-testid="bilancio-azienda-back-btn"
                         class="btn btn-secondary" style="padding:8px 14px;">
                     <i class="fas fa-arrow-left"></i> Torna alle Aziende
@@ -1336,6 +1336,19 @@
                         onclick="esportaBilancioAziendaPDF()" class="btn btn-primary" style="background:#d32f2f;padding:10px 16px;">
                     <i class="fas fa-file-pdf"></i> PDF Bilancio Azienda
                 </button>
+            </div>
+            
+            <!-- Filtro stagione per drill-down azienda -->
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+                <label for="bilancio-azienda-stagione" style="margin:0;font-weight:600;color:#555;font-size:0.9rem;">
+                    <i class="fas fa-calendar-alt" style="color:#00BCD4;"></i> Stagione di riferimento:
+                </label>
+                <select id="bilancio-azienda-stagione" data-testid="bilancio-azienda-stagione"
+                        onchange="onCambioStagioneBilancioAzienda()"
+                        style="padding:8px 12px;border:2px solid #00BCD4;border-radius:8px;font-weight:600;cursor:pointer;background:white;min-width:160px;">
+                    <option value="">— Tutte le stagioni —</option>
+                </select>
+                <span style="color:#888;font-size:0.82rem;font-style:italic;">Il filtro si applica a KPI, tabella e PDF.</span>
             </div>
             
             <!-- KPI aggregati azienda -->

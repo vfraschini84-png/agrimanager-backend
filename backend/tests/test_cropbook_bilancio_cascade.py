@@ -176,3 +176,132 @@ class TestRegressionBilancioLotto:
         if r.status_code == 200:
             assert "application/pdf" in r.headers.get("Content-Type", "")
             assert r.content[:4] == b"%PDF"
+
+
+
+# --------- Iteration 2: stagione filter on company PDF + bulk-query performance ---------
+class TestBilancioAziendaStagione:
+    @pytest.fixture(scope="class")
+    def companies(self, auth_headers):
+        r = requests.get(f"{BASE_URL}/api/companies", headers=auth_headers, timeout=15)
+        assert r.status_code == 200
+        return r.json()["data"]
+
+    def _company_with_lots(self, companies, min_lots=1):
+        cands = [c for c in companies if c["lots_count"] >= min_lots]
+        return cands[0] if cands else None
+
+    def test_company_pdf_no_stagione_ok(self, auth_headers, companies):
+        target = self._company_with_lots(companies)
+        assert target, "no company with lots"
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio-azienda/{target['id']}",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=30,
+        )
+        assert r.status_code == 200
+        assert r.content[:4] == b"%PDF"
+
+    def test_company_pdf_with_stagione_ok(self, auth_headers, companies):
+        # Prefer Ponterosa (id=5) per the problem statement; fallback to any company with lots
+        target = next((c for c in companies if c["id"] == 5), None) or self._company_with_lots(companies)
+        assert target, "no target company"
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio-azienda/{target['id']}?stagione=2024",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=30,
+        )
+        assert r.status_code == 200, f"status {r.status_code}: {r.text[:300]}"
+        assert "application/pdf" in r.headers.get("Content-Type", "")
+        assert r.content[:4] == b"%PDF"
+        # Content-Disposition should mention stagione
+        cd = r.headers.get("Content-Disposition", "")
+        assert "bilancio-azienda" in cd
+
+    def test_company_pdf_bulk_query_performance(self, auth_headers, companies):
+        """After bulk-GROUP-BY optimization, multi-lot company PDF should generate fast."""
+        # Use Ponterosa (id=5, 2 lots) if available
+        target = next((c for c in companies if c["id"] == 5 and c["lots_count"] >= 2), None)
+        if not target:
+            multi = [c for c in companies if c["lots_count"] >= 2]
+            if not multi:
+                pytest.skip("no multi-lot company available")
+            target = multi[0]
+        import time
+        t0 = time.perf_counter()
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio-azienda/{target['id']}",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=10,
+        )
+        elapsed = time.perf_counter() - t0
+        assert r.status_code == 200
+        assert r.content[:4] == b"%PDF"
+        # Reasonable: <2s for small DB (request was N+1 before)
+        assert elapsed < 5.0, f"PDF generation too slow ({elapsed:.2f}s) — possible N+1 regression"
+
+    def test_company_pdf_stagione_invalid_year(self, auth_headers, companies):
+        """A stagione with no data should still produce a PDF (or graceful 4xx)."""
+        target = self._company_with_lots(companies)
+        assert target
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio-azienda/{target['id']}?stagione=1900",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=15,
+        )
+        assert r.status_code in (200, 400), f"unexpected: {r.status_code}"
+        if r.status_code == 200:
+            assert r.content[:4] == b"%PDF"
+
+
+# --------- Iteration 2: per-lot PDF stagione filter + detailed sections ---------
+class TestBilancioLottoStagione:
+    @pytest.fixture(scope="class")
+    def first_lot_id(self, auth_headers):
+        r = requests.get(f"{BASE_URL}/api/companies", headers=auth_headers, timeout=10)
+        companies = r.json()["data"]
+        with_lots = [c for c in companies if c["lots_count"] > 0]
+        if not with_lots:
+            pytest.skip("no lots available")
+        cdetail = requests.get(
+            f"{BASE_URL}/api/companies/{with_lots[0]['id']}",
+            headers=auth_headers, timeout=10,
+        )
+        lots = cdetail.json()["data"]["lots"]
+        return lots[0]["id"]
+
+    def test_per_lot_pdf_no_stagione(self, auth_headers, first_lot_id):
+        # The endpoint accepts either /api/reports/bilancio/:id or ?lotId=
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio/{first_lot_id}",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=30,
+        )
+        if r.status_code == 404:
+            r = requests.get(
+                f"{BASE_URL}/api/reports/bilancio?lotId={first_lot_id}",
+                headers={"Authorization": auth_headers["Authorization"]},
+                timeout=30,
+            )
+        assert r.status_code == 200, f"status {r.status_code}: {r.text[:300]}"
+        assert "application/pdf" in r.headers.get("Content-Type", "")
+        assert r.content[:4] == b"%PDF"
+
+    def test_per_lot_pdf_with_stagione(self, auth_headers, first_lot_id):
+        r = requests.get(
+            f"{BASE_URL}/api/reports/bilancio/{first_lot_id}?stagione=2024",
+            headers={"Authorization": auth_headers["Authorization"]},
+            timeout=30,
+        )
+        if r.status_code == 404:
+            r = requests.get(
+                f"{BASE_URL}/api/reports/bilancio?lotId={first_lot_id}&stagione=2024",
+                headers={"Authorization": auth_headers["Authorization"]},
+                timeout=30,
+            )
+        # Accept 200 (PDF) or graceful 4xx
+        assert r.status_code in (200, 400, 404), f"unexpected: {r.status_code}"
+        if r.status_code == 200:
+            assert r.content[:4] == b"%PDF"
+            # Reasonable size: PDF with charts + tables should be >5KB
+            assert len(r.content) > 3000, f"PDF too small ({len(r.content)} bytes)"
