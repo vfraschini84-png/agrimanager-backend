@@ -4568,8 +4568,15 @@ if (sezioneUtenti && sectionId !== 'user-management-section') {
 // ==================== GESTIONE AZIONI SPECIFICHE SEZIONI ====================
 function handleSectionSpecificActions(sectionId) {
     switch(sectionId) {
+        case 'aziende-section':
+            loadAziendeDashboard();
+            break;
         case 'lista-section':
             loadLots();
+            break;
+        case 'registrazione-section':
+            // ✅ Popola dropdown aziende quando si entra nel form
+            if (typeof loadCompaniesIntoSelect === 'function') loadCompaniesIntoSelect();
             break;
         case 'gestione-economica-section':
             initGestioneEconomica();
@@ -4746,6 +4753,41 @@ function changeItemsPerPage() {
         return;
     }
     
+    // ✅ Determina azienda (esistente o nuova inline)
+    const companySelectValue = document.getElementById('company-select')?.value || '';
+    let companyId = null;
+    let companyName = '';
+    if (companySelectValue && companySelectValue !== '__new__') {
+        // Azienda esistente selezionata
+        companyId = parseInt(companySelectValue);
+        const opt = document.querySelector(`#company-select option[value="${companySelectValue}"]`);
+        companyName = opt ? opt.textContent.trim() : '';
+    } else if (companySelectValue === '__new__') {
+        // Crea prima la nuova azienda
+        const newName = (document.getElementById('company-name')?.value || '').trim();
+        if (!newName || newName.length < 2) {
+            showNotification('Inserisci la ragione sociale della nuova azienda', 'error');
+            return;
+        }
+        const sectorsChecked = Array.from(document.querySelectorAll('#company-sectors-checkboxes input:checked')).map(cb => cb.value);
+        const address = (document.getElementById('company-address')?.value || '').trim();
+        try {
+            showNotification('Creazione azienda...', 'loading');
+            const cResp = await apiCall('/companies', {
+                method: 'POST',
+                body: { name: newName, sectors: sectorsChecked, address }
+            });
+            companyId = cResp.data.id;
+            companyName = cResp.data.name;
+        } catch (err) {
+            showNotification(`Errore creazione azienda: ${err.message}`, 'error');
+            return;
+        }
+    } else {
+        showNotification('Seleziona un\'azienda o creane una nuova', 'error');
+        return;
+    }
+    
     const productCategory = document.getElementById('product-category').value;
     const customProduct = document.getElementById('custom-product').value;
     
@@ -4758,24 +4800,17 @@ function changeItemsPerPage() {
     }
     
     const lottoData = {
-        company_name: document.getElementById('company-name').value.trim(),
+        company_id: companyId,
+        company_name: companyName,
         location: document.getElementById('location').value.trim(),
         gps_coordinates: document.getElementById('gps-coordinates').value.trim(),
         product_type: document.getElementById('product-type').value,
-        product_category: finalProduct, // NUOVO CAMPO
-        variety: document.getElementById('variety').value.trim(), // NON PIÙ OBBLIGATORIO
+        product_category: finalProduct,
+        variety: document.getElementById('variety').value.trim(),
         field_lot: document.getElementById('field-lot').value.trim(),
         field_size: parseFloat(document.getElementById('field-size').value) || 0,
         createdBy: currentUser.username
     };
-    
-// ==================== AGGIUNGI QUI I CONSOLE.LOG ====================
-    console.log('📊 DEBUG saveLot():');
-    console.log('productCategory:', productCategory);
-    console.log('customProduct:', customProduct);
-    console.log('finalProduct:', finalProduct);
-    console.log('lottoData completo:', lottoData);
-    // ==================== FINE DEBUG ====================
 
     try {
         showNotification('Salvataggio in corso...', 'loading');
@@ -4786,21 +4821,31 @@ function changeItemsPerPage() {
         });
         
         // Reset del form
-        document.getElementById('company-name').value = '';
+        document.getElementById('company-select').value = '';
+        const ncf = document.getElementById('new-company-form');
+        if (ncf) ncf.style.display = 'none';
+        const cn = document.getElementById('company-name'); if (cn) cn.value = '';
+        const ca = document.getElementById('company-address'); if (ca) ca.value = '';
+        document.querySelectorAll('#company-sectors-checkboxes input:checked').forEach(cb => cb.checked = false);
         document.getElementById('location').value = '';
         document.getElementById('gps-coordinates').value = '';
         document.getElementById('product-type').value = '';
         document.getElementById('product-category').innerHTML = '<option value="">Seleziona prima la tipologia</option>';
         document.getElementById('custom-product').value = '';
         document.getElementById('custom-product-container').style.display = 'none';
-        document.getElementById('variety').value = ''; // Non più obbligatorio
+        document.getElementById('variety').value = '';
         document.getElementById('field-lot').value = '';
         document.getElementById('field-size').value = '';
         
         showNotification(`✅ Lotto creato con ID: ${response.data.id}`, 'success');
+        // Refresh dropdown aziende per riflettere nuovi conteggi
+        if (typeof loadCompaniesIntoSelect === 'function') loadCompaniesIntoSelect();
         
         if (document.getElementById('lista-section').classList.contains('active')) {
             loadLots();
+        }
+        if (document.getElementById('aziende-section')?.classList.contains('active')) {
+            if (typeof loadAziendeDashboard === 'function') loadAziendeDashboard();
         }
     } catch (error) {
         console.error('Errore salvataggio:', error);
@@ -8358,3 +8403,209 @@ async function eliminaBeneStorico(recordId, indexInRecord, descrizione) {
 // case 'gestione-costi-section':
 //     initGestioneCosti();
 //     break;
+
+// ==================== DASHBOARD AZIENDE ====================
+const SETTORI_PREDEFINITI = ['olivicoltura', 'viticoltura', 'frutticoltura', 'orticoltura', 'cerealicoltura', 'zootecnia', 'apicoltura', 'florovivaismo'];
+let cachedCompanies = [];
+let currentEditingCompanyId = null;
+
+async function loadAziendeDashboard() {
+    const grid = document.getElementById('aziende-grid');
+    if (!grid) return;
+    try {
+        const resp = await apiCall('/companies');
+        cachedCompanies = resp.data || [];
+        renderAziendeGrid(cachedCompanies);
+    } catch (err) {
+        grid.innerHTML = `<div style="text-align:center;padding:24px;color:#c62828;">Errore caricamento aziende: ${err.message}</div>`;
+    }
+}
+
+function renderAziendeGrid(items) {
+    const grid = document.getElementById('aziende-grid');
+    if (!grid) return;
+    if (!items || items.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align:center;padding:40px;color:#888;">
+                <i class="fas fa-building" style="font-size: 3rem; color:#ddd; display: block; margin-bottom: 12px;"></i>
+                <p>Nessuna azienda registrata. Crea la tua prima azienda per iniziare!</p>
+                <button onclick="apriNuovaAzienda()" class="btn btn-primary" style="margin-top: 10px;">
+                    <i class="fas fa-plus-circle"></i> Crea Azienda
+                </button>
+            </div>`;
+        return;
+    }
+    const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    grid.innerHTML = items.map(c => {
+        const sectors = (c.sectors || '').split(',').map(s => s.trim()).filter(Boolean);
+        const sectorsHtml = sectors.length > 0
+            ? sectors.map(s => `<span class="azienda-sector-chip">${esc(s)}</span>`).join('')
+            : '<span style="font-size: 0.75rem; color: #999; font-style: italic;">Settori non specificati</span>';
+        return `
+            <div class="azienda-card" data-testid="azienda-card-${c.id}">
+                <div class="azienda-card-header">
+                    <h3 class="azienda-name" onclick="apriDettagliAzienda(${c.id})">📋 ${esc(c.name)}</h3>
+                    <span class="azienda-lots-badge ${c.lots_count === 0 ? 'empty' : ''}">${c.lots_count} ${c.lots_count === 1 ? 'lotto' : 'lotti'}</span>
+                </div>
+                <div class="azienda-sectors">${sectorsHtml}</div>
+                ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
+                <div class="azienda-actions">
+                    <button class="azienda-action-btn view" onclick="apriDettagliAzienda(${c.id})" title="Vedi lotti">
+                        <i class="fas fa-eye"></i> Lotti
+                    </button>
+                    <button class="azienda-action-btn report" onclick="scaricaBilancioAzienda(${c.id})" title="Scarica PDF bilancio azienda">
+                        <i class="fas fa-file-pdf"></i> Report
+                    </button>
+                    <button class="azienda-action-btn edit" onclick="openCompanyEditor(${c.id})" title="Modifica azienda">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterAziendeList() {
+    const q = (document.getElementById('aziende-search')?.value || '').trim().toLowerCase();
+    const filtered = !q ? cachedCompanies : cachedCompanies.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        (c.sectors || '').toLowerCase().includes(q) ||
+        (c.address || '').toLowerCase().includes(q)
+    );
+    renderAziendeGrid(filtered);
+}
+
+async function apriDettagliAzienda(companyId) {
+    // Vai a lista lotti filtrata per questa azienda
+    showSection('lista-section');
+    const c = cachedCompanies.find(x => x.id === companyId);
+    if (c) {
+        const search = document.getElementById('search-lots');
+        if (search) { search.value = c.name; if (typeof filterLots === 'function') filterLots(); }
+    }
+}
+
+async function scaricaBilancioAzienda(companyId) {
+    const c = cachedCompanies.find(x => x.id === companyId);
+    if (!c) return;
+    if (c.lots_count === 0) {
+        showNotification('L\'azienda non ha lotti, nessun dato da esportare', 'warning');
+        return;
+    }
+    showNotification('Generazione PDF...', 'loading');
+    try {
+        const token = localStorage.getItem('agriManager_token');
+        const resp = await fetch(`${API_BASE_URL}/reports/bilancio-azienda/${companyId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bilancio-azienda-${c.name.replace(/\s+/g, '_')}.pdf`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        showNotification('PDF scaricato', 'success');
+    } catch (err) {
+        showNotification(`Errore: ${err.message}`, 'error');
+    }
+}
+
+function apriNuovaAzienda() {
+    openCompanyEditor(null);
+}
+
+function openCompanyEditor(companyId) {
+    currentEditingCompanyId = companyId;
+    const modal = document.getElementById('company-modal');
+    if (!modal) return;
+    const c = companyId ? cachedCompanies.find(x => x.id === companyId) : null;
+    document.getElementById('company-modal-title').innerHTML = c
+        ? '<i class="fas fa-edit"></i> Modifica Azienda'
+        : '<i class="fas fa-building"></i> Nuova Azienda';
+    document.getElementById('modal-company-name').value = c ? c.name : '';
+    document.getElementById('modal-company-address').value = c ? (c.address || '') : '';
+    renderSectorsCheckboxes('modal-company-sectors', (c?.sectors || '').split(',').map(s => s.trim()).filter(Boolean));
+    modal.style.display = 'flex';
+}
+
+function chiudiCompanyModal() {
+    const modal = document.getElementById('company-modal');
+    if (modal) modal.style.display = 'none';
+    currentEditingCompanyId = null;
+}
+
+function renderSectorsCheckboxes(containerId, selected = []) {
+    const c = document.getElementById(containerId);
+    if (!c) return;
+    c.innerHTML = SETTORI_PREDEFINITI.map(s => {
+        const isChecked = selected.includes(s);
+        return `<label class="sector-chip-input ${isChecked ? 'is-checked' : ''}">
+            <input type="checkbox" value="${s}" ${isChecked ? 'checked' : ''} onchange="this.parentElement.classList.toggle('is-checked', this.checked)">
+            ${s.charAt(0).toUpperCase() + s.slice(1)}
+        </label>`;
+    }).join('');
+}
+
+async function salvaCompany() {
+    const name = (document.getElementById('modal-company-name').value || '').trim();
+    if (!name || name.length < 2) {
+        showNotification('Ragione sociale obbligatoria (min 2 caratteri)', 'error');
+        return;
+    }
+    const sectors = Array.from(document.querySelectorAll('#modal-company-sectors input:checked')).map(cb => cb.value);
+    const address = (document.getElementById('modal-company-address').value || '').trim();
+    try {
+        showNotification('Salvataggio...', 'loading');
+        if (currentEditingCompanyId) {
+            await apiCall(`/companies/${currentEditingCompanyId}`, { method: 'PUT', body: { name, sectors, address } });
+            showNotification('Azienda aggiornata', 'success');
+        } else {
+            await apiCall('/companies', { method: 'POST', body: { name, sectors, address } });
+            showNotification('Azienda creata', 'success');
+        }
+        chiudiCompanyModal();
+        await loadAziendeDashboard();
+        if (typeof loadCompaniesIntoSelect === 'function') loadCompaniesIntoSelect();
+    } catch (err) {
+        showNotification(`Errore: ${err.message}`, 'error');
+    }
+}
+
+// ===== Form Lotto: popola select aziende =====
+async function loadCompaniesIntoSelect() {
+    const select = document.getElementById('company-select');
+    if (!select) return;
+    try {
+        const resp = await apiCall('/companies');
+        cachedCompanies = resp.data || [];
+        const current = select.value;
+        select.innerHTML = '<option value="">-- Seleziona azienda esistente --</option>'
+            + cachedCompanies.map(c => `<option value="${c.id}">${c.name}${c.lots_count ? ` (${c.lots_count})` : ''}</option>`).join('')
+            + '<option value="__new__">➕ Nuova Azienda</option>';
+        if (current && Array.from(select.options).some(o => o.value === current)) select.value = current;
+    } catch (_) {}
+}
+
+function onCompanySelectChange() {
+    const v = document.getElementById('company-select').value;
+    const newForm = document.getElementById('new-company-form');
+    const editBtn = document.getElementById('company-edit-btn');
+    if (v === '__new__') {
+        if (newForm) newForm.style.display = 'block';
+        if (editBtn) editBtn.style.display = 'none';
+        renderSectorsCheckboxes('company-sectors-checkboxes', []);
+        currentEditingCompanyId = null;
+    } else if (v && v !== '') {
+        if (newForm) newForm.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'inline-flex';
+        currentEditingCompanyId = parseInt(v);
+    } else {
+        if (newForm) newForm.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'none';
+        currentEditingCompanyId = null;
+    }
+}
+// ==============================================================
+

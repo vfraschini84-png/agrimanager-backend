@@ -409,4 +409,183 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
     }
 });
 
+// ==================== PDF BILANCIO AZIENDA (aggregato + confronto lotti) ====================
+async function assertCompanyAccess(req, companyId) {
+    const company = await db.getAsync('SELECT * FROM companies WHERE id = ?', [companyId]);
+    if (!company) return { error: 404, message: 'Azienda non trovata' };
+    if (req.user.username === 'admin' || req.user.role === 'admin') return { company };
+    const u = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
+    const tenantOwnerId = u?.parent_id || req.user.id;
+    if (company.owner_id !== tenantOwnerId) return { error: 403, message: 'Accesso negato' };
+    return { company };
+}
+
+router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:read'), async (req, res) => {
+    try {
+        const access = await assertCompanyAccess(req, req.params.id);
+        if (access.error) return res.status(access.error).json({ error: access.message });
+        const company = access.company;
+        const lots = await db.allAsync('SELECT * FROM lots WHERE company_id = ? ORDER BY id', [company.id]);
+        if (lots.length === 0) {
+            return res.status(400).json({ error: 'L\'azienda non ha lotti registrati' });
+        }
+        const fmtEur = (v) => `€ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
+        
+        // Aggrega dati per ogni lotto
+        const lotsData = [];
+        let totalRicavi = 0, totalPersonale = 0, totalMezzi = 0, totalAmm = 0;
+        for (const lot of lots) {
+            const recs = await db.allAsync('SELECT * FROM economic_records WHERE lot_id = ?', [lot.id]);
+            const ricavi = recs.reduce((s, r) => s + Number(r.ricavi_totali || 0), 0);
+            const persRow = await db.getAsync(
+                `SELECT COALESCE(SUM(costo_totale), 0) AS tot FROM costi_personale WHERE lot_id = ?`,
+                [lot.id]
+            ).catch(() => null);
+            const personale = Number(persRow?.tot || 0);
+            const mezziRow = await db.getAsync(
+                `SELECT COALESCE(SUM(importo), 0) AS tot FROM costi_mezzi_tecnici WHERE lot_id = ?`,
+                [lot.id]
+            ).catch(() => null);
+            const mezzi = Number(mezziRow?.tot || 0);
+            const amm = recs.reduce((s, r) => s + Number(r.quota_ammortamento || 0), 0);
+            const costi = personale + mezzi + amm;
+            const bilancio = ricavi - costi;
+            lotsData.push({ lot, ricavi, personale, mezzi, amm, costi, bilancio });
+            totalRicavi += ricavi; totalPersonale += personale; totalMezzi += mezzi; totalAmm += amm;
+        }
+        const totalCosti = totalPersonale + totalMezzi + totalAmm;
+        const totalBilancio = totalRicavi - totalCosti;
+        
+        const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true, info: {
+            Title: `Bilancio Azienda ${company.name}`,
+            Author: 'Cropbook'
+        }});
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="bilancio-azienda-${company.name.replace(/[^a-z0-9]/gi, '_')}.pdf"`);
+        doc.pipe(res);
+        
+        // HEADER
+        doc.fillColor('#2E7D32').fontSize(20).font('Helvetica-Bold').text('Bilancio Azienda', { align: 'center' });
+        doc.moveDown(0.2);
+        doc.fillColor('#333').fontSize(14).font('Helvetica').text(company.name, { align: 'center' });
+        if (company.sectors) {
+            doc.fontSize(10).fillColor('#666').text(`Settori: ${company.sectors}`, { align: 'center' });
+        }
+        if (company.address) {
+            doc.fontSize(10).fillColor('#666').text(`Sede: ${company.address}`, { align: 'center' });
+        }
+        doc.fontSize(9).fillColor('#888').text(`Generato il ${new Date().toLocaleDateString('it-IT')} · ${lots.length} ${lots.length === 1 ? 'lotto' : 'lotti'}`, { align: 'center' });
+        doc.moveDown(1);
+        
+        // KPI TOTALI
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Riepilogo aggregato');
+        doc.moveDown(0.3);
+        const kpiY = doc.y;
+        const kpiW = 150, kpiH = 50;
+        const kpis = [
+            { label: 'Ricavi', value: fmtEur(totalRicavi), color: '#4CAF50' },
+            { label: 'Costi', value: fmtEur(totalCosti), color: '#f44336' },
+            { label: 'Bilancio', value: fmtEur(totalBilancio), color: totalBilancio >= 0 ? '#4CAF50' : '#f44336' }
+        ];
+        kpis.forEach((k, i) => {
+            const x = 50 + i * (kpiW + 8);
+            doc.roundedRect(x, kpiY, kpiW, kpiH, 6).fillAndStroke('#FAFAFA', '#e0e0e0');
+            doc.fillColor('#666').fontSize(9).font('Helvetica').text(k.label, x, kpiY + 8, { width: kpiW, align: 'center', lineBreak: false });
+            doc.fillColor(k.color).fontSize(14).font('Helvetica-Bold').text(k.value, x, kpiY + 25, { width: kpiW, align: 'center', lineBreak: false });
+        });
+        doc.y = kpiY + kpiH + 16;
+        doc.x = 50;
+        
+        // TABELLA CONFRONTO LOTTI
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Confronto Lotti');
+        doc.moveDown(0.3);
+        
+        const cols = [
+            { label: 'Lotto', w: 120 },
+            { label: 'Prodotto', w: 80 },
+            { label: 'Ricavi', w: 70 },
+            { label: 'Personale', w: 65 },
+            { label: 'Mezzi', w: 60 },
+            { label: 'Amm.', w: 50 },
+            { label: 'Bilancio', w: 55 }
+        ];
+        const drawHeader = () => {
+            const headerY = doc.y;
+            doc.rect(50, headerY, 500, 18).fill('#2E7D32');
+            let cx = 50;
+            doc.fontSize(9).font('Helvetica-Bold').fillColor('#FFFFFF');
+            cols.forEach(c => {
+                doc.fillColor('#FFFFFF').text(c.label, cx + 3, headerY + 5, {
+                    width: c.w - 6, align: c.label === 'Lotto' || c.label === 'Prodotto' ? 'left' : 'right', lineBreak: false
+                });
+                cx += c.w;
+            });
+            doc.y = headerY + 18;
+            doc.x = 50;
+            doc.font('Helvetica').fontSize(8).fillColor('#222');
+        };
+        const PAGE_BOTTOM = doc.page.height - 60;
+        const ROW_H = 18;
+        drawHeader();
+        lotsData.forEach((d, idx) => {
+            if (doc.y + ROW_H > PAGE_BOTTOM) {
+                doc.addPage(); doc.y = doc.page.margins.top; doc.x = 50; drawHeader();
+            }
+            const rowY = doc.y;
+            if (idx % 2 === 0) doc.rect(50, rowY, 500, ROW_H).fill('#f5f5f5');
+            let cx = 50;
+            const cells = [
+                { v: `#${d.lot.id} ${d.lot.location || ''}`, a: 'left' },
+                { v: `${d.lot.product_type || ''}${d.lot.variety ? ' / ' + d.lot.variety : ''}`, a: 'left' },
+                { v: fmtEur(d.ricavi), a: 'right' },
+                { v: fmtEur(d.personale), a: 'right' },
+                { v: fmtEur(d.mezzi), a: 'right' },
+                { v: fmtEur(d.amm), a: 'right' },
+                { v: fmtEur(d.bilancio), a: 'right' }
+            ];
+            cells.forEach((c, i) => {
+                const color = (i === 6 && d.bilancio < 0) ? '#c62828' : '#222';
+                doc.fillColor(color).text(c.v, cx + 3, rowY + 5, { width: cols[i].w - 6, align: c.a, lineBreak: false });
+                cx += cols[i].w;
+            });
+            doc.y = rowY + ROW_H;
+            doc.x = 50;
+        });
+        // Riga TOTALE
+        const totalRowY = doc.y;
+        doc.rect(50, totalRowY, 500, ROW_H).fill('#E8F5E9');
+        let cx = 50;
+        const totals = [
+            { v: 'TOTALE', a: 'left' },
+            { v: '', a: 'left' },
+            { v: fmtEur(totalRicavi), a: 'right' },
+            { v: fmtEur(totalPersonale), a: 'right' },
+            { v: fmtEur(totalMezzi), a: 'right' },
+            { v: fmtEur(totalAmm), a: 'right' },
+            { v: fmtEur(totalBilancio), a: 'right' }
+        ];
+        totals.forEach((c, i) => {
+            doc.fillColor('#1B5E20').font('Helvetica-Bold').fontSize(8).text(c.v, cx + 3, totalRowY + 5, { width: cols[i].w - 6, align: c.a, lineBreak: false });
+            cx += cols[i].w;
+        });
+        doc.y = totalRowY + ROW_H;
+        
+        // Footer
+        doc.font('Helvetica').fontSize(8).fillColor('#888');
+        const range = doc.bufferedPageRange();
+        for (let i = 0; i < range.count; i++) {
+            doc.switchToPage(range.start + i);
+            doc.text(`Cropbook · ${company.name} · pag. ${i + 1}/${range.count}`, 50, doc.page.height - 35,
+                     { width: 495, align: 'center', lineBreak: false, height: 20 });
+        }
+        doc.flushPages();
+        doc.end();
+    } catch (error) {
+        logger.error('Errore PDF bilancio-azienda', { error: error.message, stack: error.stack });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Errore generazione PDF: ' + error.message });
+        }
+    }
+});
+
 module.exports = router;

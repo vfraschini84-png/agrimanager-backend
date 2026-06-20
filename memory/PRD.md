@@ -176,6 +176,17 @@
 - Endpoint `/api/reports/bilancio-azienda/:id` (somma tutti i lotti)
 - Tabella confronto per lotto + grafici aggregati
 
+### Sessione 15 (2026-06-20 pomeriggio): Frontend Aziende — FASE 2 + Report Aggregato — FASE 3
+| # | Modifica | File |
+|---|------|------|
+| 1 | **Dashboard Aziende** (nuova sezione `#aziende-section`): grid responsive di card con nome, conteggio lotti, chip settori, sede legale, 3 pulsanti azione (👁️ Lotti / 📄 Report / ✏️ Edit). Search-bar live. Pulsante "+ Nuova Azienda" prominente. Card cliccabile → drill-down filtrato in Lista Lotti | `index.html`, `css/cropbook.css`, `js/cropbook.js` |
+| 2 | **Menu home** aggiornato: nuova card "Aziende" come PRIMA voce (gradient verde, icona building) — diventa il punto di ingresso principale al posto della lista lotti | `index.html` |
+| 3 | **Modal "Editor Azienda"**: form modale con nome + chip multi-settori (olivicoltura, viticoltura, frutticoltura, orticoltura, cerealicoltura, zootecnia, apicoltura, florovivaismo) + sede opzionale. Reused per crea/modifica | `index.html`, `js/cropbook.js` |
+| 4 | **Form "Nuovo Lotto"** modificato: campo "Nome Azienda" sostituito con `<select>` "Seleziona azienda esistente / ➕ Nuova Azienda". Quando si sceglie "Nuova" si apre un form inline con stessi campi del modal. Backend: invia `company_id` se selezionata, altrimenti crea l'azienda inline prima del lotto | `index.html`, `js/cropbook.js` |
+| 5 | **Endpoint `GET /api/reports/bilancio-azienda/:id`**: nuovo PDF aggregato per azienda con KPI totali (Ricavi/Costi/Bilancio), tabella confronto lotti (Lotto/Prodotto/Ricavi/Personale/Mezzi/Amm./Bilancio per ogni lotto + riga TOTALE evidenziata in verde). Header con settori + sede + count lotti + data | `routes/reports.js` |
+| 6 | **handleSectionSpecificActions** estesa con casi `aziende-section` (loadAziendeDashboard) e `registrazione-section` (loadCompaniesIntoSelect) | `js/cropbook.js` |
+| 7 | **Nav bar inter-sezione** della dashboard aziende include pulsanti per Lista Lotti + Nuovo Lotto | `index.html` |
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni
