@@ -218,6 +218,22 @@
 - 48/48 test Jest passano ✓
 - RBAC preservato: utenti non-admin restano vincolati al proprio tenant ✓
 
+### Sessione 18 (2026-06-20 notte): Fix isolamento aziende — lotti non si mescolano più
+| # | Bug → Fix | File |
+|---|------|------|
+| 1 | **🐛 Lotti di azienda B visibili in elenco azienda A**: il drill-down "Lotti" usava `search.value = nome_azienda` con matching parziale (es. "Pozzo" matcha anche "Pozzo Profondo" o un lotto con location "Pozzo"). **Fix**: filtro STRICT per `company_id` (campo univoco) in `filterLots()` e `loadLots()`; rimosso il pre-fill della search bar | `js/cropbook.js` |
+| 2 | **`displayLots()` rispetta `currentAziendaFilter`** dal primo render — non più solo dopo l'input nella search | `js/cropbook.js` |
+| 3 | **Banner "🏢 Azienda: X" nella vista lotti** per chiarezza visiva | `index.html`, `js/cropbook.js` |
+| 4 | Verifica dipendenze aggregati: tutti gli endpoint costi/economic/report usano `WHERE lot_id = ?` (univoco); `companies/:id` e `reports/bilancio-azienda/:id` usano `WHERE company_id = ?` (univoco). **Nessun rischio di contaminazione tra aziende** | — |
+
+**Verifica E2E**:
+- Creati 3 lotti per Pozzo vivo (id 1, 8, 11) + 2 lotti per Demo PDF Final (id 2, 10)
+- Vista "Pozzo vivo" → mostra ESATTAMENTE 3 lotti, nessun lotto Demo ✓
+- API `/companies/1` → 3 lotti (di Pozzo); `/companies/2` → 2 lotti (di Demo) ✓
+- PDF bilancio-azienda/1 (Pozzo) → totale €6500 ricavi su 3 lotti; PDF bilancio-azienda/2 (Demo) → solo Demo ✓
+- 48/48 test Jest passano ✓
+- Screenshot live: banner "Azienda: Pozzo vivo" + 3 card lotti Pozzo, nessuna contaminazione ✓
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

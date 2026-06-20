@@ -4187,14 +4187,19 @@ function popolaFormEconomico(record) {
        function filterLots() {
     const searchText = document.getElementById('search-lots').value.toLowerCase().trim();
     
+    // ✅ Filtro azienda STRICT per company_id (impostato da apriLottiAzienda)
+    let baseLots = allLots;
+    if (currentAziendaFilter) {
+        baseLots = allLots.filter(lot => Number(lot.company_id) === Number(currentAziendaFilter));
+    }
+    
     if (!searchText) {
-        displayLots(allLots);
-        updateSearchStats(allLots.length, allLots.length);
+        displayLots(baseLots);
+        updateSearchStats(baseLots.length, baseLots.length);
         return;
     }
     
-    const filteredLots = allLots.filter(lot => {
-        // ✅ PROTEZIONE DA NULL/UNDEFINED
+    const filteredLots = baseLots.filter(lot => {
         const companyName = (lot.company_name || '').toLowerCase();
         const location = (lot.location || '').toLowerCase();
         const variety = (lot.variety || '').toLowerCase();
@@ -4213,7 +4218,7 @@ function popolaFormEconomico(record) {
     });
     
     displayLots(filteredLots);
-    updateSearchStats(filteredLots.length, allLots.length);
+    updateSearchStats(filteredLots.length, baseLots.length);
 }
 
         function updateSearchStats(shown, total) {
@@ -4701,8 +4706,11 @@ function showHome() {
             countBadge.textContent = `${lotsPagination.totalItems} totale`;
         }
         
-        // Mostra i lotti
-        displayLots(allLots);
+        // Mostra i lotti (con filtro azienda strict se attivo)
+        const lotsToShow = currentAziendaFilter
+            ? allLots.filter(lot => Number(lot.company_id) === Number(currentAziendaFilter))
+            : allLots;
+        displayLots(lotsToShow);
         
          hideSpinner();  // ✅ NASCONDI SPINNER
                        
@@ -8482,6 +8490,7 @@ function setVistaLotti(vista, companyId = null) {
     const btnTutti = document.getElementById('vista-tutti-btn');
     const btnBack = document.getElementById('back-aziende-btn');
     const btnAdd = document.getElementById('btn-add-azienda');
+    const aziendaHeader = document.getElementById('lista-azienda-header');
     
     if (vista === 'aziende') {
         if (grid) grid.style.display = '';
@@ -8496,6 +8505,7 @@ function setVistaLotti(vista, companyId = null) {
         if (grid) grid.style.display = 'none';
         if (search) search.style.display = '';
         if (list) list.style.display = '';
+        if (aziendaHeader) aziendaHeader.style.display = 'none';
         if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
         if (btnTutti) { btnTutti.style.background = '#4CAF50'; btnTutti.style.color = 'white'; }
         if (btnBack) btnBack.style.display = 'none';
@@ -8503,10 +8513,10 @@ function setVistaLotti(vista, companyId = null) {
         currentAziendaFilter = null;
         if (typeof loadLots === 'function') loadLots();
     } else if (vista === 'azienda-lotti') {
-        // Drill-down: lista lotti di una azienda specifica
         if (grid) grid.style.display = 'none';
         if (search) search.style.display = '';
         if (list) list.style.display = '';
+        if (aziendaHeader) aziendaHeader.style.display = '';
         if (btnBack) btnBack.style.display = '';
         if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
         if (btnTutti) { btnTutti.style.background = '#fff'; btnTutti.style.color = '#555'; }
@@ -8518,11 +8528,15 @@ function setVistaLotti(vista, companyId = null) {
 async function apriLottiAzienda(companyId) {
     const c = cachedCompanies.find(x => x.id === companyId);
     if (!c) return;
+    // ✅ Filtro STRICT per company_id (non per nome — evita false positive es. "Pozzo" matcha "Pozzo Profondo")
     setVistaLotti('azienda-lotti', companyId);
-    // Pre-imposta search
     setTimeout(() => {
         const search = document.getElementById('search-lots');
-        if (search) { search.value = c.name; if (typeof filterLots === 'function') filterLots(); }
+        if (search) { search.value = ''; }
+        const titoloAzienda = document.getElementById('lista-titolo-azienda');
+        if (titoloAzienda) titoloAzienda.textContent = c.name;
+        // Forza un refresh dell'elenco
+        if (typeof loadLots === 'function') loadLots();
     }, 100);
 }
 

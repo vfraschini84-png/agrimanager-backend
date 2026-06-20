@@ -454,11 +454,14 @@
     <div id="aziende-grid" class="aziende-grid"></div>
     
     <div class="search-input-container" id="lots-search-wrapper" style="display:none;">
+        <div id="lista-azienda-header" style="margin-bottom: 10px; font-weight: 600; color: #2E7D32; font-size: 1rem;">
+            <i class="fas fa-building"></i> Azienda: <span id="lista-titolo-azienda"></span>
+        </div>
         <input type="text" id="search-lots" class="search-input" 
         placeholder="Cerca per nome, luogo, varietà, lotto campo, ID..." 
         oninput="filterLots()">
         <i class="fas fa-search search-icon"></i>
-        <div class="help-text">Digita per filtrare i lotti in tempo reale. Cerca per: nome azienda, luogo, varietà, lotto campo, ID o tipo prodotto</div>
+        <div class="help-text">Digita per filtrare i lotti in tempo reale.</div>
         <div id="search-stats" class="search-stats"></div>
     </div>
     
