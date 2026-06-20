@@ -205,6 +205,19 @@
 | 3 | Bug registrazione lotto risolto | ✅ Completato |
 | 4 | Bilancio & Report con vista per azienda + report stagione totale + dettaglio lotti | 🟡 Backlog prossima sessione |
 
+### Sessione 17 (2026-06-20 tarda sera): Fix RBAC azienda altrui in registrazione lotto
+| # | Bug → Fix | File |
+|---|------|------|
+| 1 | **🐛 "Azienda non valida o non autorizzata"** quando super-admin selezionava azienda di un sotto-utente (es. admin vuole creare lotto per "Pozzo vivo" che ha `owner_id=2`, non `owner_id=1` dell'admin). Backend cercava sempre `WHERE owner_id = finalOwnerId` rifiutando il match. **Fix**: se `req.user.username === 'admin'` (super-admin) cerca solo per `WHERE id = ?` (ignora owner) e usa il tenant dell'azienda per il nuovo lotto (override `owner_id` + `owner_username`) | `routes/lots.js` |
+
+**Verifica end-to-end** (super-admin crea lotto per azienda "Pozzo vivo" owner_id=2):
+- POST /api/lots → 201 ✓
+- Lotto creato con `owner_id=2` (NON owner_id=1 dell'admin) ✓
+- Azienda "Pozzo vivo" ora mostra 2 lotti correttamente ✓
+- Toast UI "✅ Lotto creato con ID: 7" visibile, form resettato ✓
+- 48/48 test Jest passano ✓
+- RBAC preservato: utenti non-admin restano vincolati al proprio tenant ✓
+
 ### Test coverage
 - **48 test passanti** in 7 suite:
   - `auth.test.js` (10): registrazione, login, validazioni

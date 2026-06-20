@@ -341,11 +341,23 @@ router.post('/', authenticateToken, requirePermission('lots:create'), async (req
         let resolvedCompanyId = company_id || null;
         let resolvedCompanyName = company_name;
         if (resolvedCompanyId) {
-            const c = await db.getAsync(`SELECT id, name FROM companies WHERE id = ? AND owner_id = ?`, [resolvedCompanyId, finalOwnerId]);
+            // ✅ RBAC: super-admin vede tutte le aziende; gli altri solo quelle del proprio tenant.
+            //   Per admin con sotto-utenti consideriamo lo stesso owner_id (parent_id), già finalOwnerId.
+            const isSuperAdmin = req.user.username === 'admin';
+            const c = isSuperAdmin
+                ? await db.getAsync(`SELECT id, name, owner_id FROM companies WHERE id = ?`, [resolvedCompanyId])
+                : await db.getAsync(`SELECT id, name FROM companies WHERE id = ? AND owner_id = ?`, [resolvedCompanyId, finalOwnerId]);
             if (!c) {
                 return res.status(400).json({ error: 'Azienda non valida o non autorizzata' });
             }
             resolvedCompanyName = c.name; // snapshot
+            // Se super-admin, il lotto deve "agganciarsi" al tenant dell'azienda
+            if (isSuperAdmin && c.owner_id) {
+                const ownerCompanyUser = await db.getAsync('SELECT username FROM users WHERE id = ?', [c.owner_id]);
+                ownerUsername = ownerCompanyUser?.username || ownerUsername;
+                // forza il lotto sotto lo stesso owner dell'azienda
+                req._tenantOwnerOverride = c.owner_id;
+            }
         } else if (company_name) {
             // Auto-crea o riusa
             const existing = await db.getAsync(
@@ -363,10 +375,11 @@ router.post('/', authenticateToken, requirePermission('lots:create'), async (req
             }
         }
 
+        const effectiveOwnerId = req._tenantOwnerOverride || finalOwnerId;
         const result = await db.runAsync(
             `INSERT INTO lots (company_id, company_name, location, gps_coordinates, product_type, product_category, variety, field_lot, field_size, owner_id, owner_username, created_by)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [resolvedCompanyId, resolvedCompanyName, location, gps_coordinates, product_type, product_category || null, variety || null, field_lot || null, field_size || null, finalOwnerId, ownerUsername, createdBy || ownerUsername]
+            [resolvedCompanyId, resolvedCompanyName, location, gps_coordinates, product_type, product_category || null, variety || null, field_lot || null, field_size || null, effectiveOwnerId, ownerUsername, createdBy || ownerUsername]
         );
 
         const newLot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [result.id]);
