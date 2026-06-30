@@ -31,9 +31,111 @@ async function assertLotAccess(req, lotId) {
     return { lot };
 }
 
+// ✅ Canvas ad alta risoluzione (2x): le immagini vengono poi scalate in basso
+// da PDFKit, ottenendo testo nitido. NON usiamo chartjs-plugin-datalabels:
+// ha un bug ricorrente con chart.js v4 ("Cannot read properties of null
+// reading 'x'" in orient()) quando ci sono dati a 0. Usiamo plugin
+// custom inline `afterDatasetsDraw` per disegnare etichette con € + %.
 const chartCanvas = new ChartJSNodeCanvas({
-    width: 500, height: 300, backgroundColour: 'white'
+    width: 1100,
+    height: 660,
+    backgroundColour: 'white',
+    chartCallback: (ChartJS) => {
+        ChartJS.defaults.font.family = "'Helvetica', 'Arial', sans-serif";
+        ChartJS.defaults.color = '#222';
+    }
 });
+
+const chartCanvasSquare = new ChartJSNodeCanvas({
+    width: 880,
+    height: 700,
+    backgroundColour: 'white',
+    chartCallback: (ChartJS) => {
+        ChartJS.defaults.font.family = "'Helvetica', 'Arial', sans-serif";
+        ChartJS.defaults.color = '#222';
+    }
+});
+
+const chartCanvasHbar = new ChartJSNodeCanvas({
+    width: 1100,
+    height: 660,
+    backgroundColour: 'white',
+    chartCallback: (ChartJS) => {
+        ChartJS.defaults.font.family = "'Helvetica', 'Arial', sans-serif";
+        ChartJS.defaults.color = '#222';
+    }
+});
+
+// Plugin riutilizzabili
+function makeDoughnutLabelsPlugin(values, total) {
+    return {
+        id: 'doughnutLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            ctx.save();
+            ctx.font = "bold 22px 'Helvetica', 'Arial', sans-serif";
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            meta.data.forEach((arc, i) => {
+                const v = Number(values[i]) || 0;
+                if (v <= 0 || !arc) return;
+                // posizione al centro dell'arco
+                const { x, y, startAngle, endAngle, innerRadius, outerRadius } = arc.getProps(
+                    ['x', 'y', 'startAngle', 'endAngle', 'innerRadius', 'outerRadius'], true
+                );
+                const midAngle = (startAngle + endAngle) / 2;
+                const midRadius = (innerRadius + outerRadius) / 2;
+                const lx = x + Math.cos(midAngle) * midRadius;
+                const ly = y + Math.sin(midAngle) * midRadius;
+                const pct = total > 0 ? (v / total) * 100 : 0;
+                const eur = '€ ' + v.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+                // sfondo semi-trasparente per leggibilità
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                const text1 = `${pct.toFixed(1)}%`;
+                const w = Math.max(ctx.measureText(text1).width, ctx.measureText(eur).width) + 18;
+                ctx.fillRect(lx - w / 2, ly - 26, w, 52);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(text1, lx, ly - 11);
+                ctx.font = "bold 18px 'Helvetica', 'Arial', sans-serif";
+                ctx.fillText(eur, lx, ly + 13);
+                ctx.font = "bold 22px 'Helvetica', 'Arial', sans-serif";
+            });
+            ctx.restore();
+        }
+    };
+}
+
+function makeVbarLabelsPlugin(values, total) {
+    return {
+        id: 'vbarLabels',
+        afterDatasetsDraw(chart) {
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data) return;
+            ctx.save();
+            ctx.font = "bold 20px 'Helvetica', 'Arial', sans-serif";
+            ctx.fillStyle = '#222';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach((bar, i) => {
+                if (!bar || typeof bar.x !== 'number' || typeof bar.y !== 'number') return;
+                const v = Number(values[i]) || 0;
+                if (v <= 0) return;
+                const pct = total > 0 ? (v / total) * 100 : 0;
+                const eur = '€ ' + v.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+                ctx.fillText(eur, bar.x, bar.y - 22);
+                ctx.font = "bold 17px 'Helvetica', 'Arial', sans-serif";
+                ctx.fillStyle = '#1565C0';
+                ctx.fillText(`${pct.toFixed(1)}%`, bar.x, bar.y - 4);
+                ctx.font = "bold 20px 'Helvetica', 'Arial', sans-serif";
+                ctx.fillStyle = '#222';
+            });
+            ctx.restore();
+        }
+    };
+}
 
 const fmtEur = (n) => `€ ${(Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtKg = (n) => `${(Number(n) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} kg`;
@@ -199,44 +301,88 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         );
         const totKgRaccolto = activities.reduce((s, a) => s + Number(a.kg || 0), 0);
 
-        // ==== Genera grafici come buffer PNG ====
-        const chartRicaviCosti = await chartCanvas.renderToBuffer({
+        // ==== Genera grafici come buffer PNG (alta risoluzione) ====
+        const totRicaviCosti = (Number(tot.ricavi) || 0) + (Number(tot.costiTotali) || 0);
+        const ricaviCostiValues = [tot.ricavi, tot.costiTotali];
+        const chartRicaviCosti = await chartCanvasSquare.renderToBuffer({
             type: 'doughnut',
             data: {
                 labels: ['Ricavi', 'Costi'],
                 datasets: [{
-                    data: [tot.ricavi, tot.costiTotali],
+                    data: ricaviCostiValues,
                     backgroundColor: ['#4CAF50', '#f44336'],
-                    borderWidth: 2
+                    borderColor: '#ffffff',
+                    borderWidth: 3
                 }]
             },
             options: {
+                layout: { padding: 20 },
                 plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 14 } } },
-                    title: { display: true, text: 'Ricavi vs Costi', font: { size: 16 } }
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { size: 22, weight: 'bold' },
+                            padding: 18,
+                            boxWidth: 24,
+                            boxHeight: 16
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Ricavi vs Costi',
+                        font: { size: 28, weight: 'bold' },
+                        color: '#1B5E20',
+                        padding: { top: 4, bottom: 18 }
+                    }
                 }
-            }
+            },
+            plugins: [makeDoughnutLabelsPlugin(ricaviCostiValues, totRicaviCosti)]
         });
 
+        const totDettCosti = (Number(tot.mezzi) || 0) + (Number(tot.personale) || 0) + (Number(tot.ammortamento) || 0);
+        const dettCostiValues = [tot.mezzi, tot.personale, tot.ammortamento];
         const chartCostiBreakdown = await chartCanvas.renderToBuffer({
             type: 'bar',
             data: {
                 labels: ['Mezzi tecnici', 'Personale', 'Ammortamenti'],
                 datasets: [{
                     label: 'Costi (€)',
-                    data: [tot.mezzi, tot.personale, tot.ammortamento],
-                    backgroundColor: ['#FF9800', '#2196F3', '#9C27B0']
+                    data: dettCostiValues,
+                    backgroundColor: ['#FF9800', '#2196F3', '#9C27B0'],
+                    borderWidth: 0,
+                    maxBarThickness: 160
                 }]
             },
             options: {
+                layout: { padding: { top: 50, right: 24, bottom: 12, left: 12 } },
                 plugins: {
                     legend: { display: false },
-                    title: { display: true, text: 'Dettaglio Costi', font: { size: 16 } }
+                    title: {
+                        display: true,
+                        text: 'Dettaglio Costi (incidenza % sui costi totali)',
+                        font: { size: 26, weight: 'bold' },
+                        color: '#1B5E20',
+                        padding: { top: 4, bottom: 18 }
+                    }
                 },
                 scales: {
-                    y: { beginAtZero: true, ticks: { callback: v => '€' + v } }
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: Math.max(tot.mezzi, tot.personale, tot.ammortamento, 1) * 1.22,
+                        ticks: {
+                            callback: v => '€ ' + Number(v).toLocaleString('it-IT'),
+                            font: { size: 18 },
+                            color: '#333'
+                        },
+                        grid: { color: '#e0e0e0' }
+                    },
+                    x: {
+                        ticks: { font: { size: 20, weight: 'bold' }, color: '#222' },
+                        grid: { display: false }
+                    }
                 }
-            }
+            },
+            plugins: [makeVbarLabelsPlugin(dettCostiValues, totDettCosti)]
         });
 
         // ==== Dati confronto ultime 5 stagioni (saranno renderizzate come card in PDFKit) ====
@@ -333,23 +479,85 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         };
         const buildHbarChart = async (labels, data, title, colors) => {
             if (labels.length === 0) return null;
-            return chartCanvas.renderToBuffer({
+            // ✅ Filtra entries con valore 0/null/NaN
+            const filtered = labels.map((l, i) => ({
+                label: l,
+                value: Number(data[i]) || 0,
+                color: colors[i] || '#888'
+            })).filter(r => r.value > 0);
+            if (filtered.length === 0) return null;
+            const totale = filtered.reduce((s, r) => s + r.value, 0);
+            const maxVal = Math.max(...filtered.map(r => r.value), 1);
+            
+            // ✅ Plugin custom inline per disegnare etichette su barre orizzontali.
+            // (chartjs-plugin-datalabels v2.2.0 ha un bug con `indexAxis: 'y'` su
+            //  chart.js v4 che causa "Cannot read properties of null (reading 'x')")
+            const hbarLabelsPlugin = {
+                id: 'hbarLabels',
+                afterDatasetsDraw(chart) {
+                    const { ctx } = chart;
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data) return;
+                    ctx.save();
+                    ctx.font = "bold 18px 'Helvetica', 'Arial', sans-serif";
+                    ctx.fillStyle = '#222';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    meta.data.forEach((bar, i) => {
+                        if (!bar || typeof bar.x !== 'number' || typeof bar.y !== 'number') return;
+                        const val = filtered[i]?.value || 0;
+                        if (val <= 0) return;
+                        const eur = '€ ' + val.toLocaleString('it-IT', { maximumFractionDigits: 0 });
+                        const pct = totale > 0 ? (val / totale) * 100 : 0;
+                        ctx.fillText(`${eur}  (${pct.toFixed(1)}%)`, bar.x + 10, bar.y);
+                    });
+                    ctx.restore();
+                }
+            };
+            
+            return chartCanvasHbar.renderToBuffer({
                 type: 'bar',
                 data: {
-                    labels: labels.map(l => truncateLabel(l, 22)),
-                    datasets: [{ label: '€', data, backgroundColor: colors, borderWidth: 0 }]
+                    labels: filtered.map(r => truncateLabel(r.label, 26)),
+                    datasets: [{
+                        label: '€',
+                        data: filtered.map(r => r.value),
+                        backgroundColor: filtered.map(r => r.color),
+                        borderWidth: 0,
+                        maxBarThickness: 42
+                    }]
                 },
                 options: {
                     indexAxis: 'y',
+                    layout: { padding: { top: 8, right: 200, bottom: 8, left: 8 } },
                     plugins: {
                         legend: { display: false },
-                        title: { display: true, text: title, font: { size: 14, weight: 'bold' } }
+                        title: {
+                            display: true,
+                            text: title,
+                            font: { size: 26, weight: 'bold' },
+                            color: '#1B5E20',
+                            padding: { top: 4, bottom: 18 }
+                        }
                     },
                     scales: {
-                        x: { beginAtZero: true, ticks: { callback: v => '€' + v } },
-                        y: { ticks: { font: { size: 10 } } }
+                        x: {
+                            beginAtZero: true,
+                            suggestedMax: maxVal * 1.30,
+                            ticks: {
+                                callback: v => '€ ' + Number(v).toLocaleString('it-IT'),
+                                font: { size: 16 },
+                                color: '#444'
+                            },
+                            grid: { color: '#e0e0e0' }
+                        },
+                        y: {
+                            ticks: { font: { size: 16, weight: '600' }, color: '#222' },
+                            grid: { display: false }
+                        }
                     }
-                }
+                },
+                plugins: [hbarLabelsPlugin]
             });
         };
         const chartPersonale = await buildHbarChart(

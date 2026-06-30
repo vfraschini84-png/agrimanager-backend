@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-06-20
-**Versione**: 1.8.0
+**Ultimo aggiornamento**: 2026-06-29
+**Versione**: 1.9.0
 
 ---
 
@@ -290,6 +290,18 @@
 | 8 | **Rimossi emoji** dal PDF aziendale (PDFKit Helvetica non li renderizza, si vedevano caratteri tipo `Ø=ÜA`). | `routes/reports.js` |
 
 **Test**: 48/48 Jest + 15/15 pytest (iteration_2) + UI Playwright PASS. Analisi PDF (Gemini) conferma tutte le 3 sezioni con grafico+tabella+Incidenza.
+
+### Sessione 7 (2026-06-29): Grafici PDF nitidi + percentuali in tutti i diagrammi
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Risoluzione grafici raddoppiata**: canvas da 500×300 a 1100×660 (e 880×700 per doughnut). PDFKit ora scala in basso le PNG → testo nitido, titoli e label sharp. Font Helvetica esplicito, color #222. | `routes/reports.js` |
+| 2 | **% + € in "Ricavi vs Costi"**: doughnut con etichette al centro di ogni spicchio: `63.8%` + `€ 32.219` (sfondo semi-trasparente per leggibilità). | `routes/reports.js` |
+| 3 | **% + € in "Dettaglio Costi"**: bar chart verticale con € sopra la barra + percentuale (incidenza sui costi totali) in blu sotto. Titolo aggiornato a "Dettaglio Costi (incidenza % sui costi totali)". | `routes/reports.js` |
+| 4 | **% + € nelle 3 sezioni dettagliate** (Personale per Attività, Mezzi per Categoria, Ammortamenti per Bene): bar orizzontali con etichette `€ 15.113 (99.1%)` a destra di ogni barra. | `routes/reports.js` |
+| 5 | **Plugin custom inline** sostituiscono `chartjs-plugin-datalabels` (rimosso da deps): il plugin v2.2.0 ha un bug noto con chart.js v4 ("Cannot read properties of null reading 'x'" in `orient()`) quando un dato è 0 o con `indexAxis: 'y'`. I custom plugin `makeDoughnutLabelsPlugin`, `makeVbarLabelsPlugin` e `hbarLabelsPlugin` sono robusti e gestiscono entries a 0. | `routes/reports.js` |
+| 6 | **Font axes/title ingranditi**: title 26-28pt, axis ticks 16-20pt, suggestedMax con margine per evitare clipping delle etichette. | `routes/reports.js` |
+
+**Test**: 48/48 Jest PASS. PDF di 3 lotti + 3 aziende generati e analizzati (Gemini): tutte le percentuali corrette, testo nitido, layout pulito.
 
 ## Backlog / Next steps
 
