@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-06-29
-**Versione**: 1.9.0
+**Ultimo aggiornamento**: 2026-07-21
+**Versione**: 1.10.0 (Security fix)
 
 ---
 
@@ -302,6 +302,24 @@
 | 6 | **Font axes/title ingranditi**: title 26-28pt, axis ticks 16-20pt, suggestedMax con margine per evitare clipping delle etichette. | `routes/reports.js` |
 
 **Test**: 48/48 Jest PASS. PDF di 3 lotti + 3 aziende generati e analizzati (Gemini): tutte le percentuali corrette, testo nitido, layout pulito.
+
+### Sessione 8 (2026-07-21): 🛡️ FIX IDOR massivo + tenantGuard middleware condiviso
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Nuovo middleware `tenantGuard.js`**: `getTenantOwnerId(req)`, `isSuperAdmin(req)` (solo `username='admin'` — NON `role==='admin'` come prima!), `assertLotAccess`, `assertRecordAccess`, factory `requireLotAccess({from,field})` e `requireRecordAccess(table)`. Whitelist tabelle per prevenire SQL injection. | `middleware/tenantGuard.js` (NEW) |
+| 2 | **FIX critico bypass `isSuperAdmin`**: la logica esistente in `lots.js` (poi copiata altrove) trattava qualsiasi `role='admin'` come super-admin. In Cropbook OGNI tenant-owner ha `role='admin'` → il check faceva bypass del tenant guard per tutti i tenant-admin. Ora solo `username='admin'` (piattaforma) può cross-tenant. | `middleware/tenantGuard.js` |
+| 3 | **FIX IDOR activities.js**: `POST` e `DELETE` ora protetti da `requireLotAccess`/`requireRecordAccess`. | `routes/activities.js` |
+| 4 | **FIX IDOR analyses.js**: `POST` e `DELETE` ora protetti. | `routes/analyses.js` |
+| 5 | **FIX IDOR costi.js**: **8 endpoint sanati** — `PUT /tariffe`, `POST /attivita`, `GET/POST/PUT/DELETE /personale`, `GET/POST/DELETE /mezzi`. Aggiunte permission `costi:read|create|update|delete`. Il POST `/personale` recupera ora la tariffa dal `lot.owner_id` (non da `req.user.id`) così un figlio usa correttamente la tariffa del padre. | `routes/costi.js` |
+| 6 | **Nuovi permessi RBAC**: `costi:*` per manager (tutti), operator (r/c/u), viewer (solo r). Prima `viewer` non aveva permessi espliciti sui costi e le route non li verificavano → mutation possibili anche dai viewer. | `middleware/rbac.js` |
+| 7 | **Test IDOR completo**: `__tests__/idor-tenant.test.js` con 16 scenari (cross-tenant DELETE/PUT/POST su activities/analyses/costi × 4 route + regression GET + RBAC viewer + legitimate owner). Tutti PASS. | `__tests__/idor-tenant.test.js` (NEW) |
+
+**Test verificati end-to-end**: 
+- 64/64 Jest locale (48 legacy + 16 nuovi IDOR)
+- 17/17 live pytest via testing_agent contro il preview URL
+- 0 issue critiche, 0 issue minori
+
+**Nota operativa**: Node backend NON ha hot-reload → dopo modifiche a `www/` serve `sudo supervisorctl restart cropbook`.
 
 ## Backlog / Next steps
 
