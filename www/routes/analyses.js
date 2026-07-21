@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { requirePermission } = require('../middleware/rbac');
+const { requireLotAccess, requireRecordAccess } = require('../middleware/tenantGuard');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -144,14 +145,14 @@ router.get('/:lotId', authenticateToken, requirePermission('analyses:read'), asy
  *         description: Errore del server
  */
 // POST /api/analyses - Nuova analisi
-router.post('/', authenticateToken, requirePermission('analyses:create'), async (req, res) => {
+router.post('/',
+    authenticateToken,
+    requirePermission('analyses:create'),
+    requireLotAccess({ from: 'body', field: 'lot_id' }),
+    async (req, res) => {
     try {
         const { lot_id, year, filename, originalName, fileUrl, notes, fileSize } = req.body;
-        
-        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lot_id]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
+        const lot = req.tenantLot;
         
         const result = await db.runAsync(
             `INSERT INTO analyses (lot_id, year, filename, original_name, file_url, notes, file_size, owner_id, owner_username, uploaded_by)
@@ -187,7 +188,11 @@ router.post('/', authenticateToken, requirePermission('analyses:create'), async 
  *         description: Errore del server
  */
 // DELETE /api/analyses/:id - Elimina analisi
-router.delete('/:id', authenticateToken, requirePermission('analyses:delete'), async (req, res) => {
+router.delete('/:id',
+    authenticateToken,
+    requirePermission('analyses:delete'),
+    requireRecordAccess('analyses'),
+    async (req, res) => {
     try {
         await db.runAsync('DELETE FROM analyses WHERE id = ?', [req.params.id]);
         res.json({ success: true });

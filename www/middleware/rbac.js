@@ -13,7 +13,8 @@ const ROLES = {
             'activities:read', 'activities:create', 'activities:update', 'activities:delete',
             'analyses:read', 'analyses:upload', 'analyses:create', 'analyses:delete',
             'users:read', 'users:create', 'users:update',
-            'economic:read', 'economic:create', 'economic:update', 'economic:delete'
+            'economic:read', 'economic:create', 'economic:update', 'economic:delete',
+            'costi:read', 'costi:create', 'costi:update', 'costi:delete'
         ]
     },
     operator: {
@@ -22,7 +23,8 @@ const ROLES = {
             'lots:read', 'lots:create', 'lots:update',
             'activities:read', 'activities:create', 'activities:update',
             'analyses:read', 'analyses:upload', 'analyses:create',
-            'economic:read', 'economic:create', 'economic:update'
+            'economic:read', 'economic:create', 'economic:update',
+            'costi:read', 'costi:create', 'costi:update'
         ]
     },
     viewer: {
@@ -31,7 +33,8 @@ const ROLES = {
             'lots:read',
             'activities:read',
             'analyses:read',
-            'economic:read'
+            'economic:read',
+            'costi:read'
         ]
     }
 };

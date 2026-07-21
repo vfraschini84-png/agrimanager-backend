@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../database');
 const { requirePermission } = require('../middleware/rbac');
+const { requireLotAccess, requireRecordAccess } = require('../middleware/tenantGuard');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -174,15 +175,14 @@ router.get('/:lotId', authenticateToken, requirePermission('activities:read'), a
  *         description: Errore del server
  */
 // POST /api/activities - Nuova attività
-router.post('/', authenticateToken, requirePermission('activities:create'), async (req, res) => {
+router.post('/',
+    authenticateToken,
+    requirePermission('activities:create'),
+    requireLotAccess({ from: 'body', field: 'lot_id' }),
+    async (req, res) => {
     try {
         const { lot_id, date, kg, notes } = req.body;
-        
-        // Ottieni l'owner dal lotto (ereditato)
-        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lot_id]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
+        const lot = req.tenantLot; // popolato da requireLotAccess (già verificato)
         
         const result = await db.runAsync(
             `INSERT INTO activities (lot_id, date, kg, notes, owner_id, owner_username, created_by)
@@ -220,13 +220,12 @@ router.post('/', authenticateToken, requirePermission('activities:create'), asyn
  *         description: Errore del server
  */
 // DELETE /api/activities/:id - Elimina attività
-router.delete('/:id', authenticateToken, requirePermission('activities:delete'), async (req, res) => {
+router.delete('/:id',
+    authenticateToken,
+    requirePermission('activities:delete'),
+    requireRecordAccess('activities'),
+    async (req, res) => {
     try {
-        const activity = await db.getAsync('SELECT * FROM activities WHERE id = ?', [req.params.id]);
-        if (!activity) {
-            return res.status(404).json({ error: 'Attività non trovata' });
-        }
-        
         await db.runAsync('DELETE FROM activities WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {

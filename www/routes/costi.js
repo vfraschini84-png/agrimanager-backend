@@ -1,5 +1,7 @@
 const express = require('express');
 const db = require('../database');
+const { requirePermission } = require('../middleware/rbac');
+const { requireLotAccess, requireRecordAccess, assertLotAccess } = require('../middleware/tenantGuard');
 const router = express.Router();
 require('dotenv').config();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -21,7 +23,7 @@ function authenticateToken(req, res, next) {
 // ==================== TARIFFE MANODOPERA ====================
 
 // GET /api/costi/tariffe/:stagione - Recupera tariffe per stagione
-router.get('/tariffe/:stagione', authenticateToken, async (req, res) => {
+router.get('/tariffe/:stagione', authenticateToken, requirePermission('costi:read'), async (req, res) => {
     try {
         let tariffa = await db.getAsync(
             'SELECT * FROM tariffe_manodopera WHERE stagione_agricola = ? AND owner_id = ?',
@@ -48,11 +50,12 @@ router.get('/tariffe/:stagione', authenticateToken, async (req, res) => {
     }
 });
 
-// PUT /api/costi/tariffe/:stagione - Aggiorna tariffe
-router.put('/tariffe/:stagione', authenticateToken, async (req, res) => {
+// PUT /api/costi/tariffe/:stagione - Aggiorna tariffe (solo owner_id === utente)
+router.put('/tariffe/:stagione', authenticateToken, requirePermission('costi:update'), async (req, res) => {
     try {
         const { costo_orario_standard, costo_orario_specializzato } = req.body;
         
+        // UPDATE ristretto all'owner_id dell'utente autenticato — no IDOR possibile
         await db.runAsync(
             `UPDATE tariffe_manodopera 
              SET costo_orario_standard = ?, costo_orario_specializzato = ?
@@ -69,7 +72,7 @@ router.put('/tariffe/:stagione', authenticateToken, async (req, res) => {
 // ==================== ATTIVITÀ PREDEFINITE ====================
 
 // GET /api/costi/attivita - Lista attività (globali + personali + admin)
-router.get('/attivita', authenticateToken, async (req, res) => {
+router.get('/attivita', authenticateToken, requirePermission('costi:read'), async (req, res) => {
     try {
         // Trova il parent_id dell'utente
         let parentId = req.user.id;
@@ -90,8 +93,8 @@ router.get('/attivita', authenticateToken, async (req, res) => {
     }
 });
 
-// POST /api/costi/attivita
-router.post('/attivita', authenticateToken, async (req, res) => {
+// POST /api/costi/attivita — attività personalizzate scoped per user (no lot_id, no IDOR)
+router.post('/attivita', authenticateToken, requirePermission('costi:create'), async (req, res) => {
     try {
         const { nome, categoria } = req.body;
         
@@ -120,24 +123,13 @@ router.post('/attivita', authenticateToken, async (req, res) => {
 // ==================== COSTI PERSONALE ====================
 
 // GET /api/costi/personale/:lotId/:stagione - Costi personale per lotto e stagione
-router.get('/personale/:lotId/:stagione', authenticateToken, async (req, res) => {
+router.get('/personale/:lotId/:stagione',
+    authenticateToken,
+    requirePermission('costi:read'),
+    requireLotAccess({ from: 'params', field: 'lotId' }),
+    async (req, res) => {
     try {
         const { lotId, stagione } = req.params;
-        
-        // ✅ Verifica che il lotto appartenga all'utente
-        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
-            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
-            const ownerId = user?.parent_id || req.user.id;
-            if (lot.owner_id !== ownerId) {
-                return res.status(403).json({ error: 'Accesso negato' });
-            }
-        }
-        
         const records = await db.allAsync(
             `SELECT * FROM costi_personale WHERE lot_id = ? AND stagione_agricola = ? ORDER BY data_attivita DESC`,
             [lotId, stagione]
@@ -150,15 +142,20 @@ router.get('/personale/:lotId/:stagione', authenticateToken, async (req, res) =>
 });
 
 // POST /api/costi/personale - Registra costo personale
-router.post('/personale', authenticateToken, async (req, res) => {
+router.post('/personale',
+    authenticateToken,
+    requirePermission('costi:create'),
+    requireLotAccess({ from: 'body', field: 'lot_id' }),
+    async (req, res) => {
     try {
         const { lot_id, stagione_agricola, data_attivita, numero_operatori, 
                 qualifica, ore_lavorate, attivita, note } = req.body;
+        const lot = req.tenantLot;
         
-        // Recupera tariffa oraria
+        // Recupera tariffa oraria del TENANT (non di req.user.id se figlio)
         const tariffa = await db.getAsync(
             'SELECT * FROM tariffe_manodopera WHERE stagione_agricola = ? AND owner_id = ?',
-            [stagione_agricola, req.user.id]
+            [stagione_agricola, lot.owner_id]
         );
         
         const costoOrario = qualifica === 'specializzato' 
@@ -166,8 +163,6 @@ router.post('/personale', authenticateToken, async (req, res) => {
             : (tariffa?.costo_orario_standard || 15.00);
         
         const costoTotale = numero_operatori * ore_lavorate * costoOrario;
-        
-        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lot_id]);
         
         const result = await db.runAsync(
             `INSERT INTO costi_personale 
@@ -187,7 +182,11 @@ router.post('/personale', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/costi/personale/:id - Elimina costo personale
-router.delete('/personale/:id', authenticateToken, async (req, res) => {
+router.delete('/personale/:id',
+    authenticateToken,
+    requirePermission('costi:delete'),
+    requireRecordAccess('costi_personale'),
+    async (req, res) => {
     try {
         await db.runAsync('DELETE FROM costi_personale WHERE id = ?', [req.params.id]);
         res.json({ success: true });
@@ -197,16 +196,18 @@ router.delete('/personale/:id', authenticateToken, async (req, res) => {
 });
 
 // PUT /api/costi/personale/:id - Modifica costo personale
-router.put('/personale/:id', authenticateToken, async (req, res) => {
+router.put('/personale/:id',
+    authenticateToken,
+    requirePermission('costi:update'),
+    requireRecordAccess('costi_personale'),
+    async (req, res) => {
     try {
         const { numero_operatori, qualifica, ore_lavorate, attivita, note } = req.body;
-        const record = await db.getAsync('SELECT * FROM costi_personale WHERE id = ?', [req.params.id]);
-        
-        if (!record) return res.status(404).json({ error: 'Record non trovato' });
+        const record = req.tenantRecord; // già verificato dal middleware
         
         const tariffa = await db.getAsync(
             'SELECT * FROM tariffe_manodopera WHERE stagione_agricola = ? AND owner_id = ?',
-            [record.stagione_agricola, req.user.id]
+            [record.stagione_agricola, record.owner_id]
         );
         
         const costoOrario = qualifica === 'specializzato' 
@@ -239,24 +240,13 @@ router.put('/personale/:id', authenticateToken, async (req, res) => {
 // ==================== COSTI MEZZI TECNICI ====================
 
 // GET /api/costi/mezzi/:lotId/:stagione
-router.get('/mezzi/:lotId/:stagione', authenticateToken, async (req, res) => {
+router.get('/mezzi/:lotId/:stagione',
+    authenticateToken,
+    requirePermission('costi:read'),
+    requireLotAccess({ from: 'params', field: 'lotId' }),
+    async (req, res) => {
     try {
         const { lotId, stagione } = req.params;
-        
-        // ✅ Verifica che il lotto appartenga all'utente
-        const lot = await db.getAsync('SELECT owner_id FROM lots WHERE id = ?', [lotId]);
-        if (!lot) {
-            return res.status(404).json({ error: 'Lotto non trovato' });
-        }
-        
-        if (req.user.username !== 'admin' && req.user.role !== 'admin') {
-            const user = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [req.user.id]);
-            const ownerId = user?.parent_id || req.user.id;
-            if (lot.owner_id !== ownerId) {
-                return res.status(403).json({ error: 'Accesso negato' });
-            }
-        }
-        
         const records = await db.allAsync(
             `SELECT * FROM costi_mezzi_tecnici WHERE lot_id = ? AND stagione_agricola = ? ORDER BY data_registrazione DESC`,
             [lotId, stagione]
@@ -269,10 +259,14 @@ router.get('/mezzi/:lotId/:stagione', authenticateToken, async (req, res) => {
 });
 
 // POST /api/costi/mezzi
-router.post('/mezzi', authenticateToken, async (req, res) => {
+router.post('/mezzi',
+    authenticateToken,
+    requirePermission('costi:create'),
+    requireLotAccess({ from: 'body', field: 'lot_id' }),
+    async (req, res) => {
     try {
         const { lot_id, stagione_agricola, data_registrazione, descrizione, importo, categoria } = req.body;
-        const lot = await db.getAsync('SELECT owner_id, owner_username FROM lots WHERE id = ?', [lot_id]);
+        const lot = req.tenantLot;
         
         const result = await db.runAsync(
             `INSERT INTO costi_mezzi_tecnici 
@@ -290,7 +284,11 @@ router.post('/mezzi', authenticateToken, async (req, res) => {
 });
 
 // DELETE /api/costi/mezzi/:id
-router.delete('/mezzi/:id', authenticateToken, async (req, res) => {
+router.delete('/mezzi/:id',
+    authenticateToken,
+    requirePermission('costi:delete'),
+    requireRecordAccess('costi_mezzi_tecnici'),
+    async (req, res) => {
     try {
         await db.runAsync('DELETE FROM costi_mezzi_tecnici WHERE id = ?', [req.params.id]);
         res.json({ success: true });

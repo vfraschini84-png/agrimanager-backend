@@ -1,0 +1,29 @@
+{
+  "summary": "IDOR tenant-guard fix verified end-to-end. All 16 Jest IDOR tests + 48 legacy Jest tests PASS locally (64/64), AND 17 live pytest scenarios PASS against the public preview URL, covering: cross-tenant DELETE/PUT/POST for activities, analyses, costi_personale, costi_mezzi; GET read-isolation for costi/personale and costi/mezzi; RBAC (viewer cannot delete/create); legitimate owner still allowed; and super-admin (username=admin) bypass still works. IMPORTANT: on first live run 12/17 tests FAILED because the cropbook Node process (PID 621, started 07:13:05) was serving stale code — tenantGuard.js was modified at 07:16:30 after server start. Node.js has no hot reload; a `supervisorctl restart cropbook` was required. After restart, 17/17 live IDOR tests pass.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": { "ui_bugs": [], "integration_issues": [], "design_issues": [] },
+  "test_report_links": [
+    "/app/backend/tests/test_idor_live.py",
+    "/app/www/__tests__/idor-tenant.test.js",
+    "/app/test_reports/pytest/idor_live.xml"
+  ],
+  "action_items": [
+    "OPERATIONAL: after every backend code change under /app/www/, run `sudo supervisorctl restart cropbook`. Node.js is NOT hot-reloaded by supervisor here (unlike the FastAPI backend). The main agent's local Jest tests pass with fresh code, but the deployed preview keeps serving the last-loaded module until restart. This should be documented in the runbook or the supervisor config should be updated to use nodemon.",
+    "OPTIONAL: consider adding a `dev` command with nodemon in supervisor to auto-restart on file changes, matching the FastAPI hot-reload behaviour."
+  ],
+  "critical_code_review_comments": [
+    "tenantGuard.js correctly uses getTenantOwnerId (parent_id fallback), a whitelist of allowed tables (prevents SQL injection via table name), and isSuperAdmin gated on username==='admin' (NOT role==='admin') — correct hardening.",
+    "costi.js POST /personale now sources tariffa from lot.owner_id, so sub-users legitimately inherit parent's tariffa — verified via regression test test_B_can_put_own_costo_personale.",
+    "RBAC upgrade: viewer role no longer has costi:delete/costi:create — verified with live viewer sub-user token (3 mutation attempts all → 403)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_idor_live.py (NEW — 17 live IDOR tests)"
+  ],
+  "success_rate": { "backend": "100% (17/17 live + 64/64 Jest)", "frontend": "N/A (backend-only scope)" },
+  "test_credentials": "Super-admin: admin / 96a0761f3943. Tenants created dynamically per run (live_a_<ts>, live_b_<ts>, live_view_<ts>), password: password123.",
+  "seed_data_creation": "Each test run creates 2 fresh tenant admin users, 1 viewer sub-user under Tenant B, 2 lots (one per tenant), plus B's activity/analysis/costo_personale/costo_mezzi. No cleanup performed by the live pytest suite (owner_id-tagged records remain in SQLite).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The IDOR fix is fully verified. Any future test that hits the preview URL after code edits to /app/www MUST first `sudo supervisorctl restart cropbook` — otherwise you will chase phantom failures. Live IDOR regression suite is at /app/backend/tests/test_idor_live.py — reuse it for any future auth/tenant/rbac work on Cropbook.",
+  "rca of the issue": "First live-URL run had 12 failing IDOR assertions. RCA: `stat` showed tenantGuard.js mtime=07:16:30 but cropbook process (pid 621) started at 07:13:05 — the running Node server was executing stale middleware from before the guard was added. Reproduction: modify any file in /app/www and immediately hit the preview URL — behaviour reflects pre-edit code. Mitigation: `sudo supervisorctl restart cropbook`; after that all 17 live tests passed. Long-term mitigation: switch cropbook supervisor command to `nodemon server.js` or add a filewatcher."
+}
