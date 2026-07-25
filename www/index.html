@@ -26,24 +26,32 @@
     <div class="container mobile-optimized">
         <!-- Sezione Autenticazione -->
         <div id="auth-section" class="auth-section active">
-            <h2 class="section-title"><i class="fas fa-user-shield"></i> Accesso Cropbook</h2>
+            <h2 class="section-title"><i class="fas fa-user-shield"></i> <span data-i18n="auth.login_title">Accesso Cropbook</span></h2>
+            
+            <!-- Language selector (visible on auth) -->
+            <p class="auth-lang-hint" data-i18n="auth.language_hint">Scegli la lingua:</p>
+            <div class="auth-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua">
+                <button type="button" data-lang-btn="it" data-testid="auth-lang-it" onclick="setCurrentLang('it')" aria-pressed="true">🇮🇹 Italiano</button>
+                <button type="button" data-lang-btn="en" data-testid="auth-lang-en" onclick="setCurrentLang('en')" aria-pressed="false">🇬🇧 English</button>
+                <button type="button" data-lang-btn="es" data-testid="auth-lang-es" onclick="setCurrentLang('es')" aria-pressed="false">🇪🇸 Español</button>
+            </div>
             
             <div class="auth-tabs">
-    <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
-    <button class="auth-tab" onclick="switchAuthTab('register')" id="register-tab">Registrazione</button>
+    <button class="auth-tab active" onclick="switchAuthTab('login')" data-i18n="auth.signin_btn">Login</button>
+    <button class="auth-tab" onclick="switchAuthTab('register')" id="register-tab" data-i18n="auth.signup_btn">Registrazione</button>
 </div>
             
             <!-- Form Login -->
 <div id="login-form" class="auth-form active">
     <div class="form-group">
-        <label for="login-username">Username</label>
-        <input type="text" id="login-username" placeholder="Inserisci il tuo username">
+        <label for="login-username" data-i18n="auth.username">Username</label>
+        <input type="text" id="login-username" data-i18n-placeholder="auth.username" placeholder="Inserisci il tuo username">
     </div>
     
     <div class="form-group">
-    <label for="login-password">Password</label>
+    <label for="login-password" data-i18n="auth.password">Password</label>
     <div style="position: relative; display: flex; align-items: center;">
-        <input type="password" id="login-password" placeholder="Inserisci la tua password" style="flex: 1; padding-right: 45px;">
+        <input type="password" id="login-password" data-i18n-placeholder="auth.password" placeholder="Inserisci la tua password" style="flex: 1; padding-right: 45px;">
         <button type="button" onclick="togglePasswordVisibility('login-password', this)" 
                 style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #666; padding: 8px;">
             <i class="fas fa-eye"></i>
@@ -54,17 +62,17 @@
     <!-- RIGA CON PULSANTE ACCEDI E CHECKBOX RICORDAMI AFFIANCATI -->
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
         <button class="btn btn-primary" onclick="login()" style="flex: 2;">
-            <i class="fas fa-sign-in-alt"></i> Accedi
+            <i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.signin_btn">Accedi</span>
         </button>
         
         <div style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="remember-me" style="width: 18px; height: 18px; margin: 0;">
-            <label for="remember-me" style="margin: 0; cursor: pointer; white-space: nowrap;">Ricordami</label>
+            <label for="remember-me" data-i18n="auth.remember_me" style="margin: 0; cursor: pointer; white-space: nowrap;">Ricordami</label>
         </div>
     </div>
  
     <div style="text-align: center; margin-top: 15px;">
-    <a href="#" onclick="showForgotPasswordForm()" style="color: #4CAF50; text-decoration: none; font-size: 14px;">
+    <a href="#" onclick="showForgotPasswordForm()" data-i18n="auth.forgot_password" style="color: #4CAF50; text-decoration: none; font-size: 14px;">
         Password dimenticata?
     </a>
 </div>
@@ -72,17 +80,17 @@
             
 <!-- Form Password Dimenticata -->
 <div id="forgotPasswordSection" style="display: none; max-width: 400px; margin: 50px auto; padding: 20px;">
-    <h2>Recupera Password</h2>
-    <p style="color: #666; margin-bottom: 20px;">
+    <h2 data-i18n="auth.forgot_password">Recupera Password</h2>
+    <p data-i18n="auth.reset_intro" style="color: #666; margin-bottom: 20px;">
         Inserisci la tua email. Riceverai un link per reimpostare la password.
     </p>
     
     <div class="form-group">
-        <label for="forgotEmail">Email</label>
+        <label for="forgotEmail" data-i18n="auth.email">Email</label>
         <input type="email" id="forgotEmail" class="form-control" placeholder="es. mario.rossi@email.com">
     </div>
     
-    <button onclick="requestPasswordReset()" class="btn btn-primary" style="width: 100%;">
+    <button onclick="requestPasswordReset()" class="btn btn-primary" style="width: 100%;" data-i18n="auth.reset_link_btn">
         Invia Link di Reset
     </button>
     
@@ -218,27 +226,43 @@
         <header id="app-header" style="display: none;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <button id="header-home-btn" onclick="goHome()" title="Torna alla home"
+            <button id="header-home-btn" onclick="goHome()" data-i18n-title="common.back"
                     style="background: rgba(255,255,255,0.18); color: white; border: 2px solid rgba(255,255,255,0.4); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: none; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s;">
                 <i class="fas fa-home"></i>
             </button>
             <div>
                 <h1 style="margin: 0;">CROPBOOK</h1>
-                <p class="app-description" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
+                <p class="app-description" data-i18n="header.tagline" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
             </div>
         </div>
-        <div class="user-info" style="flex-wrap: wrap; gap: 8px;">
+        <div class="user-info" style="flex-wrap: wrap; gap: 8px; align-items: center;">
+    <!-- Language switcher (compact) -->
+    <div class="header-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua"
+         style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:20px;">
+        <button type="button" data-lang-btn="it" data-testid="lang-btn-it"
+                onclick="setCurrentLang('it')"
+                title="Italiano" aria-pressed="true"
+                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇮🇹 IT</button>
+        <button type="button" data-lang-btn="en" data-testid="lang-btn-en"
+                onclick="setCurrentLang('en')"
+                title="English" aria-pressed="false"
+                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇬🇧 EN</button>
+        <button type="button" data-lang-btn="es" data-testid="lang-btn-es"
+                onclick="setCurrentLang('es')"
+                title="Español" aria-pressed="false"
+                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇪🇸 ES</button>
+    </div>
     <span id="current-user-display">Utente</span>
     <span class="user-role-badge" id="current-user-role">Ruolo</span>
     <button id="btn-gestione-utenti" onclick="showSection('user-management-section')" 
         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: none; transition: all 0.3s ease;"
         onmouseover="this.style.background='rgba(255,255,255,0.4)'" 
         onmouseout="this.style.background='rgba(255,255,255,0.2)'"
-        title="Gestione Utenti e Permessi">
-    <i class="fas fa-users-cog"></i> Gestione Utenti
+        data-i18n-title="header.user_management" title="Gestione Utenti e Permessi">
+    <i class="fas fa-users-cog"></i> <span data-i18n="header.user_management">Gestione Utenti</span>
 </button>
     <button class="logout-btn" onclick="logout()">
-        <i class="fas fa-sign-out-alt"></i> Logout
+        <i class="fas fa-sign-out-alt"></i> <span data-i18n="header.logout">Logout</span>
     </button>
 </div>
     </div>
@@ -249,32 +273,32 @@
                 <div class="menu-icon">
                     <i class="fas fa-clipboard-list"></i>
                 </div>
-                <h3 class="menu-title">Registrazione Lotti</h3>
-                <p class="menu-desc">Aggiungi nuovi lotti con dati completi e coordinate GPS</p>
+                <h3 class="menu-title" data-i18n="menu.registrazione">Registrazione Lotti</h3>
+                <p class="menu-desc" data-i18n="menu.registrazione_desc">Aggiungi nuovi lotti con dati completi e coordinate GPS</p>
             </div>
             
             <div class="menu-item" id="lista" onclick="showSection('lista-section')">
                 <div class="menu-icon">
                     <i class="fas fa-list"></i>
                 </div>
-                <h3 class="menu-title">Lista Lotti</h3>
-                <p class="menu-desc">Visualizza tutti i lotti registrati e avvia la navigazione</p>
+                <h3 class="menu-title" data-i18n="menu.lista">Lista Lotti</h3>
+                <p class="menu-desc" data-i18n="menu.lista_desc">Visualizza tutti i lotti registrati e avvia la navigazione</p>
             </div>
             
             <div class="menu-item" id="dettagli" onclick="showSection('dettagli-section')">
                 <div class="menu-icon">
                     <i class="fas fa-info-circle"></i>
                 </div>
-                <h3 class="menu-title">Dettagli Lotti</h3>
-                <p class="menu-desc">Completa le informazioni con i dati di raccolta</p>
+                <h3 class="menu-title" data-i18n="menu.dettagli">Dettagli Lotti</h3>
+                <p class="menu-desc" data-i18n="menu.dettagli_desc">Completa le informazioni con i dati di raccolta</p>
             </div>
             
             <div class="menu-item" id="economia" onclick="showSection('gestione-economica-section')">
                 <div class="menu-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <h3 class="menu-title">Gestione Ricavi</h3>
-                <p class="menu-desc">Prezzi, vendite e ricavi per stagione agricola</p>
+                <h3 class="menu-title" data-i18n="menu.economica">Gestione Ricavi</h3>
+                <p class="menu-desc" data-i18n="menu.economica_desc">Prezzi, vendite e ricavi per stagione agricola</p>
             </div>
                        
 <!-- Menu Gestione Costi -->
@@ -282,8 +306,8 @@
     <div class="menu-icon">
         <i class="fas fa-calculator"></i>
     </div>
-    <h3 class="menu-title">Gestione Costi</h3>
-    <p class="menu-desc">Personale, mezzi tecnici e ammortamenti</p>
+    <h3 class="menu-title" data-i18n="menu.costi">Gestione Costi</h3>
+    <p class="menu-desc" data-i18n="menu.costi_desc">Personale, mezzi tecnici e ammortamenti</p>
 </div>
 
 <!-- Menu Bilancio & Report -->
@@ -291,14 +315,14 @@
     <div class="menu-icon">
         <i class="fas fa-chart-pie"></i>
     </div>
-    <h3 class="menu-title">Bilancio & Report</h3>
-    <p class="menu-desc">Grafici, riepiloghi ed esportazione dati</p>
+    <h3 class="menu-title" data-i18n="menu.bilancio">Bilancio & Report</h3>
+    <p class="menu-desc" data-i18n="menu.bilancio_desc">Grafici, riepiloghi ed esportazione dati</p>
 </div>
        </div>
 
         <!-- Sezione Registrazione -->
         <div id="registrazione-section" class="section">
-            <h2 class="section-title"><i class="fas fa-clipboard-list"></i> Registrazione Nuovo Lotto</h2>
+            <h2 class="section-title"><i class="fas fa-clipboard-list"></i> <span data-i18n="section.registrazione_title">Registrazione Nuovo Lotto</span></h2>
             
             <!-- ✅ Selettore Azienda: esistente da dropdown OR nuova inline -->
             <div class="form-group">
@@ -428,7 +452,7 @@
         <!-- ⚠️ Dashboard Aziende unificata dentro lista-section (sotto) -->
 <!-- Sezione Lista Lotti -->
 <div id="lista-section" class="section">
-    <h2 class="section-title"><i class="fas fa-list"></i> Lista Lotti Registrati</h2>
+    <h2 class="section-title"><i class="fas fa-list"></i> <span data-i18n="section.lista_title">Lista Lotti Registrati</span></h2>
     
     <!-- ✅ Toggle vista Aziende / Tutti i lotti -->
     <div class="vista-toggle" style="display:flex; gap:6px; margin-bottom: 14px; flex-wrap: wrap;">
@@ -498,7 +522,7 @@
         <!-- Sezione Dettagli Lotto -->
         <div id="dettagli-section" class="section">
             <div class="section-nav-bar">
-                <h2 class="section-title"><i class="fas fa-info-circle"></i> Dettagli Lotto</h2>
+                <h2 class="section-title"><i class="fas fa-info-circle"></i> <span data-i18n="section.dettagli_title">Dettagli Lotto</span></h2>
                 <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
                     <button type="button" class="section-nav-btn" data-target="dettagli-section" data-testid="nav-dettagli-btn"
                             onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
@@ -527,17 +551,17 @@
                 <div class="cascade-selettori" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                     <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
                         <label for="cascade-az-dettagli" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
-                            <i class="fas fa-building" style="color:#4CAF50;"></i> Azienda:
+                            <i class="fas fa-building" style="color:#4CAF50;"></i> <span data-i18n="cascade.company">Azienda:</span>
                         </label>
                         <select id="cascade-az-dettagli" data-testid="cascade-az-dettagli"
                                 onchange="onCambioAziendaCascade('dettagli')"
                                 style="padding:7px 10px;border:1.5px solid #4CAF50;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
-                            <option value="">— Tutte —</option>
+                            <option value="" data-i18n="cascade.all">— Tutte —</option>
                         </select>
                     </div>
                     <div class="dropdown">
                         <button class="btn btn-secondary dropdown-toggle" type="button" id="lotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i class="fas fa-list"></i> Seleziona Lotto
+                            <i class="fas fa-list"></i> <span data-i18n="cascade.select_lot">Seleziona Lotto</span>
                         </button>
                         <div class="dropdown-menu" aria-labelledby="lotDropdown" id="lot-dropdown-menu">
                             <!-- I lotti verranno aggiunti qui via JavaScript -->
@@ -705,7 +729,7 @@
         <!-- Sezione Gestione Economica Lotti -->
         <div id="gestione-economica-section" class="section" style="display: none;">
             <div class="section-nav-bar">
-                <h2 class="section-title"><i class="fas fa-chart-line"></i> Gestione Economica Lotti</h2>
+                <h2 class="section-title"><i class="fas fa-chart-line"></i> <span data-i18n="section.economica_title">Gestione Economica Lotti</span></h2>
                 <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
                     <button type="button" class="section-nav-btn" data-target="dettagli-section"
                             onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
@@ -722,17 +746,17 @@
             <div style="display: flex; justify-content: flex-end; margin-bottom: 15px; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
                     <label for="cascade-az-economica" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
-                        <i class="fas fa-building" style="color:#9C27B0;"></i> Azienda:
+                        <i class="fas fa-building" style="color:#9C27B0;"></i> <span data-i18n="cascade.company">Azienda:</span>
                     </label>
                     <select id="cascade-az-economica" data-testid="cascade-az-economica"
                             onchange="onCambioAziendaCascade('economica')"
                             style="padding:7px 10px;border:1.5px solid #9C27B0;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
-                        <option value="">— Tutte —</option>
+                        <option value="" data-i18n="cascade.all">— Tutte —</option>
                     </select>
                 </div>
                 <div class="dropdown">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="economicLotDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fas fa-list"></i> Seleziona Lotto
+                        <i class="fas fa-list"></i> <span data-i18n="cascade.select_lot">Seleziona Lotto</span>
                     </button>
                     <div class="dropdown-menu" aria-labelledby="economicLotDropdown" id="economic-lot-dropdown-menu">
                         <!-- I lotti verranno aggiunti qui via JavaScript -->
@@ -878,7 +902,7 @@
 <!-- Sezione Gestione Costi del Lotto -->
 <div id="gestione-costi-section" class="section" style="display: none;">
     <div class="section-nav-bar">
-        <h2 class="section-title"><i class="fas fa-calculator"></i> Gestione Costi del Lotto</h2>
+        <h2 class="section-title"><i class="fas fa-calculator"></i> <span data-i18n="section.costi_title">Gestione Costi del Lotto</span></h2>
         <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
             <button type="button" class="section-nav-btn" data-target="dettagli-section"
                     onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
@@ -898,17 +922,17 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
                 <label for="cascade-az-costi" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
-                    <i class="fas fa-building" style="color:#FF5722;"></i> Azienda:
+                    <i class="fas fa-building" style="color:#FF5722;"></i> <span data-i18n="cascade.company">Azienda:</span>
                 </label>
                 <select id="cascade-az-costi" data-testid="cascade-az-costi"
                         onchange="onCambioAziendaCascade('costi')"
                         style="padding:7px 10px;border:1.5px solid #FF5722;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
-                    <option value="">— Tutte —</option>
+                    <option value="" data-i18n="cascade.all">— Tutte —</option>
                 </select>
             </div>
             <div class="dropdown">
                 <button class="btn btn-secondary dropdown-toggle" type="button" id="costiLotDropdown" data-toggle="dropdown">
-                    <i class="fas fa-list"></i> Seleziona Lotto
+                    <i class="fas fa-list"></i> <span data-i18n="cascade.select_lot">Seleziona Lotto</span>
                 </button>
                 <div class="dropdown-menu" id="costi-lot-dropdown-menu"></div>
             </div>
@@ -1287,7 +1311,7 @@
 <!-- Sezione Bilancio & Report -->
 <div id="bilancio-section" class="section" style="display: none;">
     <div class="section-nav-bar">
-        <h2 class="section-title"><i class="fas fa-chart-pie"></i> Bilancio & Report</h2>
+        <h2 class="section-title"><i class="fas fa-chart-pie"></i> <span data-i18n="section.bilancio_title">Bilancio & Report</span></h2>
         <div class="section-nav-buttons" role="navigation" aria-label="Naviga tra sezioni lotto">
             <button type="button" class="section-nav-btn" data-target="dettagli-section"
                     onclick="navigateToSection('dettagli-section')" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
@@ -1307,14 +1331,14 @@
         <button type="button" id="bilancio-mode-azienda-btn" data-testid="bilancio-mode-azienda-btn"
                 onclick="setBilancioMode('azienda')"
                 class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:#00BCD4;color:white;border-radius:8px;font-weight:700;cursor:pointer;">
-            <i class="fas fa-building"></i> Vista Aziende
+            <i class="fas fa-building"></i> <span data-i18n="bilancio.mode_azienda">Vista Aziende</span>
         </button>
         <button type="button" id="bilancio-mode-lotto-btn" data-testid="bilancio-mode-lotto-btn"
                 onclick="setBilancioMode('lotto')"
                 class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:white;color:#00BCD4;border-radius:8px;font-weight:700;cursor:pointer;">
-            <i class="fas fa-seedling"></i> Vista Singolo Lotto
+            <i class="fas fa-seedling"></i> <span data-i18n="bilancio.mode_lotto">Vista Singolo Lotto</span>
         </button>
-        <span id="bilancio-mode-hint" style="color:#666;font-size:0.85rem;font-style:italic;flex:1;min-width:200px;text-align:right;">
+        <span id="bilancio-mode-hint" data-i18n="bilancio.hint_azienda" style="color:#666;font-size:0.85rem;font-style:italic;flex:1;min-width:200px;text-align:right;">
             Scegli un'azienda per vedere il bilancio consolidato di tutti i suoi lotti
         </span>
     </div>
@@ -1329,26 +1353,26 @@
             <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
                 <button type="button" onclick="chiudiBilancioAziendaDetail()" data-testid="bilancio-azienda-back-btn"
                         class="btn btn-secondary" style="padding:8px 14px;">
-                    <i class="fas fa-arrow-left"></i> Torna alle Aziende
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="bilancio.back_to_companies">Torna alle Aziende</span>
                 </button>
                 <h3 id="bilancio-azienda-detail-title" style="margin:0;color:#2E7D32;flex:1;min-width:200px;"></h3>
                 <button type="button" id="bilancio-azienda-pdf-btn" data-testid="bilancio-azienda-pdf-btn"
                         onclick="esportaBilancioAziendaPDF()" class="btn btn-primary" style="background:#d32f2f;padding:10px 16px;">
-                    <i class="fas fa-file-pdf"></i> PDF Bilancio Azienda
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="bilancio.pdf_company">PDF Bilancio Azienda</span>
                 </button>
             </div>
             
             <!-- Filtro stagione per drill-down azienda -->
             <div style="display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
-                <label for="bilancio-azienda-stagione" style="margin:0;font-weight:600;color:#555;font-size:0.9rem;">
+                <label for="bilancio-azienda-stagione" data-i18n="bilancio.season_ref" style="margin:0;font-weight:600;color:#555;font-size:0.9rem;">
                     <i class="fas fa-calendar-alt" style="color:#00BCD4;"></i> Stagione di riferimento:
                 </label>
                 <select id="bilancio-azienda-stagione" data-testid="bilancio-azienda-stagione"
                         onchange="onCambioStagioneBilancioAzienda()"
                         style="padding:8px 12px;border:2px solid #00BCD4;border-radius:8px;font-weight:600;cursor:pointer;background:white;min-width:160px;">
-                    <option value="">— Tutte le stagioni —</option>
+                    <option value="" data-i18n="bilancio.all_seasons">— Tutte le stagioni —</option>
                 </select>
-                <span style="color:#888;font-size:0.82rem;font-style:italic;">Il filtro si applica a KPI, tabella e PDF.</span>
+                <span data-i18n="bilancio.filter_hint" style="color:#888;font-size:0.82rem;font-style:italic;">Il filtro si applica a KPI, tabella e PDF.</span>
             </div>
             
             <!-- KPI aggregati azienda -->
@@ -1369,17 +1393,17 @@
     <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center;">
         <div class="cascade-azienda-wrapper" style="display:inline-flex;align-items:center;gap:6px;">
             <label for="cascade-az-bilancio" style="margin:0;font-size:0.85rem;color:#555;white-space:nowrap;">
-                <i class="fas fa-building" style="color:#00BCD4;"></i> Azienda:
+                <i class="fas fa-building" style="color:#00BCD4;"></i> <span data-i18n="cascade.company">Azienda:</span>
             </label>
             <select id="cascade-az-bilancio" data-testid="cascade-az-bilancio"
                     onchange="onCambioAziendaCascade('bilancio')"
                     style="padding:7px 10px;border:1.5px solid #00BCD4;border-radius:8px;font-size:0.88rem;background:white;min-width:140px;">
-                <option value="">— Tutte —</option>
+                <option value="" data-i18n="cascade.all">— Tutte —</option>
             </select>
         </div>
         <div class="dropdown">
             <button class="btn btn-secondary dropdown-toggle" type="button" id="bilancioLotDropdown">
-                <i class="fas fa-list"></i> Seleziona Lotto
+                <i class="fas fa-list"></i> <span data-i18n="cascade.select_lot">Seleziona Lotto</span>
             </button>
             <div class="dropdown-menu" id="bilancio-lot-dropdown-menu"></div>
         </div>
@@ -1460,6 +1484,7 @@
         </footer>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="js/cropbook.js"></script>
 <div class="safe-area-bottom"></div>
 

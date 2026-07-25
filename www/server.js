@@ -200,6 +200,7 @@ mountRoute('/api/economic', './routes/economic');
 mountRoute('/api/costi', './routes/costi');
 mountRoute('/api/reports', './routes/reports');
 mountRoute('/api/admin', './routes/admin');
+mountRoute('/api/users', './routes/users');
 
 // ==================== 404 ====================
 app.use((req, res) => {

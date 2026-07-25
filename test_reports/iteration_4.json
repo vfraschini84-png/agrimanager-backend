@@ -1,0 +1,43 @@
+{
+  "summary": "Phase 1 P0 i18n (IT/EN/ES) verified end-to-end against public preview URL. Backend: 8/8 pytest scenarios PASS on new /api/users/me/language + /api/users/language routes (auth-guard, whitelist ['it','en','es'], 400 on invalid, persistence). Regression: 64/64 Jest tests still green. Frontend: auth-page language pills switch all data-i18n content live (IT/EN/ES titles + Ricordami/Remember me/Recuérdame + Password dimenticata/Forgot password?/¿Olvidaste tu contraseña? all confirmed). localStorage persists selection across reload. Post-login header switcher [data-testid=lang-btn-it|en|es] shows and applies .lang-btn-active correctly. All 6 menu cards (registrazione/lista/dettagli/economica/costi/bilancio) render exact expected strings in EN and ES. Bilancio toggle (bilancio.mode_azienda) switches Vista Aziende → Company View → Vista Empresas across all 3 languages. Section title (section.bilancio_title) also switches. CRITICAL FINDING VERIFIED: after logging in with localStorage='en', server-saved language 'it' correctly overrides and menu renders in Italian — server-side load path works.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Bilancio dynamic cards / drilldown re-render on language change",
+        "issue": "Dynamically-injected content that uses inline t() at render time (e.g. cropbook.js lines 8855/8959-8971: 'View Consolidated Balance →' link on company cards, and the four KPI headers Ricavi/Costi/Bilancio/N° Lotti) is NOT re-translated when the header language button is clicked AFTER the section is already rendered. Static data-i18n elements re-translate correctly, but these template-literal strings freeze in the language active at first render. Reproduction: open Bilancio in EN, then click IT header button — section title becomes Italian but the company cards still show 'View Consolidated Balance →' in English (see screenshot). KPI labels have same behaviour if user changes lang after opening drilldown.",
+        "affected_selectors": [".menu-card a inside Bilancio company grid", "[data-i18n=bilancio.kpi_*] rendered via innerHTML/template"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_i18n_language.py",
+    "/app/test_reports/pytest/i18n_lang.xml",
+    "/app/www/__tests__ (64/64 Jest still green)"
+  ],
+  "action_items": [
+    "MINOR: fire a re-render of Bilancio dynamic cards + drilldown when 'cropbook:lang-changed' CustomEvent is dispatched by i18n.js. Easiest fix: in cropbook.js, add document.addEventListener('cropbook:lang-changed', () => { if (currentSection === 'bilancio') renderBilancio(); }); (or similar for the currently visible section). Applies to any section that uses t() inside template literals — Bilancio is the confirmed one; sanity-check Registrazione/Lista/Costi drilldowns too.",
+    "OPERATIONAL (reminder from iteration_3): after any /app/www/ backend edit, run 'sudo supervisorctl restart cropbook' — Node is not hot-reloaded."
+  ],
+  "critical_code_review_comments": [
+    "routes/users.js: correct JWT guard, strict whitelist SUPPORTED_LANGS=['it','en','es'], parameterised SQL, 400 on invalid, 500 on unexpected errors — solid.",
+    "database.js: idempotent ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'it' guarded by column existence check — safe on re-run.",
+    "i18n.js: sound design (fallback chain lang→it→key literal, best-effort persistLangToServer, CustomEvent 'cropbook:lang-changed' dispatched). BUT the CustomEvent is currently a dead-letter — no listener re-renders dynamic sections. Wire it up in cropbook.js for full coverage.",
+    "index.html: data-testid=auth-lang-it/en/es and data-testid=lang-btn-it/en/es both present and correctly wired. All required data-i18n keys on menu cards + section titles verified against dictionary."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_i18n_language.py (NEW — 8 pytest cases for GET/PUT /users/(me/)language)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 new i18n pytest + 64/64 Jest regression)",
+    "frontend": "~95% — all specified assertions pass; single minor gap is dynamic re-render on lang change"
+  },
+  "test_credentials": "admin / 96a0761f3943 (super-admin). Base URL: https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com/api",
+  "seed_data_creation": "None. Admin's users.language column is toggled during pytest (en → es → it) and restored to 'it' at end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend i18n endpoints are covered by /app/backend/tests/test_i18n_language.py — reuse for regression. If main agent implements the 'cropbook:lang-changed' listener to re-render Bilancio, re-run the Playwright flow: open Bilancio in EN, then click IT header, expect company card link to become 'Vedi Bilancio Consolidato →'. Also spot-check Registrazione + Costi + Dettagli sections for the same class of dynamic-render bug.",
+  "rca of the issue": "Dynamic content in cropbook.js uses `${t('key')}` inside template literals — t() is invoked once at render time and the resulting string is baked into innerHTML. When setCurrentLang() fires document.dispatchEvent(new CustomEvent('cropbook:lang-changed', ...)), no listener re-runs the section's render function, so previously-rendered strings remain stale. Static [data-i18n] elements are re-processed by applyTranslations() which is why section titles switch but inline-rendered strings don't. Fix: listen for the event and call the current section's renderer, or convert those strings to spans with [data-i18n] where feasible."
+}

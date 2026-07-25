@@ -232,11 +232,20 @@ const emptyPermissions = {
         
         currentUser = response.user;
         showAppInterface();
-        showNotification(`Benvenuto ${response.user.username}!`, 'success');
+        
+        // ✅ Carica la lingua preferita salvata dall'utente (best-effort)
+        try {
+            const langResp = await apiCall('/users/me/language');
+            if (langResp && langResp.language && typeof setCurrentLang === 'function') {
+                setCurrentLang(langResp.language);
+            }
+        } catch (_) { /* ignora, resta con la lingua locale */ }
+        
+        showNotification(`${t('notify.login_success')} — ${response.user.username}`, 'success');
        hideSpinner(); 
     } catch (error) {
         hideSpinner();
-        showNotification(error.message || 'Credenziali non valide', 'error');
+        showNotification(error.message || t('notify.login_failed'), 'error');
     }
 }
 
@@ -5324,7 +5333,7 @@ function closeAllDropdowns() {
     dropdownMenu.innerHTML = '';
     
     if (lotsFiltrati.length === 0) {
-        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">' + t('cascade.no_lots') + '</div>';
         return;
     }
     
@@ -5385,7 +5394,7 @@ function closeAllDropdowns() {
     dropdownMenu.innerHTML = '';
     
     if (lotsFiltrati.length === 0) {
-        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">' + t('cascade.no_lots') + '</div>';
         return;
     }
     
@@ -6739,7 +6748,7 @@ function initGestioneCosti() {
     dropdownMenu.innerHTML = '';
     
     if (lotsFiltrati.length === 0) {
-        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">' + t('cascade.no_lots') + '</div>';
         initCostiLotDropdown();
         initBeniDurevoliCosti();
         return;
@@ -6794,7 +6803,7 @@ function initBilancioSection() {
     dropdownMenu.innerHTML = '';
     
     if (lotsFiltrati.length === 0) {
-        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">Nessun lotto per questa azienda</div>';
+        dropdownMenu.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-style:italic;">' + t('cascade.no_lots') + '</div>';
     } else {
         lotsFiltrati.forEach(lot => {
             const item = document.createElement('button');
@@ -8732,7 +8741,7 @@ async function popolaSelectAziendeCascade(ctx) {
         }
         const withLots = (companies || []).filter(c => Number(c.lots_count) > 0);
         const prev = sel.value;
-        sel.innerHTML = '<option value="">— Tutte le aziende —</option>'
+        sel.innerHTML = `<option value="">${t('cascade.all')}</option>`
             + withLots.map(c => `<option value="${c.id}">${c.name} (${c.lots_count})</option>`).join('');
         // Ripristina selezione precedente se ancora valida
         const restore = prev || cascadeCompanyFilter[ctx] || '';
@@ -8791,7 +8800,7 @@ function setBilancioMode(mode) {
         if (viewLot) viewLot.style.display = 'none';
         if (btnAz) { btnAz.style.background = '#00BCD4'; btnAz.style.color = 'white'; }
         if (btnLot) { btnLot.style.background = 'white'; btnLot.style.color = '#00BCD4'; }
-        if (hint) hint.textContent = "Scegli un'azienda per vedere il bilancio consolidato di tutti i suoi lotti";
+        if (hint) hint.textContent = t('bilancio.hint_azienda');
         // Mostra griglia aziende (chiudi eventuale drill-down)
         chiudiBilancioAziendaDetail();
         renderBilancioAziendeGrid();
@@ -8800,7 +8809,7 @@ function setBilancioMode(mode) {
         if (viewLot) viewLot.style.display = '';
         if (btnAz) { btnAz.style.background = 'white'; btnAz.style.color = '#00BCD4'; }
         if (btnLot) { btnLot.style.background = '#00BCD4'; btnLot.style.color = 'white'; }
-        if (hint) hint.textContent = "Analizza il bilancio di un singolo lotto con confronto multi-stagione";
+        if (hint) hint.textContent = t('bilancio.hint_lotto');
         // Popola select Azienda della modalità lotto
         popolaSelectAziendeCascade('bilancio');
     }
@@ -8818,8 +8827,7 @@ async function renderBilancioAziendeGrid() {
             grid.innerHTML = `
                 <div style="grid-column:1/-1;text-align:center;padding:40px;color:#888;background:white;border-radius:12px;">
                     <i class="fas fa-building" style="font-size:3rem;color:#ddd;display:block;margin-bottom:12px;"></i>
-                    <p>Nessuna azienda con lotti registrati.</p>
-                    <p style="font-size:0.85rem;">Crea un'azienda e aggiungi almeno un lotto per visualizzare il bilancio aggregato.</p>
+                    <p>${t('bilancio.no_data_company')}</p>
                 </div>`;
             return;
         }
@@ -8844,7 +8852,7 @@ async function renderBilancioAziendeGrid() {
                     <div class="azienda-sectors">${sectorsHtml}</div>
                     ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
                     <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e0e0e0;text-align:center;color:#00BCD4;font-weight:700;font-size:0.9rem;">
-                        <i class="fas fa-chart-pie"></i> Vedi Bilancio Consolidato →
+                        <i class="fas fa-chart-pie"></i> ${t('bilancio.see_report')} →
                     </div>
                 </div>`;
         }).join('');
@@ -8948,38 +8956,38 @@ async function renderBilancioAziendaDrilldown() {
         if (kpiEl) {
             kpiEl.innerHTML = `
                 <div style="background:linear-gradient(135deg,#4CAF50,#2E7D32);color:white;padding:18px;border-radius:12px;text-align:center;">
-                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">💰 Ricavi Totali</h4>
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">${t('bilancio.kpi_revenue')}</h4>
                     <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-ricavi">${fmt(totRicavi)}</p>
                 </div>
                 <div style="background:linear-gradient(135deg,#f44336,#c62828);color:white;padding:18px;border-radius:12px;text-align:center;">
-                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">💸 Costi Totali</h4>
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">${t('bilancio.kpi_costs')}</h4>
                     <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-costi">${fmt(totCosti)}</p>
                 </div>
                 <div style="background:linear-gradient(135deg,${totBilancio >= 0 ? '#2196F3,#1565C0' : '#f44336,#c62828'});color:white;padding:18px;border-radius:12px;text-align:center;">
-                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">⚖️ Bilancio</h4>
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">${t('bilancio.kpi_balance')}</h4>
                     <p style="font-size:1.6rem;font-weight:bold;margin:0;" data-testid="bilancio-az-finale">${fmt(totBilancio)}</p>
                 </div>
                 <div style="background:linear-gradient(135deg,#FF9800,#E65100);color:white;padding:18px;border-radius:12px;text-align:center;">
-                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">🌱 N° Lotti</h4>
+                    <h4 style="margin:0 0 6px 0;font-size:.9rem;opacity:.95;">${t('bilancio.kpi_lots')}</h4>
                     <p style="font-size:1.6rem;font-weight:bold;margin:0;">${lots.length}</p>
                 </div>`;
         }
         
         if (tableEl) {
             if (rows.length === 0) {
-                tableEl.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">Nessun lotto disponibile.</p>';
+                tableEl.innerHTML = `<p style="text-align:center;color:#999;padding:20px;">${t('common.no_data')}</p>`;
             } else {
                 tableEl.innerHTML = `
                     <table style="width:100%;border-collapse:collapse;font-size:.92rem;min-width:600px;">
                         <thead>
                             <tr style="background:#2E7D32;color:white;">
-                                <th style="padding:10px;text-align:left;">Lotto</th>
-                                <th style="padding:10px;text-align:left;">Prodotto</th>
-                                <th style="padding:10px;text-align:right;">Ricavi</th>
-                                <th style="padding:10px;text-align:right;">Personale</th>
-                                <th style="padding:10px;text-align:right;">Mezzi</th>
-                                <th style="padding:10px;text-align:right;">Amm.</th>
-                                <th style="padding:10px;text-align:right;">Bilancio</th>
+                                <th style="padding:10px;text-align:left;">${t('common.lot')}</th>
+                                <th style="padding:10px;text-align:left;">${t('bilancio.col_product')}</th>
+                                <th style="padding:10px;text-align:right;">${t('bilancio.col_revenue')}</th>
+                                <th style="padding:10px;text-align:right;">${t('bilancio.col_personnel')}</th>
+                                <th style="padding:10px;text-align:right;">${t('bilancio.col_means')}</th>
+                                <th style="padding:10px;text-align:right;">${t('bilancio.col_amort')}</th>
+                                <th style="padding:10px;text-align:right;">${t('bilancio.col_balance')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -8997,7 +9005,7 @@ async function renderBilancioAziendaDrilldown() {
                                 </tr>`;
                             }).join('')}
                             <tr style="background:#E8F5E9;font-weight:700;">
-                                <td style="padding:11px;color:#1B5E20;">TOTALE</td>
+                                <td style="padding:11px;color:#1B5E20;">${t('common.total').toUpperCase()}</td>
                                 <td style="padding:11px;"></td>
                                 <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totRicavi)}</td>
                                 <td style="padding:11px;text-align:right;color:#1B5E20;">${fmt(totPersonale)}</td>

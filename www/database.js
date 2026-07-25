@@ -321,6 +321,18 @@ async function initializeDatabase() {
         logger.warn('Migrazione lots.company_id', { error: err.message });
     }
     
+    // ✅ Migrazione idempotente: aggiungi language a users (i18n)
+    try {
+        const usersCols = await db.allAsync(`PRAGMA table_info(users)`);
+        const hasLanguage = usersCols.some(c => c.name === 'language');
+        if (!hasLanguage) {
+            await db.runAsync(`ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'it'`);
+            logger.info('✅ Migrazione: aggiunta colonna users.language');
+        }
+    } catch (err) {
+        logger.warn('Migrazione users.language', { error: err.message });
+    }
+    
     // ✅ Auto-migrate: per ogni lotto orfano (company_id NULL), crea/associa l'azienda dal company_name
     try {
         const orphanLots = await db.allAsync(`SELECT id, company_name, owner_id, owner_username, created_by FROM lots WHERE company_id IS NULL AND company_name IS NOT NULL`);
