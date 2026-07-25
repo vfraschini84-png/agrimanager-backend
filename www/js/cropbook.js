@@ -9031,6 +9031,36 @@ function chiudiBilancioAziendaDetail() {
     if (detail) detail.style.display = 'none';
 }
 
+// ✅ Re-render sezioni con contenuto dinamico al cambio di lingua (i18n)
+// Alcuni componenti sono generati via innerHTML con t() interpolato a runtime:
+// serve re-eseguire il render dopo che setCurrentLang() ha applicato le traduzioni
+// statiche via applyTranslations().
+document.addEventListener('cropbook:lang-changed', () => {
+    try {
+        // Bilancio & Report: griglia aziende sempre visibile in vista aziende
+        const bilancioSection = document.getElementById('bilancio-section');
+        if (bilancioSection && bilancioSection.classList.contains('active')) {
+            if (currentBilancioMode === 'azienda') {
+                if (currentBilancioAziendaId) {
+                    // Drilldown: rifai KPI + tabella nella nuova lingua
+                    if (typeof renderBilancioAziendaDrilldown === 'function') renderBilancioAziendaDrilldown();
+                } else {
+                    // Vista aziende: re-render card
+                    if (typeof renderBilancioAziendeGrid === 'function') renderBilancioAziendeGrid();
+                }
+                // Aggiorna hint dinamico (setBilancioMode lo imposta via textContent)
+                const hint = document.getElementById('bilancio-mode-hint');
+                if (hint) hint.textContent = t('bilancio.hint_azienda');
+            } else {
+                const hint = document.getElementById('bilancio-mode-hint');
+                if (hint) hint.textContent = t('bilancio.hint_lotto');
+            }
+        }
+    } catch (err) {
+        console.warn('Re-render on lang-changed failed:', err);
+    }
+});
+
 /**
  * Aggrega ricavi, personale, mezzi, ammortamenti per UN lotto.
  * Se `stagione` è fornita, filtra solo quella stagione.

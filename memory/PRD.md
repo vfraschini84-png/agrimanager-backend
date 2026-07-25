@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-07-21
-**Versione**: 1.10.0 (Security fix)
+**Ultimo aggiornamento**: 2026-07-25
+**Versione**: 1.11.0 (i18n Phase 1)
 
 ---
 
@@ -320,6 +320,24 @@
 - 0 issue critiche, 0 issue minori
 
 **Nota operativa**: Node backend NON ha hot-reload → dopo modifiche a `www/` serve `sudo supervisorctl restart cropbook`.
+
+### Sessione 9 (2026-07-25): 🌍 i18n Fase 1 — IT/EN/ES
+| # | Modifica | File |
+|---|---|---|
+| 1 | **Sistema i18n vanilla** (no library): dizionario ~100 chiavi × 3 lingue, `t(key,vars)`, `applyTranslations()`, `setCurrentLang(lang)`. Attributi supportati: `data-i18n`, `data-i18n-html`, `data-i18n-placeholder`, `data-i18n-title`, `data-i18n-value`, `data-i18n-aria-label`. | `js/i18n.js` (NEW) |
+| 2 | **Selettore lingua login/register** (grande, 3 pillole): 🇮🇹 Italiano / 🇬🇧 English / 🇪🇸 Español con `.auth-lang-switcher`. | `index.html` |
+| 3 | **Header switcher compatto** post-login: 🇮🇹 IT / 🇬🇧 EN / 🇪🇸 ES accanto al nome utente. Con stato attivo evidenziato. | `index.html`, `css/cropbook.css` |
+| 4 | **Areas tradotte**: header (tagline + logout + gestione utenti), auth (login/register/reset password), main menu (6 card + descrizioni), section titles (H2 tutte e 6), Bilancio & Report (mode toggle + hint + KPI + drilldown + tabella + button PDF), cascade selectors (label "Azienda:" + placeholder "Tutte" + "Seleziona Lotto" + "Nessun lotto"). | `index.html`, `js/cropbook.js` |
+| 5 | **Persistenza dual**: `localStorage['cropbook_lang']` (client) + `users.language` (DB) via `PUT /api/users/language`. Al login `GET /api/users/me/language` sovrascrive il localStorage. | `routes/users.js` (NEW), `database.js` migration |
+| 6 | **Re-render dinamico** su `cropbook:lang-changed`: le sezioni con contenuto generato via `innerHTML` (Bilancio drilldown KPI + tabella + card aziende) vengono ri-renderizzate automaticamente quando l'utente cambia lingua senza dover cambiare sezione. | `js/cropbook.js` |
+| 7 | **Whitelist backend**: le lingue supportate sono in un `SUPPORTED_LANGS = ['it','en','es']`. Richieste con lingua non valida → HTTP 400. Default in caso di key mancante: italiano → chiave letterale (mai crash). | `routes/users.js`, `js/i18n.js` |
+
+**Testing (iteration_4)**:
+- ✅ 64/64 Jest (regression) 
+- ✅ 8/8 nuovi pytest sui 2 nuovi endpoint `/api/users/*/language`
+- ✅ Frontend E2E: switching IT↔EN↔ES verificato su auth + menu + drilldown Bilancio (KPI/tabella)
+- ✅ Persistenza localStorage + DB verificata
+- 🟢 0 issue critiche, 0 issue minori dopo il fix del re-render dinamico
 
 ## Backlog / Next steps
 
