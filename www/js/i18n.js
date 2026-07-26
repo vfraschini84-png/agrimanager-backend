@@ -176,6 +176,9 @@ const translations = {
     'cascade.all':           { it: '— Tutte —', en: '— All —', es: '— Todas —' },
     'cascade.select_lot':    { it: 'Seleziona Lotto', en: 'Select Lot', es: 'Seleccionar Parcela' },
     'cascade.no_lots':       { it: 'Nessun lotto per questa azienda', en: 'No lots for this company', es: 'Ninguna parcela para esta empresa' },
+    'cards.sectors_empty':   { it: 'Settori non specificati', en: 'Sectors not specified', es: 'Sectores no especificados' },
+    'cards.lot_one':         { it: 'lotto',                   en: 'lot',                    es: 'parcela' },
+    'cards.lot_many':        { it: 'lotti',                   en: 'lots',                   es: 'parcelas' },
 
     /* ============ NOTIFICATIONS / TOASTS ============ */
     'notify.saved':          { it: 'Salvato con successo',    en: 'Saved successfully',    es: 'Guardado exitosamente' },

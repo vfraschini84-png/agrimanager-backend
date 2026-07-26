@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-07-25
-**Versione**: 1.11.0 (i18n Phase 1)
+**Ultimo aggiornamento**: 2026-08-08
+**Versione**: 1.12.0 (i18n complete + UX fix)
 
 ---
 
@@ -338,6 +338,26 @@
 - ✅ Frontend E2E: switching IT↔EN↔ES verificato su auth + menu + drilldown Bilancio (KPI/tabella)
 - ✅ Persistenza localStorage + DB verificata
 - 🟢 0 issue critiche, 0 issue minori dopo il fix del re-render dinamico
+
+### Sessione 10 (2026-08-08): 🌍 i18n Fase 2 + 3 + UX fix persistenza lingua + bandiere prominenti
+| # | Modifica | File |
+|---|---|---|
+| 1 | **UX FIX critico**: al login la lingua selezionata al login screen ora **VINCE** sul valore del profilo server. Se localStorage ha `cropbook_lang`, viene mantenuta e PUSHed al server (`PUT /api/users/language`). Solo su primo device (localStorage vuoto), il valore server ha priorità. | `js/cropbook.js` |
+| 2 | **Bandiere prominenti** nel selettore header: separate in `<span class="lang-flag">🇮🇹</span>` + `<span class="lang-code">IT</span>`. La bandiera attiva è più grande (1.35rem vs 1.15rem) con drop-shadow. | `index.html`, `css/cropbook.css` |
+| 3 | **Fase 2 - Backend errors i18n**: nuovo `middleware/i18n.js` con `attachI18n` (Express middleware globale su `/api/`), rileva lingua da (1) `X-Language` header (2) `Accept-Language` (3) `req.user.language` (4) default IT. Espone `req.t(key)` e `req.lang`. Whitelist SUPPORTED_LANGS. | `middleware/i18n.js` (NEW), `server.js` |
+| 4 | **Backend errors tradotti**: `Token non fornito`, `Token non valido`, `Credenziali non valide`, `Accesso negato`, `Permessi insufficienti`, `Record non trovato`, `Lotto non trovato`, `Azienda non trovata`, `L'azienda non ha lotti registrati`, `Lingua non supportata` — tutti tradotti in 10 file `routes/*.js` + `middleware/tenantGuard.js` + `middleware/rbac.js`. | vari `routes/*.js` |
+| 5 | **X-Language header su tutte le apiCall**: il frontend invia sempre la lingua corrente ad ogni chiamata API, così i messaggi errore ritornano nella lingua UI. | `js/cropbook.js` (apiCall) |
+| 6 | **Fase 3 - PDF report multilingua**: aggiunto `pdfTranslations` (~50 chiavi) + `makePdfTranslator(lang)` factory. Endpoint `/api/reports/bilancio/:lotId` e `/api/reports/bilancio-azienda/:id` accettano `?lang=xx` (fallback: `users.language` → default IT). Tradotti: titolo report, "Stagione di riferimento", KPI (Ricavi/Costi/Bilancio), sezioni (Confronto Ultime 5 Stagioni, Dettaglio Personale/Mezzi/Ammortamenti, Registrazioni Economiche, Bilancio per Lotto), titoli grafici, colonne tabelle (Attività/Qualifica/Ore-uomo/Interventi/Totale/Incidenza/Categoria/Bene/Costo/Anni/Quota/anno), riga TOTALE, footer, legenda. | `middleware/i18n.js`, `routes/reports.js` |
+| 7 | **Frontend passa `?lang=xx`** su `esportaBilancioPDF` + `esportaBilancioAziendaPDF`. Il PDF esce nella lingua UI corrente. | `js/cropbook.js` |
+| 8 | **Refresh dinamico esteso**: il listener `cropbook:lang-changed` ora re-renderizza anche la griglia aziende della sezione "Lista Lotti" (non solo Bilancio). Tradotti: "Settori non specificati", "lotto/lotti". | `js/cropbook.js` |
+
+**Testing (iteration_5)**: 
+- ✅ 64/64 Jest (regression) 
+- ✅ 13/13 pytest E2E (auth errors IT/EN/ES, IDOR errors, PDF `?lang=` verificato)
+- ✅ Playwright: UX fix persistenza (EN scelto → EN dopo login), bandiere attive più grandi, X-Language header su apiCall, ?lang= sul URL PDF
+- ✅ PDF EN (Gemini analysis): "Company Balance", "Period: All seasons", "Revenue", "Personnel", "Amort.", "TOTAL"
+- ✅ PDF ES: "Balance de Empresa", "Ingresos", "Costos"
+- 🟢 0 issue critiche
 
 ## Backlog / Next steps
 

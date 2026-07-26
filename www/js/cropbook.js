@@ -8517,12 +8517,12 @@ function renderAziendeGrid(items) {
         const sectors = (c.sectors || '').split(',').map(s => s.trim()).filter(Boolean);
         const sectorsHtml = sectors.length > 0
             ? sectors.map(s => `<span class="azienda-sector-chip">${esc(s)}</span>`).join('')
-            : '<span style="font-size: 0.75rem; color: #999; font-style: italic;">Settori non specificati</span>';
+            : `<span style="font-size: 0.75rem; color: #999; font-style: italic;">${t('cards.sectors_empty')}</span>`;
         return `
             <div class="azienda-card" data-testid="azienda-card-${c.id}">
                 <div class="azienda-card-header">
                     <h3 class="azienda-name" onclick="apriLottiAzienda(${c.id})">📋 ${esc(c.name)}</h3>
-                    <span class="azienda-lots-badge ${c.lots_count === 0 ? 'empty' : ''}">${c.lots_count} ${c.lots_count === 1 ? 'lotto' : 'lotti'}</span>
+                    <span class="azienda-lots-badge ${c.lots_count === 0 ? 'empty' : ''}">${c.lots_count} ${c.lots_count === 1 ? t('cards.lot_one') : t('cards.lot_many')}</span>
                 </div>
                 <div class="azienda-sectors">${sectorsHtml}</div>
                 ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
@@ -8852,7 +8852,7 @@ async function renderBilancioAziendeGrid() {
             const sectors = (c.sectors || '').split(',').map(s => s.trim()).filter(Boolean);
             const sectorsHtml = sectors.length > 0
                 ? sectors.slice(0, 3).map(s => `<span class="azienda-sector-chip">${esc(s)}</span>`).join('')
-                : '<span style="font-size:0.75rem;color:#999;font-style:italic;">Settori non specificati</span>';
+                : `<span style="font-size:0.75rem;color:#999;font-style:italic;">${t('cards.sectors_empty')}</span>`;
             return `
                 <div class="azienda-card bilancio-azienda-card" data-testid="bilancio-az-card-${c.id}"
                      onclick="apriBilancioAziendaDetail(${c.id})"
@@ -8863,7 +8863,7 @@ async function renderBilancioAziendeGrid() {
                         <h3 class="azienda-name" style="color:#00838F;">
                             <i class="fas fa-building" style="color:#00BCD4;"></i> ${esc(c.name)}
                         </h3>
-                        <span class="azienda-lots-badge">${c.lots_count} ${c.lots_count === 1 ? 'lotto' : 'lotti'}</span>
+                        <span class="azienda-lots-badge">${c.lots_count} ${c.lots_count === 1 ? t('cards.lot_one') : t('cards.lot_many')}</span>
                     </div>
                     <div class="azienda-sectors">${sectorsHtml}</div>
                     ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
@@ -9053,18 +9053,22 @@ function chiudiBilancioAziendaDetail() {
 // statiche via applyTranslations().
 document.addEventListener('cropbook:lang-changed', () => {
     try {
+        // Lista aziende (menu principale > Lista Lotti)
+        const listaSection = document.getElementById('lista-section');
+        if (listaSection && listaSection.classList.contains('active')) {
+            if (typeof setVistaLotti === 'function') {
+                setVistaLotti(currentVistaLotti || 'aziende', currentAziendaFilter);
+            }
+        }
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
         const bilancioSection = document.getElementById('bilancio-section');
         if (bilancioSection && bilancioSection.classList.contains('active')) {
             if (currentBilancioMode === 'azienda') {
                 if (currentBilancioAziendaId) {
-                    // Drilldown: rifai KPI + tabella nella nuova lingua
                     if (typeof renderBilancioAziendaDrilldown === 'function') renderBilancioAziendaDrilldown();
                 } else {
-                    // Vista aziende: re-render card
                     if (typeof renderBilancioAziendeGrid === 'function') renderBilancioAziendeGrid();
                 }
-                // Aggiorna hint dinamico (setBilancioMode lo imposta via textContent)
                 const hint = document.getElementById('bilancio-mode-hint');
                 if (hint) hint.textContent = t('bilancio.hint_azienda');
             } else {
