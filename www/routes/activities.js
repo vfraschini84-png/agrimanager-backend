@@ -11,7 +11,7 @@ function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (!token) return res.status(401).json({ error: 'Token non fornito' });
+    if (!token) return res.status(401).json({ error: req.t ? req.t('errors.token_missing') : 'Token non fornito' });
     
     try {
         const jwt = require('jsonwebtoken');
@@ -19,7 +19,7 @@ function authenticateToken(req, res, next) {
         req.user = decoded;
         next();
     } catch (err) {
-        return res.status(403).json({ error: 'Token non valido' });
+        return res.status(403).json({ error: req.t ? req.t('errors.token_invalid') : 'Token non valido' });
     }
 }
 

@@ -233,13 +233,24 @@ const emptyPermissions = {
         currentUser = response.user;
         showAppInterface();
         
-        // ✅ Carica la lingua preferita salvata dall'utente (best-effort)
+        // ✅ Politica lingua post-login:
+        //  - Se l'utente ha già scelto una lingua sul device (localStorage), quella VINCE
+        //    (rispetta la scelta esplicita fatta al login/register) e viene propagata al server.
+        //  - Se localStorage è vuoto (primo accesso da questo device), usa quella salvata sul server.
         try {
+            const localStored = localStorage.getItem('cropbook_lang');
             const langResp = await apiCall('/users/me/language');
-            if (langResp && langResp.language && typeof setCurrentLang === 'function') {
-                setCurrentLang(langResp.language);
+            const serverLang = (langResp && langResp.language) || 'it';
+            
+            if (!localStored) {
+                // Nessuna scelta locale: segui il server
+                if (typeof setCurrentLang === 'function') setCurrentLang(serverLang);
+            } else if (localStored !== serverLang) {
+                // Scelta locale diversa dal server → sincronizza al server (propagazione cross-device)
+                await apiCall('/users/language', { method: 'PUT', body: { language: localStored } });
+                // La lingua locale è già applicata (da DOMContentLoaded); non serve setCurrentLang.
             }
-        } catch (_) { /* ignora, resta con la lingua locale */ }
+        } catch (_) { /* best-effort: mantieni la lingua locale */ }
         
         showNotification(`${t('notify.login_success')} — ${response.user.username}`, 'success');
        hideSpinner(); 
@@ -2015,6 +2026,8 @@ async function apiCall(endpoint, options = {}) {
     // Prepara gli headers
     const headers = {
         'Content-Type': 'application/json',
+        // ✅ i18n backend: trasmetti la lingua corrente per i messaggi tradotti
+        'X-Language': (typeof getCurrentLang === 'function') ? getCurrentLang() : 'it',
         ...options.headers
     };
     
@@ -7150,8 +7163,11 @@ async function esportaBilancioPDF() {
     try {
         const stagione = document.getElementById('bilancio-stagione')?.value || '';
         const token = localStorage.getItem('auth_token');
-        const url = `${API_BASE_URL}/reports/bilancio/${currentBilancioLotId}` +
-                    (stagione ? `?stagione=${encodeURIComponent(stagione)}` : '');
+        const currentLang = (typeof getCurrentLang === 'function') ? getCurrentLang() : 'it';
+        const qsParts = [];
+        if (stagione) qsParts.push(`stagione=${encodeURIComponent(stagione)}`);
+        qsParts.push(`lang=${encodeURIComponent(currentLang)}`);
+        const url = `${API_BASE_URL}/reports/bilancio/${currentBilancioLotId}?${qsParts.join('&')}`;
 
         const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) {
@@ -9121,7 +9137,11 @@ async function esportaBilancioAziendaPDF() {
     try {
         showSpinner('Generazione PDF aziendale...');
         const token = localStorage.getItem('auth_token');
-        const qs = currentBilancioAziendaStagione ? `?stagione=${encodeURIComponent(currentBilancioAziendaStagione)}` : '';
+        const currentLang = (typeof getCurrentLang === 'function') ? getCurrentLang() : 'it';
+        const qsParts = [];
+        if (currentBilancioAziendaStagione) qsParts.push(`stagione=${encodeURIComponent(currentBilancioAziendaStagione)}`);
+        qsParts.push(`lang=${encodeURIComponent(currentLang)}`);
+        const qs = qsParts.length ? `?${qsParts.join('&')}` : '';
         const url = `${API_BASE_URL}/reports/bilancio-azienda/${currentBilancioAziendaId}${qs}`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!resp.ok) {

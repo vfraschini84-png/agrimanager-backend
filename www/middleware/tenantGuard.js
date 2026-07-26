@@ -41,11 +41,11 @@ function isSuperAdmin(req) {
  */
 async function assertLotAccess(req, lotId) {
     const lot = await db.getAsync('SELECT * FROM lots WHERE id = ?', [lotId]);
-    if (!lot) return { error: 404, message: 'Lotto non trovato' };
+    if (!lot) return { error: 404, message: (req && req.t) ? req.t('errors.lot_not_found') : 'Lotto non trovato' };
     if (isSuperAdmin(req)) return { lot };
     const tenantOwnerId = await getTenantOwnerId(req);
     if (Number(lot.owner_id) !== Number(tenantOwnerId)) {
-        return { error: 403, message: 'Accesso negato: risorsa di un altro tenant' };
+        return { error: 403, message: (req && req.t) ? req.t('errors.access_denied') : 'Accesso negato: risorsa di un altro tenant' };
     }
     return { lot };
 }
@@ -70,15 +70,14 @@ const ALLOWED_TABLES = new Set([
 
 async function assertRecordAccess(req, table, id) {
     if (!ALLOWED_TABLES.has(table)) {
-        // Errore di programmazione: fail-closed
         return { error: 500, message: `Tabella non autorizzata: ${table}` };
     }
     const record = await db.getAsync(`SELECT * FROM ${table} WHERE id = ?`, [id]);
-    if (!record) return { error: 404, message: 'Record non trovato' };
+    if (!record) return { error: 404, message: (req && req.t) ? req.t('errors.record_not_found') : 'Record non trovato' };
     if (isSuperAdmin(req)) return { record };
     const tenantOwnerId = await getTenantOwnerId(req);
     if (Number(record.owner_id) !== Number(tenantOwnerId)) {
-        return { error: 403, message: 'Accesso negato: risorsa di un altro tenant' };
+        return { error: 403, message: (req && req.t) ? req.t('errors.access_denied') : 'Accesso negato: risorsa di un altro tenant' };
     }
     return { record };
 }

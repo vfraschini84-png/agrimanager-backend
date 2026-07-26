@@ -1,0 +1,64 @@
+{
+  "summary": "Verified i18n Phase 2 (backend error translations) + Phase 3 (PDF report translations) + UX bug fix (localStorage lang WINS over server-profile lang on login) + flag-emphasis header styling + regression. 13/13 new backend pytest cases (test_i18n_phase2_phase3.py) pass. 64/64 Jest regression still green. Playwright end-to-end: pick EN on auth screen, login as admin (whose server profile was IT), UI stays in EN (menu shows 'Lot Registration','Companies & Lots','Lot Details','Balance & Reports','Cost Management','Economic Management'), NO Italian menu strings present. GET /api/users/me/language after login returns {language:'en'} — server profile was synced FROM localStorage via PUT /users/language on the login flow (captured X-Language=en header on that PUT). Header switcher: active EN flag rendered at 21.6px (=1.35rem) vs inactive IT flag at 18.4px — emphasis works. X-Language header propagated on 4/4 authenticated apiCall() invocations (auth/login, lots, users/me/language, users/language). PDF endpoints: EN PDF text extracted via pdfminer contains 'Company Balance', 'Period: All seasons', 'Revenue', 'Personnel', 'Amort.', 'Balance', 'TOTAL', 'Lot', 'Product'; ES PDF contains 'Balance de Empresa', 'Periodo: Todas las temporadas', 'Ingresos', 'Costos', 'Personal', 'Medios', 'Parcela', 'Producto'; per-lot PDFs in EN contain 3/4 expected section titles ('Personnel Cost Detail by Activity','Technical Means Cost Detail by Category','Amortizations Detail by Durable Asset') and ES contain 'Detalle Costo Personal por Actividad','Detalle Costo Medios Técnicos por Categoría','Detalle Amortizaciones por Bien Duradero'. Cross-tenant/not_found error also translated: DELETE /api/costi/personale/999999 X-Language=en → 'Record not found', es → 'Registro no encontrado'. Frontend PDF URL construction verified in source (cropbook.js:7169 & 9143 append &lang=xx).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/login", "issue": "LOGIN_RATE_LIMIT_MAX=10 in 15 min window. Iteration test_i18n_language.py from iteration_4 hits 429 during back-to-back runs. Non-blocking for prod, but flaky test regression setup. Consider using a per-test bearer-token cache/fixture at module scope (my new test file already does this)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Bilancio company cards (Balance & Reports > Company View)",
+        "issue": "After login in EN, company cards still render 'Settori non specificati', '1 lotto', 'Report PDF Stagione' button in Italian. These are baked-in Italian template literals in cropbook.js at render time — same class of bug flagged in iteration_4 (dynamic-render freeze). Not introduced by this iteration but still not fixed.",
+        "selector": ".menu-card in company grid",
+        "priority": "LOW"
+      },
+      {
+        "component": "Auth-screen footer",
+        "issue": "Footer '© 2025 Cropbook - Tutti i diritti riservati' remains in Italian even when auth-lang=en is selected. Missing data-i18n key on the copyright element.",
+        "selector": "footer copyright line",
+        "priority": "LOW"
+      },
+      {
+        "component": "Registration form (Create Account tab)",
+        "issue": "Input placeholders on registration form still Italian ('Scegli un username','Scegli una password','Inserisci la ragione sociale', etc.) when auth-lang=en. Placeholders lack data-i18n-placeholder handling.",
+        "selector": "#register-username, #register-password, #register-ragione-sociale, etc.",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_i18n_phase2_phase3.py",
+    "/app/test_reports/pytest/i18n_phase23.xml"
+  ],
+  "action_items": [
+    "OPTIONAL (low priority, cosmetic): translate the auth-screen footer copyright string (add data-i18n='auth.copyright' or similar).",
+    "OPTIONAL: translate registration form placeholders — add data-i18n-placeholder and translation keys.",
+    "OPTIONAL: fix carry-over dynamic-render bug from iteration_4 for Bilancio company cards ('1 lotto','Settori non specificati','Report PDF Stagione') — listen to 'cropbook:lang-changed' or use data-i18n on the injected HTML.",
+    "OPTIONAL: raise LOGIN_RATE_LIMIT_MAX in dev env, or make it configurable per-CI to avoid 429 during test runs."
+  ],
+  "critical_code_review_comments": [
+    "middleware/i18n.js is clean: SUPPORTED_LANGS whitelist, dual-dictionary lookup (backendTranslations + pdfTranslations), fallback chain lang→IT→key. detectLang priority order (X-Language → Accept-Language → req.user.language → 'it') is correct.",
+    "routes/reports.js correctly reads ?lang=xx BEFORE falling back to user profile, so explicit query overrides — matches spec.",
+    "cropbook.js login() flow: PUSHES localStorage lang to server via PUT /users/language BEFORE loading profile → server profile is updated to user's chosen lang instead of overriding it. Bug fix verified.",
+    "cropbook.js apiCall() attaches X-Language on every fetch (verified via network trace).",
+    "cropbook.js esportaBilancioPDF (7156) and esportaBilancioAziendaPDF (9132) both append &lang=${currentLang} via getCurrentLang() → matches spec.",
+    "Coverage note: reports.js line coverage is 3.52% in Jest — no unit tests cover the PDF builder. That's OK because live PDF pytest now covers it end-to-end, but adding a smoke unit test would improve resilience."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_i18n_phase2_phase3.py (NEW — 15 pytest cases: 4 token-missing translations, 3 credentials_invalid translations, 2 no_lots_in_company (skipped because no zero-lot company on live DB), 4 PDF text-extraction assertions, 2 language sync tests)"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 executable pytest + 64/64 Jest regression). 2 skipped (need zero-lot company seed).",
+    "frontend": "100% on all P0 acceptance criteria (menu translation, server sync, flag emphasis, X-Language header, PDF URL lang param). 3 minor cosmetic gaps (footer, registration placeholders, bilancio card dynamic content) — inherited or unrelated to this iteration."
+  },
+  "test_credentials": "admin / 96a0761f3943 (super-admin). Base URL: https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com/api",
+  "seed_data_creation": "None. Admin's users.language column is toggled to IT/EN/IT during tests. Reset to IT at end of every UX test flow.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "New regression suite at /app/backend/tests/test_i18n_phase2_phase3.py — uses pdfminer.six to extract PDF text and asserts translated section titles/labels. If PDF generation code changes, re-run this file. 2 tests are skipped because DB has no zero-lot company; if you want full coverage seed one company with lot_count=0 owned by admin, then no-lots error translation tests will execute. Login rate limit (10/15min) can throttle back-to-back test runs — wait or use module-scope fixture. Cosmetic i18n gaps (auth footer, registration form placeholders, bilancio card dynamic strings) still open — these are NOT part of this iteration's spec but worth cleaning up in a follow-up.",
+  "rca of the issue": "N/A — no unresolved bugs from this iteration. UX bug (server override of user's login-screen language) is fixed at cropbook.js login() by PUSHing localStorage.cropbook_lang to server profile via PUT /users/language BEFORE reading server-side profile, which ensures the auth-screen selection wins on first login and syncs the server permanently."
+}

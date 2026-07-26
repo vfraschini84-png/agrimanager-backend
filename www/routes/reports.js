@@ -6,18 +6,19 @@ const jwt = require('jsonwebtoken');
 const db = require('../database');
 const logger = require('../logger');
 const { requirePermission } = require('../middleware/rbac');
+const { makePdfTranslator } = require('../middleware/i18n');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
 function authenticateToken(req, res, next) {
     const token = (req.headers['authorization'] || '').split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token non fornito' });
+    if (!token) return res.status(401).json({ error: req.t ? req.t('errors.token_missing') : 'Token non fornito' });
     try {
         req.user = jwt.verify(token, JWT_SECRET);
         next();
     } catch (e) {
-        return res.status(403).json({ error: 'Token non valido' });
+        return res.status(403).json({ error: req.t ? req.t('errors.token_invalid') : 'Token non valido' });
     }
 }
 
@@ -238,6 +239,15 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
 
         const lot = access.lot;
         const stagione = req.query.stagione || null;
+        // ✅ Lingua PDF: ?lang=xx > lingua utente autenticato > default it
+        let pdfLang = String(req.query.lang || '').toLowerCase();
+        if (!['it','en','es'].includes(pdfLang)) {
+            try {
+                const uRow = await db.getAsync('SELECT language FROM users WHERE id = ?', [req.user.id]);
+                pdfLang = (uRow && uRow.language) || 'it';
+            } catch (_) { pdfLang = 'it'; }
+        }
+        const p = makePdfTranslator(pdfLang);
 
         // Carica record economici (filtro stagione opzionale)
         let records;
@@ -329,7 +339,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                     },
                     title: {
                         display: true,
-                        text: 'Ricavi vs Costi',
+                        text: p('pdf.chart_rev_vs_cost'),
                         font: { size: 28, weight: 'bold' },
                         color: '#1B5E20',
                         padding: { top: 4, bottom: 18 }
@@ -344,7 +354,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         const chartCostiBreakdown = await chartCanvas.renderToBuffer({
             type: 'bar',
             data: {
-                labels: ['Mezzi tecnici', 'Personale', 'Ammortamenti'],
+                labels: [p('pdf.col_means'), p('pdf.legend_personnel'), p('pdf.kpi_amort')],
                 datasets: [{
                     label: 'Costi (€)',
                     data: dettCostiValues,
@@ -359,7 +369,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: 'Dettaglio Costi (incidenza % sui costi totali)',
+                        text: p('pdf.chart_cost_detail'),
                         font: { size: 26, weight: 'bold' },
                         color: '#1B5E20',
                         padding: { top: 4, bottom: 18 }
@@ -563,19 +573,19 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         const chartPersonale = await buildHbarChart(
             personalePerAttivita.map(r => `${r.attivita} (${r.qualifica})`),
             personalePerAttivita.map(r => Number(r.totale)),
-            'Costi Personale per Attività',
+            p('pdf.chart_personnel'),
             personalePerAttivita.map((_, i) => palette[i % palette.length])
         );
         const chartMezzi = await buildHbarChart(
             mezziPerCategoria.map(r => r.categoria),
             mezziPerCategoria.map(r => Number(r.totale)),
-            'Mezzi Tecnici per Categoria',
+            p('pdf.chart_means'),
             mezziPerCategoria.map((_, i) => palette[i % palette.length])
         );
         const chartAmm = await buildHbarChart(
             ammortamentiPerBene.map(b => b.descrizione),
             ammortamentiPerBene.map(b => Number(b.quota_totale)),
-            'Ammortamenti per Bene Durevole',
+            p('pdf.chart_amort'),
             ammortamentiPerBene.map((_, i) => palette[i % palette.length])
         );
 
@@ -644,7 +654,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
 
         // ✅ Confronto Ultime 5 Stagioni — card list (stesso stile web mobile-friendly)
         ensureSpace(40);
-        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Confronto Ultime 5 Stagioni', 50, doc.y);
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text(p('pdf.section_multi_season'), 50, doc.y);
         doc.moveDown(0.4);
         
         const CARD_H = 60;
@@ -712,9 +722,9 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         ensureSpace(20);
         const legendY = doc.y + 4;
         const legendItems = [
-            { color: '#FF5722', label: 'Personale' },
-            { color: '#2196F3', label: 'Mezzi tecnici' },
-            { color: '#9C27B0', label: 'Ammortamenti' }
+            { color: '#FF5722', label: p('pdf.legend_personnel') },
+            { color: '#2196F3', label: p('pdf.legend_means') },
+            { color: '#9C27B0', label: p('pdf.legend_amort') }
         ];
         let legX = 60;
         legendItems.forEach(it => {
@@ -743,13 +753,13 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             
             // Sottotitolo con totale + nota stagione
             doc.fillColor('#555').fontSize(10).font('Helvetica')
-               .text(`Totale voce: ${fmtEur(totale)}  ·  Periodo: ${stagione || 'tutte le stagioni'}  ·  ${righe.length} ${righe.length === 1 ? 'voce' : 'voci'}`,
+               .text(`${p('pdf.detail_total')}: ${fmtEur(totale)}  ·  ${p('pdf.detail_period')}: ${stagione || p('pdf.all_seasons_short')}  ·  ${righe.length} ${righe.length === 1 ? p('pdf.entries_one') : p('pdf.entries_many')}`,
                      50, doc.y, { width: 495 });
             doc.moveDown(0.6);
             
             if (righe.length === 0) {
                 doc.fillColor('#888').fontSize(11).font('Helvetica-Oblique')
-                   .text('Nessun dato disponibile per questa voce nel periodo selezionato.', { align: 'center' });
+                   .text(p('pdf.no_data'), { align: 'center' });
                 return;
             }
             
@@ -806,7 +816,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             doc.fillColor('#1B5E20').font('Helvetica-Bold').fontSize(9);
             labelCols.forEach((c, i) => {
                 let v = '';
-                if (i === 0) v = 'TOTALE';
+                if (i === 0) v = p('pdf.total_row');
                 else if (c.field === 'totale_str') v = fmtEur(totale);
                 else if (c.field === 'incidenza_str') v = '100%';
                 doc.fillColor('#1B5E20').text(v, cx + 4, totRowY + 5,
@@ -828,15 +838,15 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                 ? fmtPct((Number(r.totale) / totalePersonaleDett) * 100) : '0%'
         }));
         renderDettaglioCosto(
-            'Dettaglio Costo Personale per Attività', '#FF5722',
+            p('pdf.section_personnel'), '#FF5722',
             righePersonale, chartPersonale, totalePersonaleDett,
             [
-                { label: 'Attività',   field: 'attivita',      w: 170, align: 'left'  },
-                { label: 'Qualifica',  field: 'qualifica',     w: 75,  align: 'left'  },
-                { label: 'Interventi', field: 'interventi',    w: 70,  align: 'right' },
-                { label: 'Ore-uomo',   field: 'ore',           w: 65,  align: 'right' },
-                { label: 'Totale',     field: 'totale_str',    w: 75,  align: 'right' },
-                { label: 'Incidenza',  field: 'incidenza_str', w: 60,  align: 'right' }
+                { label: p('pdf.col_activity'),      field: 'attivita',      w: 170, align: 'left'  },
+                { label: p('pdf.col_qualification'), field: 'qualifica',     w: 75,  align: 'left'  },
+                { label: p('pdf.col_interventions'), field: 'interventi',    w: 70,  align: 'right' },
+                { label: p('pdf.col_manhours'),      field: 'ore',           w: 65,  align: 'right' },
+                { label: p('pdf.col_total'),         field: 'totale_str',    w: 75,  align: 'right' },
+                { label: p('pdf.col_incidence'),     field: 'incidenza_str', w: 60,  align: 'right' }
             ]
         );
         
@@ -849,13 +859,13 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                 ? fmtPct((Number(r.totale) / totaleMezziDett) * 100) : '0%'
         }));
         renderDettaglioCosto(
-            'Dettaglio Costo Mezzi Tecnici per Categoria', '#2196F3',
+            p('pdf.section_means'), '#2196F3',
             righeMezzi, chartMezzi, totaleMezziDett,
             [
-                { label: 'Categoria',   field: 'categoria',     w: 230, align: 'left'  },
-                { label: 'Interventi',  field: 'interventi',    w: 100, align: 'right' },
-                { label: 'Totale',      field: 'totale_str',    w: 100, align: 'right' },
-                { label: 'Incidenza',   field: 'incidenza_str', w: 65,  align: 'right' }
+                { label: p('pdf.col_category'),      field: 'categoria',     w: 230, align: 'left'  },
+                { label: p('pdf.col_interventions'), field: 'interventi',    w: 100, align: 'right' },
+                { label: p('pdf.col_total'),         field: 'totale_str',    w: 100, align: 'right' },
+                { label: p('pdf.col_incidence'),     field: 'incidenza_str', w: 65,  align: 'right' }
             ]
         );
         
@@ -864,15 +874,15 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
             ensureSpace(40);
             doc.moveDown(0.8);
             doc.fillColor('#222').fontSize(11).font('Helvetica-Bold')
-               .text('Top 10 mezzi tecnici per descrizione', 50, doc.y, { lineBreak: false });
+               .text(p('pdf.top10_means'), 50, doc.y, { lineBreak: false });
             doc.moveDown(0.3);
             const subColsW = [305, 90, 100];
             const subHeaderY = doc.y;
             doc.rect(50, subHeaderY, 495, 16).fill('#1565C0');
             doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold')
-               .text('Descrizione', 54, subHeaderY + 4, { width: subColsW[0] - 8, lineBreak: false })
-               .text('Interventi', 50 + subColsW[0] + 4, subHeaderY + 4, { width: subColsW[1] - 8, align: 'right', lineBreak: false })
-               .text('Totale', 50 + subColsW[0] + subColsW[1] + 4, subHeaderY + 4, { width: subColsW[2] - 8, align: 'right', lineBreak: false });
+               .text(p('pdf.top10_col_desc'), 54, subHeaderY + 4, { width: subColsW[0] - 8, lineBreak: false })
+               .text(p('pdf.col_interventions'), 50 + subColsW[0] + 4, subHeaderY + 4, { width: subColsW[1] - 8, align: 'right', lineBreak: false })
+               .text(p('pdf.col_total'), 50 + subColsW[0] + subColsW[1] + 4, subHeaderY + 4, { width: subColsW[2] - 8, align: 'right', lineBreak: false });
             doc.y = subHeaderY + 16;
             doc.x = 50;
             doc.font('Helvetica').fontSize(9).fillColor('#222');
@@ -901,16 +911,16 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
                 ? fmtPct((Number(b.quota_totale) / totaleAmmDett) * 100) : '0%'
         }));
         renderDettaglioCosto(
-            'Dettaglio Ammortamenti per Bene Durevole', '#9C27B0',
+            p('pdf.section_amort'), '#9C27B0',
             righeAmm, chartAmm, totaleAmmDett,
             [
-                { label: 'Bene',             field: 'descrizione',     w: 165, align: 'left'  },
-                { label: 'Costo',            field: 'costo_str',       w: 65,  align: 'right' },
-                { label: 'Anni',             field: 'anni',            w: 35,  align: 'right' },
-                { label: 'Quota/anno',       field: 'quota_str',       w: 70,  align: 'right' },
-                { label: 'Anni nel periodo', field: 'anni_conteggio',  w: 75,  align: 'right' },
-                { label: 'Totale',           field: 'totale_str',      w: 70,  align: 'right' },
-                { label: 'Incidenza',        field: 'incidenza_str',   w: 60,  align: 'right' }
+                { label: p('pdf.col_asset'),            field: 'descrizione',     w: 165, align: 'left'  },
+                { label: p('pdf.col_cost'),             field: 'costo_str',       w: 65,  align: 'right' },
+                { label: p('pdf.col_years'),            field: 'anni',            w: 35,  align: 'right' },
+                { label: p('pdf.col_annual_quota'),     field: 'quota_str',       w: 70,  align: 'right' },
+                { label: p('pdf.col_years_in_period'),  field: 'anni_conteggio',  w: 75,  align: 'right' },
+                { label: p('pdf.col_total'),            field: 'totale_str',      w: 70,  align: 'right' },
+                { label: p('pdf.col_incidence'),        field: 'incidenza_str',   w: 60,  align: 'right' }
             ]
         );
 
@@ -1041,9 +1051,18 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         if (access.error) return res.status(access.error).json({ error: access.message });
         const company = access.company;
         const stagione = req.query.stagione ? String(req.query.stagione).trim() : null;
+        // ✅ Lingua PDF: ?lang=xx > profilo utente > default it
+        let pdfLang = String(req.query.lang || '').toLowerCase();
+        if (!['it','en','es'].includes(pdfLang)) {
+            try {
+                const uRow = await db.getAsync('SELECT language FROM users WHERE id = ?', [req.user.id]);
+                pdfLang = (uRow && uRow.language) || 'it';
+            } catch (_) { pdfLang = 'it'; }
+        }
+        const p = makePdfTranslator(pdfLang);
         const lots = await db.allAsync('SELECT * FROM lots WHERE company_id = ? ORDER BY id', [company.id]);
         if (lots.length === 0) {
-            return res.status(400).json({ error: 'L\'azienda non ha lotti registrati' });
+            return res.status(400).json({ error: req.t ? req.t('errors.no_lots_in_company') : "L'azienda non ha lotti registrati" });
         }
         const fmtEur = (v) => `€ ${Number(v || 0).toFixed(2).replace('.', ',')}`;
         
@@ -1129,7 +1148,7 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         doc.pipe(res);
         
         // HEADER
-        doc.fillColor('#2E7D32').fontSize(20).font('Helvetica-Bold').text('Bilancio Azienda', { align: 'center' });
+        doc.fillColor('#2E7D32').fontSize(20).font('Helvetica-Bold').text(p('pdf.report_title_company'), { align: 'center' });
         doc.moveDown(0.2);
         doc.fillColor('#333').fontSize(14).font('Helvetica').text(company.name, { align: 'center' });
         if (company.sectors) {
@@ -1139,21 +1158,21 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
             doc.fontSize(10).fillColor('#666').text(`Sede: ${company.address}`, { align: 'center' });
         }
         // ✅ Stagione di riferimento (NEW) — niente emoji (PDFKit/Helvetica non li supporta)
-        const stagioneLabel = stagione ? `Stagione di riferimento: ${stagione}` : 'Periodo: Tutte le stagioni';
+        const stagioneLabel = stagione ? `${p('pdf.season_ref')}: ${stagione}` : p('pdf.season_all');
         doc.fontSize(11).fillColor('#00838F').font('Helvetica-Bold').text(stagioneLabel, { align: 'center' });
         doc.font('Helvetica');
-        doc.fontSize(9).fillColor('#888').text(`Generato il ${new Date().toLocaleDateString('it-IT')} · ${lots.length} ${lots.length === 1 ? 'lotto' : 'lotti'}`, { align: 'center' });
+        doc.fontSize(9).fillColor('#888').text(`${p('pdf.generated_on')} ${new Date().toLocaleDateString(pdfLang === 'en' ? 'en-GB' : (pdfLang === 'es' ? 'es-ES' : 'it-IT'))} · ${lots.length} ${lots.length === 1 ? p('pdf.lot') : p('pdf.lots')}`, { align: 'center' });
         doc.moveDown(1);
         
         // KPI TOTALI
-        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Riepilogo aggregato');
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text(p('pdf.section_summary'));
         doc.moveDown(0.3);
         const kpiY = doc.y;
         const kpiW = 150, kpiH = 50;
         const kpis = [
-            { label: 'Ricavi', value: fmtEur(totalRicavi), color: '#4CAF50' },
-            { label: 'Costi', value: fmtEur(totalCosti), color: '#f44336' },
-            { label: 'Bilancio', value: fmtEur(totalBilancio), color: totalBilancio >= 0 ? '#4CAF50' : '#f44336' }
+            { label: p('pdf.col_revenue'), value: fmtEur(totalRicavi), color: '#4CAF50' },
+            { label: p('pdf.col_costs'), value: fmtEur(totalCosti), color: '#f44336' },
+            { label: p('pdf.col_balance'), value: fmtEur(totalBilancio), color: totalBilancio >= 0 ? '#4CAF50' : '#f44336' }
         ];
         kpis.forEach((k, i) => {
             const x = 50 + i * (kpiW + 8);
@@ -1165,17 +1184,17 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         doc.x = 50;
         
         // TABELLA CONFRONTO LOTTI
-        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text('Confronto Lotti');
+        doc.fillColor('#222').fontSize(13).font('Helvetica-Bold').text(p('pdf.section_lots_table'));
         doc.moveDown(0.3);
         
         const cols = [
-            { label: 'Lotto', w: 120 },
-            { label: 'Prodotto', w: 80 },
-            { label: 'Ricavi', w: 70 },
-            { label: 'Personale', w: 65 },
-            { label: 'Mezzi', w: 60 },
-            { label: 'Amm.', w: 50 },
-            { label: 'Bilancio', w: 55 }
+            { label: p('pdf.col_lot'), w: 120 },
+            { label: p('pdf.col_product'), w: 80 },
+            { label: p('pdf.col_revenue'), w: 70 },
+            { label: p('pdf.col_personnel'), w: 65 },
+            { label: p('pdf.col_means_short'), w: 60 },
+            { label: p('pdf.col_amort_short'), w: 50 },
+            { label: p('pdf.col_balance'), w: 55 }
         ];
         const drawHeader = () => {
             const headerY = doc.y;
@@ -1224,7 +1243,7 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
         doc.rect(50, totalRowY, 500, ROW_H).fill('#E8F5E9');
         let cx = 50;
         const totals = [
-            { v: 'TOTALE', a: 'left' },
+            { v: p('pdf.total_row'), a: 'left' },
             { v: '', a: 'left' },
             { v: fmtEur(totalRicavi), a: 'right' },
             { v: fmtEur(totalPersonale), a: 'right' },

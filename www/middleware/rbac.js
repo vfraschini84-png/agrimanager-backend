@@ -102,7 +102,7 @@ function requirePermission(permission) {
                 path: req.path
             });
             return res.status(403).json({
-                error: 'Permessi insufficienti',
+                error: (req && req.t) ? req.t('errors.permission_denied') : 'Permessi insufficienti',
                 required: permission,
                 userRole: req.user.role,
                 availablePermissions: ROLES[canonical]?.permissions || []

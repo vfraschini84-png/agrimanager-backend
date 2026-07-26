@@ -15,12 +15,12 @@ function authenticateToken(req, res, next) {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
-        return res.status(401).json({ error: 'Token non fornito' });
+        return res.status(401).json({ error: req.t ? req.t('errors.token_missing') : 'Token non fornito' });
     }
     
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) {
-            return res.status(403).json({ error: 'Token non valido' });
+            return res.status(403).json({ error: req.t ? req.t('errors.token_invalid') : 'Token non valido' });
         }
         req.user = user;
         next();
@@ -271,13 +271,13 @@ router.post('/login', async (req, res) => {
     );
 
     if (!user) {
-        return res.status(401).json({ error: 'Credenziali non valide' });
+        return res.status(401).json({ error: req.t ? req.t('errors.credentials_invalid') : 'Credenziali non valide' });
     }
 
     // Verifica password
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
-        return res.status(401).json({ error: 'Credenziali non valide' });
+        return res.status(401).json({ error: req.t ? req.t('errors.credentials_invalid') : 'Credenziali non valide' });
     }
 
     // Genera token JWT

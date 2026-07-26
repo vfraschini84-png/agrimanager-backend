@@ -8,14 +8,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token non fornito' });
+    if (!token) return res.status(401).json({ error: req.t ? req.t('errors.token_missing') : 'Token non fornito' });
     try {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
         next();
     } catch (err) {
-        return res.status(403).json({ error: 'Token non valido' });
+        return res.status(403).json({ error: req.t ? req.t('errors.token_invalid') : 'Token non valido' });
     }
 }
 
@@ -37,7 +37,7 @@ router.put('/language', authenticateToken, async (req, res) => {
     try {
         const lang = String(req.body.language || '').trim();
         if (!SUPPORTED_LANGS.includes(lang)) {
-            return res.status(400).json({ error: `Lingua non supportata. Ammesse: ${SUPPORTED_LANGS.join(', ')}` });
+            return res.status(400).json({ error: req.t ? req.t('errors.language_unsupported') : `Lingua non supportata. Ammesse: ${SUPPORTED_LANGS.join(', ')}` });
         }
         await db.runAsync('UPDATE users SET language = ? WHERE id = ?', [lang, req.user.id]);
         res.json({ success: true, language: lang });

@@ -80,12 +80,12 @@ function requireDevPanelEnabled(req, res, next) {
  */
 function authenticateToken(req, res, next) {
     const token = (req.headers['authorization'] || '').split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Token non fornito' });
+    if (!token) return res.status(401).json({ error: req.t ? req.t('errors.token_missing') : 'Token non fornito' });
     try {
         req.user = jwt.verify(token, JWT_SECRET);
         next();
     } catch (e) {
-        return res.status(403).json({ error: 'Token non valido' });
+        return res.status(403).json({ error: req.t ? req.t('errors.token_invalid') : 'Token non valido' });
     }
 }
 

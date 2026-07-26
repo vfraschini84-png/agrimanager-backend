@@ -236,21 +236,24 @@
             </div>
         </div>
         <div class="user-info" style="flex-wrap: wrap; gap: 8px; align-items: center;">
-    <!-- Language switcher (compact) -->
+    <!-- Language switcher (compact, with prominent flag) -->
     <div class="header-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua"
-         style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:20px;">
+         style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:22px;">
         <button type="button" data-lang-btn="it" data-testid="lang-btn-it"
                 onclick="setCurrentLang('it')"
-                title="Italiano" aria-pressed="true"
-                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇮🇹 IT</button>
+                title="Italiano" aria-pressed="true">
+            <span class="lang-flag" aria-hidden="true">🇮🇹</span><span class="lang-code">IT</span>
+        </button>
         <button type="button" data-lang-btn="en" data-testid="lang-btn-en"
                 onclick="setCurrentLang('en')"
-                title="English" aria-pressed="false"
-                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇬🇧 EN</button>
+                title="English" aria-pressed="false">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span><span class="lang-code">EN</span>
+        </button>
         <button type="button" data-lang-btn="es" data-testid="lang-btn-es"
                 onclick="setCurrentLang('es')"
-                title="Español" aria-pressed="false"
-                style="border:none;background:transparent;color:white;padding:5px 9px;border-radius:16px;cursor:pointer;font-size:0.85rem;font-weight:700;transition:background .15s;">🇪🇸 ES</button>
+                title="Español" aria-pressed="false">
+            <span class="lang-flag" aria-hidden="true">🇪🇸</span><span class="lang-code">ES</span>
+        </button>
     </div>
     <span id="current-user-display">Utente</span>
     <span class="user-role-badge" id="current-user-role">Ruolo</span>

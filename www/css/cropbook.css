@@ -3772,3 +3772,42 @@ input[type="radio"]:checked + span {
     margin: 0 0 8px 0;
     font-weight: 600;
 }
+
+/* ============ Header language buttons (bandiere prominenti) ============ */
+.header-lang-switcher [data-lang-btn] {
+    border: none;
+    background: transparent;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 18px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: background .18s, box-shadow .18s, transform .1s;
+}
+.header-lang-switcher [data-lang-btn] .lang-flag {
+    font-size: 1.15rem;
+    line-height: 1;
+    /* Rende la bandiera più nitida su alcuni sistemi */
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+.header-lang-switcher [data-lang-btn] .lang-code {
+    letter-spacing: 0.5px;
+}
+.header-lang-switcher [data-lang-btn].lang-btn-active {
+    background: white !important;
+    color: #2E7D32 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+}
+.header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag {
+    font-size: 1.35rem;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+}
+.header-lang-switcher [data-lang-btn]:not(.lang-btn-active):hover {
+    background: rgba(255,255,255,0.22);
+}

@@ -180,6 +180,10 @@ app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth/forgot-password', loginLimiter);
 app.use('/api/', generalLimiter);
 
+// ==================== i18n middleware (allega req.t / req.lang) ====================
+const { attachI18n } = require('./middleware/i18n');
+app.use('/api/', attachI18n);
+
 // ==================== ROUTES ====================
 const mountRoute = (mountPath, modulePath) => {
     try {
