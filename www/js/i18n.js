@@ -590,7 +590,31 @@ const translations = {
     'bilancio.chart_revenue_costs':{ it: '🍩 Ricavi vs Costi', en: '🍩 Revenue vs Costs', es: '🍩 Ingresos vs Costos' },
     'bilancio.chart_costs_detail':{ it: '📊 Dettaglio Costi', en: '📊 Costs Detail',   es: '📊 Detalle de Costos' },
     'lista.empty_first_hint':         { it: 'Nessuna azienda registrata. Crea la tua prima azienda per iniziare!', en: 'No companies registered. Create your first company to get started!', es: 'Sin empresas registradas. ¡Crea tu primera empresa para comenzar!' },
-    'lista.create_company':           { it: 'Crea Azienda', en: 'Create Company', es: 'Crear Empresa' }
+    'lista.create_company':           { it: 'Crea Azienda', en: 'Create Company', es: 'Crear Empresa' },
+
+    /* ============ NAV TOOLTIPS (barra icone sezioni) ============ */
+    'nav.tip.dettagli':               { it: 'Dettagli lotto',    en: 'Lot details',        es: 'Detalles de la parcela' },
+    'nav.tip.gestione_economica':     { it: 'Gestione Ricavi',   en: 'Revenue Management', es: 'Gestión de Ingresos' },
+    'nav.tip.gestione_costi':         { it: 'Gestione Costi',    en: 'Cost Management',    es: 'Gestión de Costos' },
+    'nav.tip.bilancio':               { it: 'Bilancio e Report', en: 'Balance & Reports',  es: 'Balance e Informes' },
+    'nav.tip.lista':                  { it: 'Lista Lotti',       en: 'Lots List',          es: 'Lista de Parcelas' },
+    'nav.tip.registrazione':          { it: 'Registrazione Lotti', en: 'Lot Registration', es: 'Registro de Parcelas' },
+    'nav.tip.utenti':                 { it: 'Gestione Utenti e Permessi', en: 'User & Permissions Management', es: 'Gestión de Usuarios y Permisos' },
+
+    /* ============ TOOLTIPS azioni dinamiche (JS) ============ */
+    'common.delete_activity':         { it: 'Elimina attività',   en: 'Delete activity',     es: 'Eliminar actividad' },
+    'common.edit_field_lot':          { it: 'Modifica lotto campo', en: 'Edit field lot',    es: 'Editar parcela de campo' },
+    'common.delete_lot':              { it: 'Elimina lotto',      en: 'Delete lot',          es: 'Eliminar parcela' },
+    'common.delete_durable':          { it: 'Elimina questo bene durevole', en: 'Delete this durable asset', es: 'Eliminar este bien duradero' },
+    'common.delete_all_season':       { it: 'Elimina tutte le registrazioni di questa stagione', en: 'Delete all records for this season', es: 'Eliminar todos los registros de esta temporada' },
+    'users.edit_role_tip':            { it: 'Modifica ruolo',     en: 'Edit role',           es: 'Editar rol' },
+    'users.delete_tip':               { it: 'Elimina utente',     en: 'Delete user',         es: 'Eliminar usuario' },
+    'users.you':                      { it: 'Tu',                 en: 'You',                 es: 'Tú' },
+    'map.lot_position':               { it: 'Posizione del lotto', en: 'Lot position',       es: 'Posición de la parcela' },
+    'map.street':                     { it: 'Strada',             en: 'Street',              es: 'Calle' },
+    'map.satellite':                  { it: 'Satellite',          en: 'Satellite',           es: 'Satélite' },
+    'map.street_tip':                 { it: 'Vista stradale (OpenStreetMap)', en: 'Street view (OpenStreetMap)', es: 'Vista de calle (OpenStreetMap)' },
+    'map.satellite_tip':              { it: 'Vista satellitare (Esri World Imagery)', en: 'Satellite view (Esri World Imagery)', es: 'Vista satelital (Esri World Imagery)' }
 };
 
 /* ---------- API pubblica ---------- */

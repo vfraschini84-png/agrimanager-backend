@@ -914,13 +914,13 @@ function createUserItem(user, isSuperAdmin = false, subUsers = [], isSubUser = f
         </div>
         <div class="user-card-actions">
             ${user.id !== currentUser.id ? `
-                <button class="btn-edit-small" onclick="editUserViaAPI(${user.id}, '${escapeHtml(user.username)}', '${user.role}')" title="Modifica ruolo">
-                    <i class="fas fa-edit"></i><span class="btn-label"> Modifica</span>
+                <button class="btn-edit-small" onclick="editUserViaAPI(${user.id}, '${escapeHtml(user.username)}', '${user.role}')" title="${t('users.edit_role_tip')}">
+                    <i class="fas fa-edit"></i><span class="btn-label"> ${t('common.edit')}</span>
                 </button>
-                <button class="btn-delete-small" onclick="deleteUserViaAPI(${user.id}, '${escapeHtml(user.username)}')" title="Elimina utente">
-                    <i class="fas fa-trash"></i><span class="btn-label"> Elimina</span>
+                <button class="btn-delete-small" onclick="deleteUserViaAPI(${user.id}, '${escapeHtml(user.username)}')" title="${t('users.delete_tip')}">
+                    <i class="fas fa-trash"></i><span class="btn-label"> ${t('common.delete')}</span>
                 </button>
-            ` : '<span class="user-card-self"><i class="fas fa-user-check"></i> Tu</span>'}
+            ` : `<span class="user-card-self"><i class="fas fa-user-check"></i> ${t('users.you')}</span>`}
         </div>
     `;
     return userItem;
@@ -1649,16 +1649,16 @@ function optimizeMobileLoad() {
                 modal.innerHTML = `
                     <div class="map-picker-container">
                         <div class="map-picker-header">
-                            <h3><i class="fas fa-map-marker-alt"></i> Posizione del lotto</h3>
+                            <h3><i class="fas fa-map-marker-alt"></i> ${t('map.lot_position')}</h3>
                             <div class="map-layer-toggle">
-                                <button type="button" id="mp-layer-street" class="active" onclick="switchMapLayer('street')" title="Vista stradale (OpenStreetMap)">
-                                    <i class="fas fa-road"></i> Strada
+                                <button type="button" id="mp-layer-street" class="active" onclick="switchMapLayer('street')" title="${t('map.street_tip')}">
+                                    <i class="fas fa-road"></i> ${t('map.street')}
                                 </button>
-                                <button type="button" id="mp-layer-satellite" onclick="switchMapLayer('satellite')" title="Vista satellitare (Esri World Imagery)">
-                                    <i class="fas fa-satellite"></i> Satellite
+                                <button type="button" id="mp-layer-satellite" onclick="switchMapLayer('satellite')" title="${t('map.satellite_tip')}">
+                                    <i class="fas fa-satellite"></i> ${t('map.satellite')}
                                 </button>
                             </div>
-                            <button type="button" class="map-picker-close" onclick="closeMapPicker()" aria-label="Chiudi">
+                            <button type="button" class="map-picker-close" onclick="closeMapPicker()" aria-label="${t('common.close')}">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -2841,7 +2841,7 @@ function updateLotGPS(lotId, gpsUrl) {
                         <small>Registrato il: ${new Date(activity.createdAt).toLocaleDateString('it-IT')} da ${activity.createdBy || 'Utente'}</small>
                     </div>
                     <div class="lotto-actions">
-                        <div class="action-btn" onclick="deleteActivity(${activity.id})" title="Elimina attività">
+                        <div class="action-btn" onclick="deleteActivity(${activity.id})" title="${t('common.delete_activity')}">
                             <i class="fas fa-trash"></i>
                         </div>
                     </div>
@@ -3686,7 +3686,7 @@ async function importaCostoPersonaleDaGestioneCosti() {
                             <small style="opacity: 0.9;">${regs.length} registrazione${regs.length !== 1 ? 'i' : ''}</small>
                             <button onclick="event.stopPropagation(); eliminaStagioneEconomica('${stagione}', ${currentEconomicLotId})" 
         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold;"
-        title="Elimina tutte le registrazioni di questa stagione">
+        title="${t('common.delete_all_season')}">
     <i class="fas fa-trash-alt"></i> Elimina Stagione
 </button>
                         </div>
@@ -3779,12 +3779,12 @@ async function importaCostoPersonaleDaGestioneCosti() {
                                     <div style="display: flex; gap: 5px; align-self: center;">
                                         <button onclick="modificaRegistrazioneEconomica(${reg.id})" 
                                                 style="background: #2196F3; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;"
-                                                title="Modifica">
+                                                title="${t('common.edit')}">
                                             ✏️ Modifica
                                         </button>
                                         <button onclick="eliminaRegistrazioneEconomica(${reg.id})" 
                                                 style="background: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;"
-                                                title="Elimina">
+                                                title="${t('common.delete')}">
                                             🗑️ Elimina
                                         </button>
                                     </div>
@@ -4965,12 +4965,12 @@ if (lot.variety && lot.variety.trim() !== '') {
                     <i class="fas fa-wallet"></i>
 </div>
                 ${permissions.canEditLots ? `
-                <div class="action-btn" onclick="editFieldLot(${lot.id})" title="Modifica lotto campo">
+                <div class="action-btn" onclick="editFieldLot(${lot.id})" title="${t('common.edit_field_lot')}">
                     <i class="fas fa-edit"></i>
                 </div>
                 ` : ''}
                 ${permissions.canDeleteLots ? `
-                <div class="action-btn" onclick="deleteLot(${lot.id})" title="Elimina lotto">
+                <div class="action-btn" onclick="deleteLot(${lot.id})" title="${t('common.delete_lot')}">
                     <i class="fas fa-trash"></i>
                 </div>
                 ` : ''}
@@ -8479,7 +8479,7 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
                 <div class="bene-storico-actions">
                     <button type="button" class="bene-storico-delete-btn" data-testid="bene-storico-delete-btn"
                             onclick="eliminaBeneStorico(${b.recordId}, ${b.indexInRecord}, '${esc(b.descrizione)}')"
-                            title="Elimina questo bene durevole">
+                            title="${t('common.delete_durable')}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
