@@ -9140,7 +9140,7 @@ document.addEventListener('cropbook:lang-changed', () => {
         // Gestione Utenti: ricarica lista utenti per aggiornare title Modifica/Elimina
         const userSection = document.getElementById('user-management-section');
         if (userSection && userSection.style.display !== 'none') {
-            if (typeof loadUsersFromBackend === 'function') loadUsersFromBackend();
+            if (typeof loadUserManagement === 'function') loadUserManagement();
         }
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
         const bilancioSection = document.getElementById('bilancio-section');

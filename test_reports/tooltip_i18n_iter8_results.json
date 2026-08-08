@@ -1,0 +1,25 @@
+{
+  "test_scope": "Focused UI retest for Cropbook tooltip i18n in Gestione Utenti and navigation",
+  "execution": "mcp_browser_automation on preview URL",
+  "url": "https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com",
+  "credentials_used": "admin / 96a0761f3943",
+  "checks_total": 26,
+  "checks_passed": 26,
+  "checks_failed": 0,
+  "primary_checks": [
+    {"lang": "it", "selector": "#users-list-container .btn-edit-small", "title": "Modifica ruolo", "status": "pass"},
+    {"lang": "it", "selector": "#users-list-container .btn-delete-small", "title": "Elimina utente", "status": "pass"},
+    {"lang": "en", "selector": "#users-list-container .btn-edit-small", "title": "Edit role", "status": "pass"},
+    {"lang": "en", "selector": "#users-list-container .btn-delete-small", "title": "Delete user", "status": "pass"},
+    {"lang": "es", "selector": "#users-list-container .btn-edit-small", "title": "Editar rol", "status": "pass"},
+    {"lang": "es", "selector": "#users-list-container .btn-delete-small", "title": "Eliminar usuario", "status": "pass"}
+  ],
+  "regression_checks": {
+    "btn_gestione_utenti_titles": "pass IT/EN/ES",
+    "five_navigation_icon_titles": "pass IT/EN/ES",
+    "console_csp_errors": [],
+    "console_deprecation_warnings": [],
+    "http_response_errors": []
+  },
+  "notes": "Local shell execution of the saved Playwright script was not possible because the Python playwright package is not installed in this container; the actual UI verification was completed with the available browser automation runner. No APIs were MOCKED."
+}
