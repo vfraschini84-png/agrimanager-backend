@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-08-08
-**Versione**: 1.13.0 (i18n copertura estesa + fix CSP/meta)
+**Versione**: 1.13.1 (tooltip i18n completa)
 
 ---
 
@@ -380,6 +380,13 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.13.1 (2026-08-08)
+- **Tooltip completamente tradotti**: aggiunti 15+ chiavi i18n per tooltip dinamici (nav.tip.*, common.delete_activity, users.edit_role_tip, users.delete_tip, map.*, ecc.)
+- **HTML**: aggiunti 21 `data-i18n-title` alle 5 icone di navigazione (Dettagli/Ricavi/Costi/Bilancio/Lista) replicate in tutte le sezioni, rimosso attributo duplicato su `#btn-gestione-utenti`
+- **JS template literals**: aggiornati tooltip generati dinamicamente (bottoni edit/delete utente, mappa street/satellite, azioni lotto, elimina bene durevole, elimina stagione) per usare `${t(...)}`
+- **Re-render su cambio lingua**: aggiunto callback in `cropbook:lang-changed` che richiama `loadUserManagement()` se la sezione Gestione Utenti è aperta — assicura che i tooltip dinamici delle card utenti si aggiornino al cambio bandiera
+- **Verificato via bug_testing_agent**: 26/26 controlli superati (100%), tooltip corretti in IT/EN/ES anche cambiando lingua con sezione già aperta
 
 ## Cambiamenti v1.13.0 (2026-08-08)
 - **i18n copertura estesa**: 200+ nuove chiavi in `www/js/i18n.js` (registrazione lotto, gestione costi, economica, utenti, bilancio, export, modali)
