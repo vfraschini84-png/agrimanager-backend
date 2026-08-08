@@ -9137,6 +9137,11 @@ document.addEventListener('cropbook:lang-changed', () => {
                 setVistaLotti(currentVistaLotti || 'aziende', currentAziendaFilter);
             }
         }
+        // Gestione Utenti: ricarica lista utenti per aggiornare title Modifica/Elimina
+        const userSection = document.getElementById('user-management-section');
+        if (userSection && userSection.style.display !== 'none') {
+            if (typeof loadUsersFromBackend === 'function') loadUsersFromBackend();
+        }
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
         const bilancioSection = document.getElementById('bilancio-section');
         if (bilancioSection && bilancioSection.classList.contains('active')) {
