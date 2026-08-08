@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-08-08
-**Versione**: 1.12.0 (i18n complete + UX fix)
+**Versione**: 1.13.0 (i18n copertura estesa + fix CSP/meta)
 
 ---
 
@@ -380,6 +380,16 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.13.0 (2026-08-08)
+- **i18n copertura estesa**: 200+ nuove chiavi in `www/js/i18n.js` (registrazione lotto, gestione costi, economica, utenti, bilancio, export, modali)
+- **HTML tradotto**: ~120 nuovi attributi `data-i18n` / `data-i18n-placeholder` / `data-i18n-title` in `www/index.html` (sezioni registrazione, dettagli, economica, costi, utenti, bilancio, footer, modal azienda)
+- **Notifiche multilingua**: aggiunto intercettore `showNotification` con mappa IT→chiavi i18n (traduzione automatica di ~40 messaggi comuni: login, save, delete, errori, validazioni)
+- **Fix CSP Google Translate**: aggiunto `<meta name="google" content="notranslate">` per disabilitare l'iniezione del widget di traduzione del browser (risolve errore CSP `translate_http`)
+- **Fix meta deprecata**: aggiunto `<meta name="mobile-web-app-capable" content="yes">` accanto a quello Apple deprecato
+- **Flag più visibili**: bandiere ingranite (1.35rem → 1.55rem quando attive), drop-shadow migliorato, min-width per pulsanti, layout responsive mobile
+- **Card aziende dinamiche**: pulsanti "Lotti" e "Modifica" tradotti via `t()` in `renderAziendeGrid()`
+- **Dropdown dinamici**: option "Seleziona anno", "Seleziona prima la tipologia", "Seleziona azienda esistente" ricostruite via `t()` per rimanere tradotte al cambio lingua
 
 ## Avvio
 Server gestito da supervisor:

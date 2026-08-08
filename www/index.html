@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="theme-color" content="#4CAF50">
-    <meta name="theme-color" content="#4CAF50">
+    <!-- Disabilita la traduzione automatica del browser (abbiamo i18n nativo) -->
+    <meta name="google" content="notranslate">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>CROPBOOK - Gestione Lotti</title>
@@ -19,7 +21,7 @@
 <div id="loading-spinner" class="spinner-overlay" style="display: none;">
     <div class="spinner-box">
         <div class="spinner"></div>
-        <p class="spinner-text" id="spinner-message">Caricamento in corso...</p>
+        <p class="spinner-text" id="spinner-message" data-i18n="spinner.loading">Caricamento in corso...</p>
     </div>
 </div>
 <div class="safe-area-top"></div>
@@ -45,13 +47,13 @@
 <div id="login-form" class="auth-form active">
     <div class="form-group">
         <label for="login-username" data-i18n="auth.username">Username</label>
-        <input type="text" id="login-username" data-i18n-placeholder="auth.username" placeholder="Inserisci il tuo username">
+        <input type="text" id="login-username" data-i18n-placeholder="reg.placeholder.login_username" placeholder="Inserisci il tuo username">
     </div>
     
     <div class="form-group">
     <label for="login-password" data-i18n="auth.password">Password</label>
     <div style="position: relative; display: flex; align-items: center;">
-        <input type="password" id="login-password" data-i18n-placeholder="auth.password" placeholder="Inserisci la tua password" style="flex: 1; padding-right: 45px;">
+        <input type="password" id="login-password" data-i18n-placeholder="reg.placeholder.login_password" placeholder="Inserisci la tua password" style="flex: 1; padding-right: 45px;">
         <button type="button" onclick="togglePasswordVisibility('login-password', this)" 
                 style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #666; padding: 8px;">
             <i class="fas fa-eye"></i>
@@ -80,14 +82,14 @@
             
 <!-- Form Password Dimenticata -->
 <div id="forgotPasswordSection" style="display: none; max-width: 400px; margin: 50px auto; padding: 20px;">
-    <h2 data-i18n="auth.forgot_password">Recupera Password</h2>
+    <h2 data-i18n="auth.recover_password_title">Recupera Password</h2>
     <p data-i18n="auth.reset_intro" style="color: #666; margin-bottom: 20px;">
         Inserisci la tua email. Riceverai un link per reimpostare la password.
     </p>
     
     <div class="form-group">
         <label for="forgotEmail" data-i18n="auth.email">Email</label>
-        <input type="email" id="forgotEmail" class="form-control" placeholder="es. mario.rossi@email.com">
+        <input type="email" id="forgotEmail" class="form-control" data-i18n-placeholder="auth.forgot_email_ph" placeholder="es. mario.rossi@email.com">
     </div>
     
     <button onclick="requestPasswordReset()" class="btn btn-primary" style="width: 100%;" data-i18n="auth.reset_link_btn">
@@ -95,7 +97,7 @@
     </button>
     
     <div style="text-align: center; margin-top: 15px;">
-        <a href="#" onclick="showLoginForm()" style="color: #4CAF50; text-decoration: none;">
+        <a href="#" onclick="showLoginForm()" data-i18n="auth.back_to_login" style="color: #4CAF50; text-decoration: none;">
             ← Torna al Login
         </a>
     </div>
@@ -106,101 +108,101 @@
             <!-- Form Registrazione (solo per admin) - VERSIONE AGGIORNATA -->
 <div id="register-form" class="auth-form">
     <div class="form-group">
-        <label for="register-username" class="required-field">Username</label>
-        <input type="text" id="register-username" placeholder="Scegli un username" required>
-        <div class="help-text">Inserisci almeno 3 caratteri</div>
+        <label for="register-username" class="required-field" data-i18n="auth.username">Username</label>
+        <input type="text" id="register-username" data-i18n-placeholder="reg.placeholder.username" placeholder="Scegli un username" required>
+        <div class="help-text" data-i18n="reg.help.username">Inserisci almeno 3 caratteri</div>
     </div>
     
     <div class="form-group">
-        <label for="register-email" class="required-field">Email</label>
-        <input type="email" id="register-email" placeholder="esempio@email.com" required>
-        <div class="help-text">Inserisci un indirizzo email valido</div>
+        <label for="register-email" class="required-field" data-i18n="auth.email">Email</label>
+        <input type="email" id="register-email" data-i18n-placeholder="reg.placeholder.email" placeholder="esempio@email.com" required>
+        <div class="help-text" data-i18n="reg.help.email">Inserisci un indirizzo email valido</div>
     </div>
     
     <div class="form-group">
-    <label for="register-password" class="required-field">Password</label>
+    <label for="register-password" class="required-field" data-i18n="auth.password">Password</label>
     <div style="position: relative; display: flex; align-items: center;">
-        <input type="password" id="register-password" placeholder="Scegli una password" required style="flex: 1; padding-right: 45px;">
+        <input type="password" id="register-password" data-i18n-placeholder="reg.placeholder.password" placeholder="Scegli una password" required style="flex: 1; padding-right: 45px;">
         <button type="button" onclick="togglePasswordVisibility('register-password', this)" 
                 style="position: absolute; right: 10px; background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #666; padding: 8px;">
             <i class="fas fa-eye"></i>
         </button>
     </div>
-    <div class="help-text">Minimo 6 caratteri</div>
+    <div class="help-text" data-i18n="reg.help.password">Minimo 6 caratteri</div>
 </div>
     
     <div class="form-group">
-        <label class="required-field">Tipologia Utente</label>
+        <label class="required-field" data-i18n="reg.user_type">Tipologia Utente</label>
         <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 10px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="radio" name="user-type" value="libero_professionista" onchange="toggleAziendaFields()">
-                <span>📋 Libero Professionista</span>
+                <span data-i18n="reg.freelancer">📋 Libero Professionista</span>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="radio" name="user-type" value="titolare" onchange="toggleAziendaFields()">
-                <span>👔 Titolare</span>
+                <span data-i18n="reg.owner">👔 Titolare</span>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                 <input type="radio" name="user-type" value="azienda" onchange="toggleAziendaFields()">
-                <span>🏢 Azienda</span>
+                <span data-i18n="reg.company_type">🏢 Azienda</span>
             </label>
         </div>
-        <div class="help-text">Seleziona la tua tipologia professionale</div>
+        <div class="help-text" data-i18n="reg.user_type_hint">Seleziona la tua tipologia professionale</div>
     </div>
     
     <!-- CAMPI AZIENDALI (visibili solo per titolare o azienda) -->
     <div id="azienda-fields" style="display: none;">
         <div class="form-group">
-            <label for="register-ragione-sociale" class="required-field">Ragione Sociale</label>
-            <input type="text" id="register-ragione-sociale" placeholder="Inserisci la ragione sociale">
-            <div class="help-text">Nome legale dell'azienda</div>
+            <label for="register-ragione-sociale" class="required-field" data-i18n="reg.legal_name">Ragione Sociale</label>
+            <input type="text" id="register-ragione-sociale" data-i18n-placeholder="reg.legal_name_ph" placeholder="Inserisci la ragione sociale">
+            <div class="help-text" data-i18n="reg.legal_name_hint">Nome legale dell'azienda</div>
         </div>
         
         <div class="form-group">
-            <label for="register-partita-iva">Partita IVA (Opzionale)</label>
+            <label for="register-partita-iva" data-i18n="reg.vat">Partita IVA (Opzionale)</label>
             <input type="text" id="register-partita-iva" placeholder="IT01234567890">
-            <div class="help-text">Formato: IT + 11 cifre</div>
+            <div class="help-text" data-i18n="reg.vat_hint">Formato: IT + 11 cifre</div>
         </div>
         
         <div class="form-group">
-            <label for="register-indirizzo">Indirizzo (Opzionale)</label>
-            <input type="text" id="register-indirizzo" placeholder="Via/Piazza, Città, CAP">
+            <label for="register-indirizzo" data-i18n="reg.address">Indirizzo (Opzionale)</label>
+            <input type="text" id="register-indirizzo" data-i18n-placeholder="reg.address_ph" placeholder="Via/Piazza, Città, CAP">
         </div>
         
         <div class="form-group">
-            <label for="register-telefono">Telefono (Opzionale)</label>
+            <label for="register-telefono" data-i18n="reg.phone">Telefono (Opzionale)</label>
             <input type="tel" id="register-telefono" placeholder="+39 123 4567890">
         </div>
         
         <div class="form-group">
-            <label for="register-settore">Settore (Opzionale)</label>
+            <label for="register-settore" data-i18n="reg.sector">Settore (Opzionale)</label>
             <select id="register-settore">
-                <option value="">Seleziona settore</option>
-                <option value="agricoltura">Agricoltura</option>
-                <option value="viticoltura">Viticoltura</option>
-                <option value="olivicoltura">Olivicoltura</option>
-                <option value="zootecnia">Zootecnia</option>
-                <option value="agriturismo">Agriturismo</option>
-                <option value="altro">Altro</option>
+                <option value="" data-i18n="reg.select_sector">Seleziona settore</option>
+                <option value="agricoltura" data-i18n="reg.sector.agri">Agricoltura</option>
+                <option value="viticoltura" data-i18n="reg.sector.viti">Viticoltura</option>
+                <option value="olivicoltura" data-i18n="reg.sector.oli">Olivicoltura</option>
+                <option value="zootecnia" data-i18n="reg.sector.zoo">Zootecnia</option>
+                <option value="agriturismo" data-i18n="reg.sector.agriturismo">Agriturismo</option>
+                <option value="altro" data-i18n="reg.sector.other">Altro</option>
             </select>
         </div>
         
         <div id="altro-settore-container" style="display: none;">
             <div class="form-group">
-                <label for="register-altro-settore">Specifica Settore</label>
-                <input type="text" id="register-altro-settore" placeholder="Inserisci il settore">
+                <label for="register-altro-settore" data-i18n="reg.sector.specify">Specifica Settore</label>
+                <input type="text" id="register-altro-settore" data-i18n-placeholder="reg.sector.specify_ph" placeholder="Inserisci il settore">
             </div>
         </div>
         
         <div class="form-group">
-            <label for="register-note-aziendali">Note Aziendali (Opzionale)</label>
-            <textarea id="register-note-aziendali" rows="3" placeholder="Informazioni aggiuntive sull'azienda..."></textarea>
+            <label for="register-note-aziendali" data-i18n="reg.company_notes">Note Aziendali (Opzionale)</label>
+            <textarea id="register-note-aziendali" rows="3" data-i18n-placeholder="reg.company_notes_ph" placeholder="Informazioni aggiuntive sull'azienda..."></textarea>
         </div>
     </div>
     
     <div class="form-group" style="background: #e8f5e9; padding: 12px; border-radius: 8px; border-left: 4px solid #4CAF50; margin-top: 10px;">
         <p style="margin: 0; font-size: 14px; color: #2e7d32;">
-            <i class="fas fa-info-circle"></i> <strong>Primo accesso?</strong> Verrai registrato come <b>Amministratore</b> con accesso completo. Potrai poi creare i tuoi sotto-utenti (operatori, visitatori) dalla sezione "Gestione Utenti".
+            <i class="fas fa-info-circle"></i> <span data-i18n-html="reg.first_access_info"><strong>Primo accesso?</strong> Verrai registrato come <b>Amministratore</b> con accesso completo. Potrai poi creare i tuoi sotto-utenti (operatori, visitatori) dalla sezione "Gestione Utenti".</span>
         </p>
         <input type="hidden" id="register-role" value="">
     </div>
@@ -209,7 +211,7 @@
 <div class="form-group" style="margin-top: 20px;">
     <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
         <input type="checkbox" id="privacy-consent" required style="margin-top: 3px; width: 18px; height: 18px; cursor: pointer;">
-        <span style="font-size: 14px; color: #555;">
+        <span style="font-size: 14px; color: #555;" data-i18n-html="reg.privacy_declare">
             Dichiaro di aver letto e accettato l'<a href="#" onclick="showPrivacyPolicy(); return false;" style="color: #4CAF50; text-decoration: underline;">Informativa sulla Privacy</a> 
             e presto il mio consenso al trattamento dei miei dati personali per le finalità indicate.
             <span style="color: #f44336;">*</span>
@@ -218,7 +220,7 @@
 </div>
 
     <button class="btn btn-primary" onclick="registerUserAdvanced()">
-        <i class="fas fa-user-plus"></i> Registra Utente
+        <i class="fas fa-user-plus"></i> <span data-i18n="reg.register_user_btn">Registra Utente</span>
     </button>
 </div>
         </div>
@@ -255,8 +257,8 @@
             <span class="lang-flag" aria-hidden="true">🇪🇸</span><span class="lang-code">ES</span>
         </button>
     </div>
-    <span id="current-user-display">Utente</span>
-    <span class="user-role-badge" id="current-user-role">Ruolo</span>
+    <span id="current-user-display" data-i18n="header.user_default">Utente</span>
+    <span class="user-role-badge" id="current-user-role" data-i18n="header.role_default">Ruolo</span>
     <button id="btn-gestione-utenti" onclick="showSection('user-management-section')" 
         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold; display: none; transition: all 0.3s ease;"
         onmouseover="this.style.background='rgba(255,255,255,0.4)'" 
@@ -329,126 +331,126 @@
             
             <!-- ✅ Selettore Azienda: esistente da dropdown OR nuova inline -->
             <div class="form-group">
-                <label for="company-select" class="required-field">Azienda</label>
+                <label for="company-select" class="required-field" data-i18n="reg_lot.company">Azienda</label>
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                     <select id="company-select" data-testid="company-select" onchange="onCompanySelectChange()"
                             style="flex: 1; min-width: 220px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; background: white;">
-                        <option value="">-- Seleziona azienda esistente --</option>
-                        <option value="__new__">➕ Nuova Azienda</option>
+                        <option value="" data-i18n="reg_lot.select_existing">-- Seleziona azienda esistente --</option>
+                        <option value="__new__" data-i18n="reg_lot.new_company_opt">➕ Nuova Azienda</option>
                     </select>
                     <button type="button" id="company-edit-btn" onclick="openCompanyEditor(currentEditingCompanyId)" 
                             data-testid="company-edit-btn" style="display: none; padding: 9px 14px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                        <i class="fas fa-edit"></i> Modifica
+                        <i class="fas fa-edit"></i> <span data-i18n="reg_lot.edit_company_btn">Modifica</span>
                     </button>
                 </div>
-                <div class="help-text">Seleziona un'azienda esistente o crea una nuova. I lotti di una stessa azienda condividono ragione sociale e settori.</div>
+                <div class="help-text" data-i18n="reg_lot.company_help">Seleziona un'azienda esistente o crea una nuova. I lotti di una stessa azienda condividono ragione sociale e settori.</div>
                 
                 <!-- Form inline "Nuova Azienda" (mostrato quando si sceglie ➕) -->
                 <div id="new-company-form" style="display: none; margin-top: 12px; padding: 14px; background: #f0f7ff; border: 1px solid #b3d9ff; border-radius: 8px;">
-                    <h5 style="margin: 0 0 10px 0; color: #1565C0;"><i class="fas fa-plus-circle"></i> Nuova Azienda</h5>
+                    <h5 style="margin: 0 0 10px 0; color: #1565C0;"><i class="fas fa-plus-circle"></i> <span data-i18n="reg_lot.new_company_title">Nuova Azienda</span></h5>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <div>
-                            <label for="company-name" style="font-size: 0.85rem;">Ragione Sociale *</label>
-                            <input type="text" id="company-name" placeholder="es. Azienda Alpha S.r.l." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                            <label for="company-name" style="font-size: 0.85rem;" data-i18n="reg_lot.legal_name">Ragione Sociale *</label>
+                            <input type="text" id="company-name" data-i18n-placeholder="reg_lot.legal_name_ph" placeholder="es. Azienda Alpha S.r.l." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
                         </div>
                         <div>
-                            <label style="font-size: 0.85rem;">Settori di attività</label>
+                            <label style="font-size: 0.85rem;" data-i18n="reg_lot.sectors">Settori di attività</label>
                             <div id="company-sectors-checkboxes" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
                                 <!-- Popolato dinamicamente -->
                             </div>
                         </div>
                         <div>
-                            <label for="company-address" style="font-size: 0.85rem;">Sede legale (opzionale)</label>
-                            <input type="text" id="company-address" placeholder="es. Via Roma 12, Bari" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
+                            <label for="company-address" style="font-size: 0.85rem;" data-i18n="reg_lot.legal_address">Sede legale (opzionale)</label>
+                            <input type="text" id="company-address" data-i18n-placeholder="reg_lot.legal_address_ph" placeholder="es. Via Roma 12, Bari" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;">
                         </div>
                     </div>
                 </div>
             </div>
             
             <div class="form-group">
-                <label for="location" class="required-field">Luogo</label>
-                <input type="text" id="location" placeholder="Inserisci il luogo di produzione" onblur="validateField('location', 2)" oninput="clearFieldError('location')" required>
-                <div class="help-text">Inserisci almeno 2 caratteri</div>
+                <label for="location" class="required-field" data-i18n="reg_lot.location">Luogo</label>
+                <input type="text" id="location" data-i18n-placeholder="reg_lot.location_ph" placeholder="Inserisci il luogo di produzione" onblur="validateField('location', 2)" oninput="clearFieldError('location')" required>
+                <div class="help-text" data-i18n="reg_lot.location_hint">Inserisci almeno 2 caratteri</div>
             </div>
             
             <div class="form-group">
-    <label for="gps-coordinates">Coordinate GPS (Link Google Maps) - Opzionale</label>
+    <label for="gps-coordinates" data-i18n="reg_lot.gps">Coordinate GPS (Link Google Maps) - Opzionale</label>
     <div style="display: flex; gap: 10px; align-items: center;">
         <input type="url" id="gps-coordinates" placeholder="https://maps.google.com/?q=45.4765,10.9257" onblur="validateOptionalGoogleMapsUrl()" oninput="clearFieldError('gps-coordinates')" style="flex: 1;">
         <button type="button" onclick="openMapPicker()" class="btn btn-primary" style="white-space: nowrap;">
-            <i class="fas fa-map-marker-alt"></i> Salva Posizione
+            <i class="fas fa-map-marker-alt"></i> <span data-i18n="reg_lot.save_position">Salva Posizione</span>
         </button>
     </div>
     <div style="display: flex; gap: 10px; margin-top: 5px; flex-wrap: wrap;">
         <button type="button" onclick="getCurrentLocation()" class="btn-help">
-            <i class="fas fa-location-arrow"></i> Usa posizione attuale
+            <i class="fas fa-location-arrow"></i> <span data-i18n="reg_lot.use_current">Usa posizione attuale</span>
         </button>
         <button type="button" onclick="pasteFromClipboard()" class="btn-help">
-            <i class="fas fa-paste"></i> Incolla dagli appunti
+            <i class="fas fa-paste"></i> <span data-i18n="reg_lot.paste_clipboard">Incolla dagli appunti</span>
         </button>
         <button type="button" onclick="generateMapsUrl()" class="btn-help">
-            <i class="fas fa-coordinates"></i> Genera da coordinate
+            <i class="fas fa-coordinates"></i> <span data-i18n="reg_lot.gen_coords">Genera da coordinate</span>
         </button>
         <button type="button" onclick="showAddGPSLaterMessage()" class="btn-help" style="background: #FF9800;">
-            <i class="fas fa-clock"></i> Aggiungerò dopo
+            <i class="fas fa-clock"></i> <span data-i18n="reg_lot.add_later">Aggiungerò dopo</span>
         </button>
     </div>
-    <div class="help-text">Puoi aggiungere le coordinate GPS anche in un secondo momento</div>
+    <div class="help-text" data-i18n="reg_lot.gps_help">Puoi aggiungere le coordinate GPS anche in un secondo momento</div>
     <div class="tooltip">
         <i class="fas fa-question-circle"></i>
-        <span class="tooltiptext">Clicca "Aggiungerò dopo" se vuoi inserire le coordinate in un secondo momento</span>
+        <span class="tooltiptext" data-i18n="reg_lot.gps_tooltip">Clicca "Aggiungerò dopo" se vuoi inserire le coordinate in un secondo momento</span>
     </div>
 </div>
             
             <div class="form-group">
-                <label for="product-type" class="required-field">Tipologia di Prodotto</label>
+                <label for="product-type" class="required-field" data-i18n="reg_lot.product_type">Tipologia di Prodotto</label>
                 <select id="product-type" onchange="validateField('product-type', 1)" required>
-                    <option value="">Seleziona tipologia</option>
-                    <option value="frutta">Frutta</option>
-                    <option value="verdura">Verdura</option>
-                    <option value="cereali">Cereali</option>
-                    <option value="vino">Vino</option>
-                    <option value="olio">Olio</option>
-                    <option value="latte">Latte</option>
-                    <option value="carne">Carne</option>
+                    <option value="" data-i18n="reg_lot.select_type">Seleziona tipologia</option>
+                    <option value="frutta" data-i18n="reg_lot.type.fruits">Frutta</option>
+                    <option value="verdura" data-i18n="reg_lot.type.veg">Verdura</option>
+                    <option value="cereali" data-i18n="reg_lot.type.grains">Cereali</option>
+                    <option value="vino" data-i18n="reg_lot.type.wine">Vino</option>
+                    <option value="olio" data-i18n="reg_lot.type.oil">Olio</option>
+                    <option value="latte" data-i18n="reg_lot.type.milk">Latte</option>
+                    <option value="carne" data-i18n="reg_lot.type.meat">Carne</option>
                 </select>
             </div>
             
 <div class="form-group">
-    <label for="product-category">Prodotto (Opzionale)</label>
+    <label for="product-category" data-i18n="reg_lot.product_optional">Prodotto (Opzionale)</label>
     <select id="product-category" onchange="handleProductCategoryChange()">
-        <option value="">Seleziona prima la tipologia</option>
+        <option value="" data-i18n="reg_lot.select_type_first">Seleziona prima la tipologia</option>
         <!-- Le opzioni verranno popolate dinamicamente via JavaScript -->
     </select>
-    <div class="help-text">Seleziona "altri" per inserire un prodotto personalizzato</div>
+    <div class="help-text" data-i18n="reg_lot.product_help">Seleziona "altri" per inserire un prodotto personalizzato</div>
 </div>
 
 <div class="form-group" id="custom-product-container" style="display: none;">
-    <label for="custom-product">Specifica Prodotto</label>
-    <input type="text" id="custom-product" placeholder="Inserisci il nome del prodotto">
-    <div class="help-text">Inserisci il nome del prodotto personalizzato</div>
+    <label for="custom-product" data-i18n="reg_lot.specify_product">Specifica Prodotto</label>
+    <input type="text" id="custom-product" data-i18n-placeholder="reg_lot.specify_product_ph" placeholder="Inserisci il nome del prodotto">
+    <div class="help-text" data-i18n="reg_lot.custom_prod_hint">Inserisci il nome del prodotto personalizzato</div>
 </div>
 
             <div class="form-group">
-    <label for="variety">Varietà (Opzionale)</label>
-    <input type="text" id="variety" placeholder="Inserisci la varietà" onblur="validateOptionalField('variety', 2)" oninput="clearFieldError('variety')">
-    <div class="help-text">Inserisci almeno 2 caratteri (opzionale)</div>
+    <label for="variety" data-i18n="reg_lot.variety">Varietà (Opzionale)</label>
+    <input type="text" id="variety" data-i18n-placeholder="reg_lot.variety_ph" placeholder="Inserisci la varietà" onblur="validateOptionalField('variety', 2)" oninput="clearFieldError('variety')">
+    <div class="help-text" data-i18n="reg_lot.variety_hint">Inserisci almeno 2 caratteri (opzionale)</div>
 </div>
             
             <div class="form-group">
-                <label for="field-lot">Lotto Campo (Opzionale)</label>
-                <input type="text" id="field-lot" placeholder="Es: Campo A, Lotto 12B" maxlength="50">
-                <div class="help-text">Identificativo del lotto campo</div>
+                <label for="field-lot" data-i18n="reg_lot.field_lot">Lotto Campo (Opzionale)</label>
+                <input type="text" id="field-lot" data-i18n-placeholder="reg_lot.field_lot_ph" placeholder="Es: Campo A, Lotto 12B" maxlength="50">
+                <div class="help-text" data-i18n="reg_lot.lot_id_hint">Identificativo del lotto campo</div>
             </div>
 
             <div class="form-group">
-                <label for="field-size">Superficie (ettari) (Opzionale)</label>
+                <label for="field-size" data-i18n="reg_lot.field_size">Superficie (ettari) (Opzionale)</label>
                 <input type="number" id="field-size" step="0.01" min="0" placeholder="0.00">
-                <div class="help-text">Superficie totale del lotto in ettari</div>
+                <div class="help-text" data-i18n="reg_lot.area_hint">Superficie totale del lotto in ettari</div>
             </div>
 
             <button class="btn btn-primary" onclick="saveLot()">
-                <i class="fas fa-save"></i> Salva Lotto
+                <i class="fas fa-save"></i> <span data-i18n="reg_lot.save_lot">Salva Lotto</span>
             </button>
         </div>
         
@@ -461,19 +463,19 @@
     <div class="vista-toggle" style="display:flex; gap:6px; margin-bottom: 14px; flex-wrap: wrap;">
         <button type="button" id="vista-aziende-btn" onclick="setVistaLotti('aziende')" 
                 class="btn btn-secondary" style="background: #4CAF50; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
-            <i class="fas fa-building"></i> Per Azienda
+            <i class="fas fa-building"></i> <span data-i18n="lista.per_azienda">Per Azienda</span>
         </button>
         <button type="button" id="vista-tutti-btn" onclick="setVistaLotti('tutti')" 
                 class="btn btn-secondary" style="background: #fff; color: #555; border: 1px solid #ccc; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
-            <i class="fas fa-list"></i> Tutti i lotti
+            <i class="fas fa-list"></i> <span data-i18n="lista.all_lots">Tutti i lotti</span>
         </button>
         <button type="button" id="back-aziende-btn" onclick="setVistaLotti('aziende')" 
                 style="display:none; background: #607D8B; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
-            <i class="fas fa-arrow-left"></i> Torna alle aziende
+            <i class="fas fa-arrow-left"></i> <span data-i18n="bilancio.back_to_companies">Torna alle aziende</span>
         </button>
         <button type="button" onclick="apriNuovaAzienda()" id="btn-add-azienda"
                 style="margin-left: auto; background: #2E7D32; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
-            <i class="fas fa-plus"></i> Nuova Azienda
+            <i class="fas fa-plus"></i> <span data-i18n="lista.new_azienda">Nuova Azienda</span>
         </button>
     </div>
     
@@ -482,21 +484,21 @@
     
     <div class="search-input-container" id="lots-search-wrapper" style="display:none;">
         <div id="lista-azienda-header" style="margin-bottom: 10px; font-weight: 600; color: #2E7D32; font-size: 1rem;">
-            <i class="fas fa-building"></i> Azienda: <span id="lista-titolo-azienda"></span>
+            <i class="fas fa-building"></i> <span data-i18n="common.company">Azienda</span>: <span id="lista-titolo-azienda"></span>
         </div>
         <input type="text" id="search-lots" class="search-input" 
-        placeholder="Cerca per nome, luogo, varietà, lotto campo, ID..." 
+        data-i18n-placeholder="lista.search_ph" placeholder="Cerca per nome, luogo, varietà, lotto campo, ID..." 
         oninput="filterLots()">
         <i class="fas fa-search search-icon"></i>
-        <div class="help-text">Digita per filtrare i lotti in tempo reale.</div>
+        <div class="help-text" data-i18n="lista.search_help">Digita per filtrare i lotti in tempo reale.</div>
         <div id="search-stats" class="search-stats"></div>
     </div>
     
     <div id="lots-list" style="display:none;">
         <div class="lotto-item">
             <div class="lotto-info">
-                <h3>Caricamento in corso...</h3>
-                <p>Attendere prego</p>
+                <h3 data-i18n="spinner.loading">Caricamento in corso...</h3>
+                <p data-i18n="spinner.wait">Attendere prego</p>
             </div>
         </div>
     </div>
@@ -504,19 +506,19 @@
     <!-- ✅ CONTROLLI PAGINAZIONE - INSERISCI QUI -->
     <div id="lots-pagination">
     <div class="pagination-row">
-        <button id="prev-page-btn" onclick="loadLotsPage('prev')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
+        <button id="prev-page-btn" onclick="loadLotsPage('prev')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled data-i18n="pager.prev">
             ← Precedente
         </button>
-        <span id="page-info" style="font-weight: bold;">Pagina <span id="current-page">1</span> di <span id="total-pages">1</span></span>
-        <button id="next-page-btn" onclick="loadLotsPage('next')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled>
+        <span id="page-info" style="font-weight: bold;"><span data-i18n="pager.page">Pagina</span> <span id="current-page">1</span> <span data-i18n="pager.of">di</span> <span id="total-pages">1</span></span>
+        <button id="next-page-btn" onclick="loadLotsPage('next')" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;" disabled data-i18n="pager.next">
             Successiva →
         </button>
     </div>
     <select id="items-per-page" onchange="changeItemsPerPage()" style="padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
-        <option value="10">10 per pagina</option>
-        <option value="20" selected>20 per pagina</option>
-        <option value="50">50 per pagina</option>
-        <option value="100">100 per pagina</option>
+        <option value="10" data-i18n="pager.per_page_10">10 per pagina</option>
+        <option value="20" selected data-i18n="pager.per_page_20">20 per pagina</option>
+        <option value="50" data-i18n="pager.per_page_50">50 per pagina</option>
+        <option value="100" data-i18n="pager.per_page_100">100 per pagina</option>
     </select>
 </div>
 </div>
@@ -543,7 +545,7 @@
                 <!-- ✅ Selettore stagione generale per tutta la sezione Dettagli -->
                 <div class="dettagli-stagione-wrapper" style="display: flex; align-items: center; gap: 8px;">
                     <label for="dettagli-stagione-select" style="margin: 0; font-weight: 600; color: #555; font-size: 0.9rem;">
-                        <i class="fas fa-leaf" style="color: #4CAF50;"></i> Stagione:
+                        <i class="fas fa-leaf" style="color: #4CAF50;"></i> <span data-i18n="common.season">Stagione</span>:
                     </label>
                     <select id="dettagli-stagione-select" data-testid="dettagli-stagione-select"
                             onchange="onCambioStagioneDettagli()" 
@@ -583,10 +585,10 @@
                         <i class="fas fa-calendar-alt"></i>
                     </div>
                     <div style="flex: 1;">
-                        <h3 class="section-title">Attività di Raccolta 
+                        <h3 class="section-title"><span data-i18n="det.harvest_title">Attività di Raccolta</span> 
                             <span id="raccolta-count" class="activity-badge">0</span>
                         </h3>
-                        <p class="section-subtitle">Registra e visualizza le attività di raccolta del lotto</p>
+                        <p class="section-subtitle" data-i18n="det.activities.subtitle">Registra e visualizza le attività di raccolta del lotto</p>
                     </div>
                     <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
                         <i class="fas fa-chevron-down"></i>
@@ -597,24 +599,24 @@
                     <!-- FORM PER NUOVA RACCOLTA -->
                     <div class="section-grid">
                         <div class="form-group">
-                            <label for="harvest-date"><i class="fas fa-calendar-day"></i> Data Raccolta</label>
+                            <label for="harvest-date"><i class="fas fa-calendar-day"></i> <span data-i18n="det.harvest_date">Data Raccolta</span></label>
                             <input type="date" id="harvest-date" class="special-input">
                         </div>
                         
                         <div class="form-group">
-                            <label for="harvest-kg"><i class="fas fa-weight-hanging"></i> Kg Raccolti</label>
+                            <label for="harvest-kg"><i class="fas fa-weight-hanging"></i> <span data-i18n="det.harvest_kg">Kg Raccolti</span></label>
                             <input type="number" id="harvest-kg" placeholder="0" step="0.1" class="special-input">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="harvest-notes"><i class="fas fa-sticky-note"></i> Note Raccolta</label>
-                        <textarea id="harvest-notes" rows="2" placeholder="Note sulla raccolta..." class="special-input"></textarea>
+                        <label for="harvest-notes"><i class="fas fa-sticky-note"></i> <span data-i18n="det.harvest_notes">Note Raccolta</span></label>
+                        <textarea id="harvest-notes" rows="2" data-i18n-placeholder="det.harvest_notes_ph" placeholder="Note sulla raccolta..." class="special-input"></textarea>
                     </div>
                     
                     <div class="section-actions">
                         <button class="btn btn-secondary" onclick="addHarvestActivity()" style="background: #FF9800;">
-                            <i class="fas fa-plus"></i> Aggiungi Raccolta
+                            <i class="fas fa-plus"></i> <span data-i18n="det.add_harvest">Aggiungi Raccolta</span>
                         </button>
                     </div>
                     
@@ -622,7 +624,7 @@
                     <div id="activities-history-container" style="margin-top: 20px; display: none;">
                         <div class="history-header" onclick="toggleHistory('activities')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;">
                             <h4 style="color: #FF9800; margin: 0; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-history"></i> Storico Attività di Raccolta
+                                <i class="fas fa-history"></i> <span data-i18n="det.harvest_history">Storico Attività di Raccolta</span>
                                 <span class="activity-badge">0</span>
                             </h4>
                             <button class="history-toggle" onclick="event.stopPropagation(); toggleHistory('activities')" style="background: none; border: none; font-size: 1rem; cursor: pointer; color: #666;">
@@ -641,10 +643,10 @@
                         <i class="fas fa-flask"></i>
                     </div>
                     <div style="flex: 1;">
-                        <h3 class="section-title">Analisi Multiresiduali 
+                        <h3 class="section-title"><span data-i18n="det.analyses_title">Analisi Multiresiduali</span> 
                             <span id="analisi-count" class="analysis-badge">0</span>
                         </h3>
-                        <p class="section-subtitle">Carica e gestisci le analisi di laboratorio</p>
+                        <p class="section-subtitle" data-i18n="det.analyses.subtitle">Carica e gestisci le analisi di laboratorio</p>
                     </div>
                     <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
                         <i class="fas fa-chevron-down"></i>
@@ -655,26 +657,26 @@
                     <!-- FORM PER INSERIMENTO NUOVA ANALISI -->
                     <div class="section-grid">
                         <div class="form-group">
-                            <label for="analysis-year"><i class="fas fa-calendar"></i> Anno Riferimento</label>
+                            <label for="analysis-year"><i class="fas fa-calendar"></i> <span data-i18n="det.analysis_year">Anno Riferimento</span></label>
                             <select id="analysis-year" class="special-input">
-                                <option value="">Seleziona anno</option>
+                                <option value="" data-i18n="det.select_year">Seleziona anno</option>
                             </select>
                         </div>
                         
                         <div class="form-group">
-                            <label for="analysis-file"><i class="fas fa-file-upload"></i> Carica File Analisi</label>
+                            <label for="analysis-file"><i class="fas fa-file-upload"></i> <span data-i18n="det.analysis_file">Carica File Analisi</span></label>
                             <input type="file" id="analysis-file" accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png" class="special-input">
                         </div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="analysis-notes"><i class="fas fa-clipboard"></i> Note Analisi</label>
-                        <textarea id="analysis-notes" rows="2" placeholder="Note sull'analisi..." class="special-input"></textarea>
+                        <label for="analysis-notes"><i class="fas fa-clipboard"></i> <span data-i18n="det.analysis_notes">Note Analisi</span></label>
+                        <textarea id="analysis-notes" rows="2" data-i18n-placeholder="det.analysis_notes_ph" placeholder="Note sull'analisi..." class="special-input"></textarea>
                     </div>
                     
                     <div class="section-actions">
                         <button class="btn btn-secondary" onclick="uploadAnalysis()" style="background: #2196F3;">
-                            <i class="fas fa-upload"></i> Carica Analisi
+                            <i class="fas fa-upload"></i> <span data-i18n="det.upload_analysis">Carica Analisi</span>
                         </button>
                     </div>
                     
@@ -682,7 +684,7 @@
                     <div id="analyses-history-container" style="margin-top: 20px; display: none;">
                         <div class="history-header" onclick="toggleHistory('analyses')" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;">
                             <h4 style="color: #2196F3; margin: 0; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-history"></i> Storico Analisi Caricate
+                                <i class="fas fa-history"></i> <span data-i18n="det.analyses_history">Storico Analisi Caricate</span>
                                 <span class="analysis-badge">0</span>
                             </h4>
                             <button class="history-toggle" onclick="event.stopPropagation(); toggleHistory('analyses')" style="background: none; border: none; font-size: 1rem; cursor: pointer; color: #666;">
@@ -701,8 +703,8 @@
                         <i class="fas fa-notes-medical"></i>
                     </div>
                     <div style="flex: 1;">
-                        <h3 class="section-title">Note Generali Lotto</h3>
-                        <p class="section-subtitle">Informazioni aggiuntive sul lotto</p>
+                        <h3 class="section-title" data-i18n="det.general_notes_title">Note Generali Lotto</h3>
+                        <p class="section-subtitle" data-i18n="det.info.subtitle">Informazioni aggiuntive sul lotto</p>
                     </div>
                     <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
                         <i class="fas fa-chevron-down"></i>
@@ -711,8 +713,8 @@
                 
                 <div class="section-content expanded">
                     <div class="form-group">
-                        <label for="general-notes"><i class="fas fa-edit"></i> Note</label>
-                        <textarea id="general-notes" rows="4" placeholder="Inserisci note generali sul lotto..." class="special-input"></textarea>
+                        <label for="general-notes"><i class="fas fa-edit"></i> <span data-i18n="common.notes">Note</span></label>
+                        <textarea id="general-notes" rows="4" data-i18n-placeholder="det.general_notes_ph" placeholder="Inserisci note generali sul lotto..." class="special-input"></textarea>
                     </div>
                 </div>
             </div>
@@ -720,11 +722,11 @@
             <!-- Pulsanti di azione -->
             <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="saveLotDetails()">
-                    <i class="fas fa-save"></i> Salva Dettagli
+                    <i class="fas fa-save"></i> <span data-i18n="det.save_details">Salva Dettagli</span>
                 </button>
                 
                 <button class="btn btn-secondary" onclick="showSection('lista-section')">
-                    <i class="fas fa-arrow-left"></i> Torna alla Lista
+                    <i class="fas fa-arrow-left"></i> <span data-i18n="det.back_to_list">Torna alla Lista</span>
                 </button>
             </div>
         </div>
@@ -777,8 +779,8 @@
             <i class="fas fa-plus-circle"></i>
         </div>
         <div style="flex: 1;">
-            <h3 class="section-title">Nuova Registrazione Economica</h3>
-            <p class="section-subtitle">Inserisci i dati economici per la stagione agricola</p>
+            <h3 class="section-title" data-i18n="eco.new_registration">Nuova Registrazione Economica</h3>
+            <p class="section-subtitle" data-i18n="eco.subtitle">Inserisci i dati economici per la stagione agricola</p>
         </div>
         <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
             <i class="fas fa-chevron-down"></i>
@@ -789,76 +791,76 @@
         <!-- PRIMA RIGA: Dati Base -->
         <div class="section-grid">
             <div class="form-group">
-                <label for="stagione-agricola"><i class="fas fa-calendar"></i> Stagione Agricola</label>
+                <label for="stagione-agricola"><i class="fas fa-calendar"></i> <span data-i18n="eco.season">Stagione Agricola</span></label>
                 <select id="stagione-agricola" class="special-input">
-                    <option value="">Seleziona anno</option>
+                    <option value="" data-i18n="eco.select_year">Seleziona anno</option>
                 </select>
             </div>
             
             <div class="form-group">
-                <label for="data-acquisto-vendita"><i class="fas fa-calendar-day"></i> Data Acquisto/Vendita</label>
+                <label for="data-acquisto-vendita"><i class="fas fa-calendar-day"></i> <span data-i18n="eco.transaction_date">Data Acquisto/Vendita</span></label>
                 <input type="date" id="data-acquisto-vendita" class="special-input">
             </div>
         </div>
 
                         <!-- SECONDA RIGA: Metodo di Calcolo Orizzontale -->
         <div class="form-group">
-            <label><i class="fas fa-calculator"></i> Metodo di Calcolo Prezzo</label>
+            <label><i class="fas fa-calculator"></i> <span data-i18n="eco.calc_method">Metodo di Calcolo Prezzo</span></label>
             <div style="display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; border-radius: 8px; transition: all 0.3s ease; border: 2px solid var(--primary); background: rgba(76, 175, 80, 0.1); flex: 1; min-width: 150px; justify-content: center;" id="label-metodo-kg">
                     <input type="radio" id="metodo-prezzo-kg" name="metodo-calcolo" value="kg" checked onchange="toggleMetodoCalcolo()">
-                    <span style="font-weight: 500;">Prezzo al kg (€/kg)</span>
+                    <span style="font-weight: 500;" data-i18n="eco.method_kg">Prezzo al kg (€/kg)</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; border-radius: 8px; transition: all 0.3s ease; border: 2px solid #ddd; background: white; flex: 1; min-width: 150px; justify-content: center;" id="label-metodo-totale">
                     <input type="radio" id="metodo-prezzo-totale" name="metodo-calcolo" value="totale" onchange="toggleMetodoCalcolo()">
-                    <span style="font-weight: 500;">Prezzo totale (€)</span>
+                    <span style="font-weight: 500;" data-i18n="eco.method_total">Prezzo totale (€)</span>
                 </label>
             </div>
-            <div class="help-text" style="margin-top: 8px;">Scegli come vuoi inserire il prezzo</div>
+            <div class="help-text" style="margin-top: 8px;" data-i18n="eco.price_mode_hint">Scegli come vuoi inserire il prezzo</div>
         </div>
 
         <!-- TERZA RIGA: Quantità e Prezzo (INVERTITI) -->
         <div class="section-grid">
             <!-- Campo Prezzo al kg (visibile di default) - ORA A DESTRA -->
             <div id="campo-prezzo-kg" class="form-group">
-                <label for="prezzo-acquisto-vendita"><i class="fas fa-euro-sign"></i> Prezzo al kg (€/kg)</label>
+                <label for="prezzo-acquisto-vendita"><i class="fas fa-euro-sign"></i> <span data-i18n="eco.method_kg">Prezzo al kg (€/kg)</span></label>
                 <input type="number" id="prezzo-acquisto-vendita" step="0.01" placeholder="0.00" class="special-input" oninput="calcolaPrezzoAutomatico()">
-                <div class="help-text">Prezzo per chilogrammo</div>
+                <div class="help-text" data-i18n="eco.price_per_kg_hint">Prezzo per chilogrammo</div>
             </div>
 
             <!-- Campo Prezzo totale (nascosto di default) - ORA A DESTRA -->
             <div id="campo-prezzo-totale" style="display: none;" class="form-group">
-                <label for="prezzo-totale"><i class="fas fa-money-bill-wave"></i> Prezzo totale (€)</label>
+                <label for="prezzo-totale"><i class="fas fa-money-bill-wave"></i> <span data-i18n="eco.method_total">Prezzo totale (€)</span></label>
                 <input type="number" id="prezzo-totale" step="0.01" placeholder="0.00" class="special-input" oninput="calcolaPrezzoAutomatico()">
-                <div class="help-text">Prezzo totale complessivo</div>
+                <div class="help-text" data-i18n="eco.price_total_hint">Prezzo totale complessivo</div>
             </div>
 
             <!-- Kg Raccolti - ORA A SINISTRA -->
             <div class="form-group">
-                <label for="totale-kg-raccolti"><i class="fas fa-weight-hanging"></i> Totale Kg Raccolti
+                <label for="totale-kg-raccolti"><i class="fas fa-weight-hanging"></i> <span data-i18n="eco.total_kg">Totale Kg Raccolti</span>
                     <button type="button" onclick="calcolaKgRaccoltiAutomaticoCompleto()" class="btn-help" style="margin-left: 5px;">
-                        <i class="fas fa-calculator"></i> Calcola Auto
+                        <i class="fas fa-calculator"></i> <span data-i18n="eco.calc_auto">Calcola Auto</span>
                     </button>
                 </label>
                 <input type="number" id="totale-kg-raccolti" step="0.1" placeholder="0" class="special-input" oninput="calcolaPrezzoAutomatico()">
-                <div class="help-text">Quantità totale raccolta</div>
+                <div class="help-text" data-i18n="eco.qty_hint">Quantità totale raccolta</div>
             </div>
         </div>
 
         <!-- QUARTA RIGA: Costi -->
                 
             <div class="form-group">
-    <label for="costo-personale"><i class="fas fa-coins"></i> Totale Costi Stagione (€)</label>
+    <label for="costo-personale"><i class="fas fa-coins"></i> <span data-i18n="eco.total_costs">Totale Costi Stagione (€)</span></label>
     <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="costo-personale" readonly placeholder="Nessun costo aggiunto" class="special-input"
+        <input type="text" id="costo-personale" readonly data-i18n-placeholder="eco.no_cost_added" placeholder="Nessun costo aggiunto" class="special-input"
                style="flex: 1; background: #f0f0f0; color: #333; cursor: not-allowed; font-weight: bold;">
         <button type="button" onclick="importaCostiTotaliDaGestioneCosti()"
                 style="background: #FF5722; color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; white-space: nowrap; font-size: 0.9rem;"
-                title="Importa il totale costi (personale + mezzi tecnici + ammortamenti) dalla sezione Gestione Costi">
-            <i class="fas fa-download"></i> Aggiorna da Costi
+                data-i18n-title="eco.import_costs_tooltip" title="Importa il totale costi (personale + mezzi tecnici + ammortamenti) dalla sezione Gestione Costi">
+            <i class="fas fa-download"></i> <span data-i18n="eco.update_from_costs">Aggiorna da Costi</span>
         </button>
     </div>
-    <div class="help-text">Somma di personale, mezzi tecnici e quote di ammortamento dalla sezione Gestione Costi (sola lettura)</div>
+    <div class="help-text" data-i18n="eco.total_costs_help">Somma di personale, mezzi tecnici e quote di ammortamento dalla sezione Gestione Costi (sola lettura)</div>
     <!-- Campi nascosti popolati al click di "Aggiorna da Costi" -->
     <input type="hidden" id="costo-personale-valore" value="0">
     <input type="hidden" id="costo-mezzi-valore" value="0">
@@ -868,10 +870,10 @@
         <!-- PULSANTI AZIONE -->
         <div class="section-actions">
             <button class="btn btn-primary" onclick="salvaRegistrazioneEconomica()" style="background: #9C27B0;">
-                <i class="fas fa-save"></i> Salva Registrazione
+                <i class="fas fa-save"></i> <span data-i18n="eco.save_registration">Salva Registrazione</span>
             </button>
             <button class="btn btn-secondary" onclick="resetFormEconomico()">
-                <i class="fas fa-times"></i> Annulla
+                <i class="fas fa-times"></i> <span data-i18n="common.cancel">Annulla</span>
             </button>
         </div>
     </div>
@@ -884,10 +886,10 @@
                         <i class="fas fa-history"></i>
                     </div>
                     <div style="flex: 1;">
-                        <h3 class="section-title">Storico Registrazioni Economiche
+                        <h3 class="section-title"><span data-i18n="eco.history_title">Storico Registrazioni Economiche</span>
                             <span id="economia-count" class="activity-badge">0</span>
                         </h3>
-                        <p class="section-subtitle">Cronologia e bilancio economico</p>
+                        <p class="section-subtitle" data-i18n="eco.history_subtitle">Cronologia e bilancio economico</p>
                     </div>
                     <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
                         <i class="fas fa-chevron-down"></i>
@@ -953,8 +955,8 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div style="flex: 1;">
-                    <h3 class="section-title">👥 Costo Personale</h3>
-                    <p class="section-subtitle">Registra attività e calcola costi manodopera</p>
+                    <h3 class="section-title" data-i18n="costi.personnel_title">👥 Costo Personale</h3>
+                    <p class="section-subtitle" data-i18n="costi.subtitle">Registra attività e calcola costi manodopera</p>
                 </div>
                 <button class="section-toggle">
                     <i class="fas fa-chevron-down"></i>
@@ -965,9 +967,9 @@
                 <!-- TARIFFE MANODOPERA -->
 <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h4 style="margin: 0;">💶 Tariffe Orarie Stagione</h4>
+        <h4 style="margin: 0;" data-i18n="costi.hourly_rates">💶 Tariffe Orarie Stagione</h4>
         <div style="display: flex; align-items: center; gap: 10px;">
-            <label style="margin: 0; white-space: nowrap;">Stagione:</label>
+            <label style="margin: 0; white-space: nowrap;"><span data-i18n="common.season">Stagione</span>:</label>
             <select id="tariffe-stagione-select" onchange="cambiaStagioneTariffe()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; min-width: 100px;">
                 <!-- Popolato dinamicamente -->
             </select>
@@ -975,79 +977,79 @@
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
         <div class="form-group">
-            <label>Standard (€/ora)</label>
+            <label data-i18n="costi.rate_standard">Standard (€/ora)</label>
             <input type="number" id="tariffa-standard" value="15.00" step="0.50" min="0" class="special-input">
         </div>
         <div class="form-group">
-            <label>Specializzato (€/ora)</label>
+            <label data-i18n="costi.rate_spec">Specializzato (€/ora)</label>
             <input type="number" id="tariffa-specializzato" value="22.00" step="0.50" min="0" class="special-input">
         </div>
     </div>
     <button class="btn btn-secondary" onclick="salvaTariffeManodopera()" style="margin-top: 10px;">
-        <i class="fas fa-save"></i> Aggiorna Tariffe
+        <i class="fas fa-save"></i> <span data-i18n="costi.update_rates">Aggiorna Tariffe</span>
     </button>
 </div>
                 
                 <!-- FORM REGISTRAZIONE ATTIVITÀ -->
-                <h4 style="margin-bottom: 15px;">📝 Registra Attività Personale</h4>
+                <h4 style="margin-bottom: 15px;" data-i18n="costi.record_activity">📝 Registra Attività Personale</h4>
                 <div class="section-grid">
                     <div class="form-group">
-                        <label>Data Attività</label>
+                        <label data-i18n="costi.activity_date">Data Attività</label>
                         <input type="date" id="costo-data-attivita" class="special-input">
                     </div>
                     <div class="form-group">
-                        <label>N. Operatori</label>
+                        <label data-i18n="costi.n_operators">N. Operatori</label>
                         <input type="number" id="costo-numero-operatori" value="1" min="1" max="50" class="special-input">
                     </div>
                     <div class="form-group">
-                        <label>Qualifica</label>
+                        <label data-i18n="costi.qualification">Qualifica</label>
                         <select id="costo-qualifica" class="special-input">
-                            <option value="standard">Standard</option>
-                            <option value="specializzato">Specializzato</option>
+                            <option value="standard" data-i18n="costi.qualification.standard">Standard</option>
+                            <option value="specializzato" data-i18n="costi.qualification.spec">Specializzato</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Ore Lavorate</label>
+                        <label data-i18n="costi.hours_worked">Ore Lavorate</label>
                         <input type="number" id="costo-ore-lavorate" value="6.5" step="0.5" min="0.5" max="24" class="special-input">
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
-                        <label>Attività Svolta</label>
+                        <label data-i18n="costi.activity_performed">Attività Svolta</label>
                         <div style="display: flex; gap: 10px;">
                             <select id="costo-attivita-select" class="special-input" style="flex: 1;" onchange="handleAttivitaSelect()">
-                                <option value="">Seleziona attività predefinita...</option>
+                                <option value="" data-i18n="costi.select_predefined">Seleziona attività predefinita...</option>
                             </select>
-                            <input type="text" id="costo-attivita-libera" placeholder="Oppure scrivi attività libera..." class="special-input" style="flex: 1; display: none;">
+                            <input type="text" id="costo-attivita-libera" data-i18n-placeholder="costi.free_activity_ph" placeholder="Oppure scrivi attività libera..." class="special-input" style="flex: 1; display: none;">
                         </div>
                     </div>
                     <div class="form-group" style="grid-column: span 2;">
-                        <label>Note</label>
-                        <textarea id="costo-note" rows="2" class="special-input" placeholder="Note aggiuntive..."></textarea>
+                        <label data-i18n="common.notes">Note</label>
+                        <textarea id="costo-note" rows="2" class="special-input" data-i18n-placeholder="costi.notes_ph" placeholder="Note aggiuntive..."></textarea>
                     </div>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="btn btn-primary" onclick="salvaCostoPersonale()" style="background: #FF5722;">
-                        <i class="fas fa-save"></i> Registra Attività
+                        <i class="fas fa-save"></i> <span data-i18n="costi.record_activity_btn">Registra Attività</span>
                     </button>
                     <button class="btn btn-secondary" onclick="resetCostoPersonaleForm()">
-                        <i class="fas fa-times"></i> Annulla
+                        <i class="fas fa-times"></i> <span data-i18n="common.cancel">Annulla</span>
                     </button>
                 </div>
                 
                 <!-- RIEPILOGO E REGISTRO -->
                 <div style="margin-top: 25px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4>📊 Registro Attività Personale</h4>
+                        <h4 data-i18n="costi.personnel_register">📊 Registro Attività Personale</h4>
                         <div class="vista-buttons-container" style="display: flex; gap: 10px;">
-    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('giornaliera')">📅 Giorno</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('settimanale')">📆 Settimana</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('mensile')">🗓️ Mese</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('annuale')">📆 Anno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('giornaliera')" data-i18n="costi.view.day">📅 Giorno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('settimanale')" data-i18n="costi.view.week">📆 Settimana</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('mensile')" data-i18n="costi.view.month">🗓️ Mese</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaRegistro('annuale')" data-i18n="costi.view.year">📆 Anno</button>
 </div>
                     </div>
                     <div id="costi-personale-registro" style="max-height: 400px; overflow-y: auto;"></div>
                     <div style="text-align: right; margin-top: 15px; padding: 10px; background: #FF5722; color: white; border-radius: 8px;">
-                        <strong>Totale Costo Personale Stagione: <span id="totale-costo-personale">€0.00</span></strong>
+                        <strong><span data-i18n="costi.total_personnel_season">Totale Costo Personale Stagione</span>: <span id="totale-costo-personale">€0.00</span></strong>
                     </div>
                 </div>
             </div>
@@ -1060,8 +1062,8 @@
                     <i class="fas fa-flask"></i>
                 </div>
                 <div style="flex: 1;">
-                    <h3 class="section-title">🧪 Costo Mezzi Tecnici</h3>
-                    <p class="section-subtitle">Fitofarmaci, fertilizzanti e altri mezzi</p>
+                    <h3 class="section-title" data-i18n="costi.means_title">🧪 Costo Mezzi Tecnici</h3>
+                    <p class="section-subtitle" data-i18n="costi.means_subtitle">Fitofarmaci, fertilizzanti e altri mezzi</p>
                 </div>
                 <button class="section-toggle">
                     <i class="fas fa-chevron-down"></i>
@@ -1071,51 +1073,51 @@
             <div class="section-content">
                 <div class="section-grid">
                     <div class="form-group">
-                        <label>Data</label>
+                        <label data-i18n="common.date">Data</label>
                         <input type="date" id="mezzi-data" class="special-input">
                     </div>
                     <div class="form-group">
-                        <label>Categoria</label>
+                        <label data-i18n="costi.category">Categoria</label>
                         <select id="mezzi-categoria" class="special-input">
-                            <option value="fitofarmaci">Fitofarmaci</option>
-                            <option value="fertilizzanti">Fertilizzanti</option>
-                            <option value="sementi">Sementi</option>
-                            <option value="carburanti">Carburanti</option>
-                            <option value="altro">Altro</option>
+                            <option value="fitofarmaci" data-i18n="costi.category.pesticides">Fitofarmaci</option>
+                            <option value="fertilizzanti" data-i18n="costi.category.fertilizers">Fertilizzanti</option>
+                            <option value="sementi" data-i18n="costi.category.seeds">Sementi</option>
+                            <option value="carburanti" data-i18n="costi.category.fuels">Carburanti</option>
+                            <option value="altro" data-i18n="reg.sector.other">Altro</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Descrizione</label>
-                        <input type="text" id="mezzi-descrizione" class="special-input" placeholder="Descrizione prodotto...">
+                        <label data-i18n="field.description">Descrizione</label>
+                        <input type="text" id="mezzi-descrizione" class="special-input" data-i18n-placeholder="costi.desc_product_ph" placeholder="Descrizione prodotto...">
                     </div>
                     <div class="form-group">
-                        <label>Importo (€)</label>
+                        <label data-i18n="costi.amount">Importo (€)</label>
                         <input type="number" id="mezzi-importo" step="0.01" min="0" class="special-input" placeholder="0.00">
                     </div>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button class="btn btn-primary" onclick="salvaCostoMezziTecnici()" style="background: #2196F3;">
-                        <i class="fas fa-save"></i> Registra Costo
+                        <i class="fas fa-save"></i> <span data-i18n="costi.record_cost">Registra Costo</span>
                     </button>
                     <button class="btn btn-secondary" onclick="resetMezziTecniciForm()">
-                        <i class="fas fa-times"></i> Annulla
+                        <i class="fas fa-times"></i> <span data-i18n="common.cancel">Annulla</span>
                     </button>
                 </div>
                 
                 <div style="margin-top: 20px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h4 style="margin: 0;">📊 Registro Mezzi Tecnici</h4>
+        <h4 style="margin: 0;" data-i18n="costi.means_register">📊 Registro Mezzi Tecnici</h4>
         <div class="vista-buttons-container" style="display: flex; gap: 10px;">
-    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('giornaliera')">📅 Giorno</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('settimanale')">📆 Settimana</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('mensile')">🗓️ Mese</button>
-    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('annuale')">📆 Anno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('giornaliera')" data-i18n="costi.view.day">📅 Giorno</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('settimanale')" data-i18n="costi.view.week">📆 Settimana</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('mensile')" data-i18n="costi.view.month">🗓️ Mese</button>
+    <button class="btn-help vista-btn" onclick="cambiaVistaMezzi('annuale')" data-i18n="costi.view.year">📆 Anno</button>
 </div>
     </div>
     <div id="mezzi-tecnici-registro" style="max-height: 300px; overflow-y: auto;"></div>
                     <div style="text-align: right; margin-top: 15px; padding: 10px; background: #2196F3; color: white; border-radius: 8px;">
-                        <strong>Totale Mezzi Tecnici: <span id="totale-mezzi-tecnici">€0.00</span></strong>
+                        <strong><span data-i18n="costi.total_means">Totale Mezzi Tecnici</span>: <span id="totale-mezzi-tecnici">€0.00</span></strong>
                     </div>
                 </div>
             </div>
@@ -1128,8 +1130,8 @@
                     <i class="fas fa-tractor"></i>
                 </div>
                 <div style="flex: 1;">
-                    <h3 class="section-title">🚜 Ammortamento Beni Durevoli</h3>
-                    <p class="section-subtitle">Trattori, impianti e attrezzature</p>
+                    <h3 class="section-title" data-i18n="costi.durables_title">🚜 Ammortamento Beni Durevoli</h3>
+                    <p class="section-subtitle" data-i18n="costi.durables_subtitle">Trattori, impianti e attrezzature</p>
                 </div>
                 <button class="section-toggle">
                     <i class="fas fa-chevron-down"></i>
@@ -1138,17 +1140,17 @@
             
             <div class="section-content">
                 <div class="form-group">
-                    <label>Beni Durevoli in Ammortamento</label>
+                    <label data-i18n="costi.durable_assets_amort">Beni Durevoli in Ammortamento</label>
                     <div id="beni-durevoli-costi-container" style="margin-top: 20px;"></div>
                     <button type="button" onclick="aggiungiBeneDurevoleCosti()" style="margin-top: 10px; padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                        <i class="fas fa-plus"></i> Aggiungi Bene Durevole
+                        <i class="fas fa-plus"></i> <span data-i18n="costi.add_durable">Aggiungi Bene Durevole</span>
                     </button>
                 </div>
                 <!-- ✅ Storico beni durevoli del lotto (tutti i beni mai registrati, attivi + terminati) -->
                 <div class="beni-storico-wrapper" style="margin-top: 24px; padding-top: 18px; border-top: 2px dashed #e1bee7;">
                     <div class="beni-storico-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
                         <h4 style="margin: 0; color: #6A1B9A; font-size: 1rem;">
-                            <i class="fas fa-history"></i> Storico Beni Registrati
+                            <i class="fas fa-history"></i> <span data-i18n="costi.durables_history">Storico Beni Registrati</span>
                         </h4>
                         <span id="beni-storico-counter" class="beni-storico-counter" style="font-size: 0.78rem; color: #666; background: #f3e5f5; padding: 3px 10px; border-radius: 12px; font-weight: 600;">—</span>
                     </div>
@@ -1206,35 +1208,35 @@
                 
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
     <button class="btn btn-primary" onclick="salvaBeniDurevoliCosti()" style="background: #9C27B0;">
-        <i class="fas fa-save"></i> Salva Beni Durevoli
+        <i class="fas fa-save"></i> <span data-i18n="costi.save_durables">Salva Beni Durevoli</span>
     </button>
 </div>
 
                 <div style="text-align: right; margin-top: 15px; padding: 10px; background: #9C27B0; color: white; border-radius: 8px;">
-                    <strong>Quota Ammortamento Annuale: <span id="totale-ammortamento-costi">€0.00</span></strong>
+                    <strong><span data-i18n="costi.annual_amort_quota">Quota Ammortamento Annuale</span>: <span id="totale-ammortamento-costi">€0.00</span></strong>
                 </div>
             </div>
         </div>
         
         <!-- RIEPILOGO COSTI TOTALI -->
         <div style="background: linear-gradient(135deg, #2c3e50, #1a1a2e); color: white; padding: 20px; border-radius: 12px; text-align: center;">
-            <h3 style="margin-bottom: 15px;">📊 Riepilogo Costi Stagione <span id="riepilogo-stagione"></span></h3>
+            <h3 style="margin-bottom: 15px;">📊 <span data-i18n="costi.summary_title">Riepilogo Costi Stagione</span> <span id="riepilogo-stagione"></span></h3>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
                 <div>
-                    <p style="opacity: 0.8;">👥 Personale</p>
+                    <p style="opacity: 0.8;">👥 <span data-i18n="costi.tab.personnel">Personale</span></p>
                     <strong style="font-size: 1.2rem;" id="riepilogo-personale">€0.00</strong>
                 </div>
                 <div>
-                    <p style="opacity: 0.8;">🧪 Mezzi Tecnici</p>
+                    <p style="opacity: 0.8;">🧪 <span data-i18n="costi.tab.means">Mezzi Tecnici</span></p>
                     <strong style="font-size: 1.2rem;" id="riepilogo-mezzi">€0.00</strong>
                 </div>
                 <div>
-                    <p style="opacity: 0.8;">🚜 Ammortamenti</p>
+                    <p style="opacity: 0.8;">🚜 <span data-i18n="costi.amortizations">Ammortamenti</span></p>
                     <strong style="font-size: 1.2rem;" id="riepilogo-ammortamenti">€0.00</strong>
                 </div>
             </div>
             <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.3);">
-                <strong style="font-size: 1.5rem;">TOTALE COSTI: <span id="riepilogo-totale-costi">€0.00</span></strong>
+                <strong style="font-size: 1.5rem;"><span data-i18n="costi.total_costs">TOTALE COSTI</span>: <span id="riepilogo-totale-costi">€0.00</span></strong>
             </div>
         </div>
     </div>
@@ -1242,32 +1244,32 @@
   
 <!-- Sezione Gestione Utenti (solo per admin) -->
         <div id="user-management-section" class="section" style="display: none;">
-            <h2 class="section-title"><i class="fas fa-users-cog"></i> Gestione Utenti e Permessi</h2>
+            <h2 class="section-title"><i class="fas fa-users-cog"></i> <span data-i18n="header.user_management_tooltip">Gestione Utenti e Permessi</span></h2>
             
             <div class="permission-section">
-                <h3 style="margin-bottom: 15px;">Registra Nuovo Utente</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="users.register_new">Registra Nuovo Utente</h3>
                 <div class="user-form-grid">
                     <div class="form-group">
-                        <label for="new-user-username">Username *</label>
-                        <input type="text" id="new-user-username" placeholder="es. mario_rossi">
+                        <label for="new-user-username" data-i18n="users.username_star">Username *</label>
+                        <input type="text" id="new-user-username" data-i18n-placeholder="users.username_ph" placeholder="es. mario_rossi">
                     </div>
 
                     <div class="form-group">
-                        <label for="new-user-email">Email <small style="color:#888">(opzionale, per invio credenziali)</small></label>
-                        <input type="email" id="new-user-email" placeholder="es. mario@azienda.it">
+                        <label for="new-user-email"><span data-i18n="users.email">Email</span> <small style="color:#888" data-i18n="users.email_optional_hint">(opzionale, per invio credenziali)</small></label>
+                        <input type="email" id="new-user-email" data-i18n-placeholder="users.email_ph" placeholder="es. mario@azienda.it">
                     </div>
 
                     <div class="form-group">
-                        <label for="new-user-password">Password *</label>
+                        <label for="new-user-password" data-i18n="users.password_star">Password *</label>
                         <div style="position: relative;">
-                            <input type="password" id="new-user-password" placeholder="Minimo 6 caratteri" style="padding-right: 75px;">
+                            <input type="password" id="new-user-password" data-i18n-placeholder="users.password_ph" placeholder="Minimo 6 caratteri" style="padding-right: 75px;">
                             <button type="button" onclick="togglePasswordVisibility('new-user-password', this)"
-                                    title="Mostra/Nascondi password"
+                                    data-i18n-title="users.toggle_password" title="Mostra/Nascondi password"
                                     style="position: absolute; right: 38px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: #555; padding: 6px;">
                                 <i class="fas fa-eye"></i>
                             </button>
                             <button type="button" onclick="generateRandomPassword('new-user-password')"
-                                    title="Genera password casuale"
+                                    data-i18n-title="users.generate_password" title="Genera password casuale"
                                     style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1rem; color: #4CAF50; padding: 6px;">
                                 <i class="fas fa-magic"></i>
                             </button>
@@ -1275,11 +1277,11 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="new-user-role">Ruolo *</label>
+                        <label for="new-user-role" data-i18n="users.role_star">Ruolo *</label>
                         <select id="new-user-role">
-                            <option value="visitatore">Visitatore (solo lettura)</option>
-                            <option value="operatore" selected>Operatore (può aggiungere/modificare)</option>
-                            <option value="admin">Amministratore (accesso completo)</option>
+                            <option value="visitatore" data-i18n="users.role.viewer_full">Visitatore (solo lettura)</option>
+                            <option value="operatore" selected data-i18n="users.role.operator_full">Operatore (può aggiungere/modificare)</option>
+                            <option value="admin" data-i18n="users.role.admin_full">Amministratore (accesso completo)</option>
                         </select>
                     </div>
                 </div>
@@ -1287,24 +1289,24 @@
                 <div style="display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 10px; background: #f1f8e9; border-radius: 8px;">
                     <input type="checkbox" id="send-credentials-email" checked style="width: 18px; height: 18px; cursor: pointer;">
                     <label for="send-credentials-email" style="margin: 0; cursor: pointer; font-size: 0.95rem; color: #2e7d32;">
-                        <i class="fas fa-paper-plane"></i> Invia automaticamente le credenziali via email al sotto-utente (richiede campo Email)
+                        <i class="fas fa-paper-plane"></i> <span data-i18n="users.auto_send_credentials">Invia automaticamente le credenziali via email al sotto-utente (richiede campo Email)</span>
                     </label>
                 </div>
 
                 <button class="btn btn-primary" onclick="registerNewUser()">
-                    <i class="fas fa-user-plus"></i> Registra Utente
+                    <i class="fas fa-user-plus"></i> <span data-i18n="reg.register_user_btn">Registra Utente</span>
                 </button>
             </div>
             
             <div class="user-list">
-                <h3 style="margin-bottom: 15px;">Utenti Registrati</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="users.registered">Utenti Registrati</h3>
                 <div id="users-list-container">
                     <!-- Gli utenti verranno caricati qui -->
                 </div>
             </div>
             
             <div class="permission-section">
-                <h3 style="margin-bottom: 15px;">Gestione Permessi</h3>
+                <h3 style="margin-bottom: 15px;" data-i18n="users.permissions">Gestione Permessi</h3>
                 <div id="permissions-list">
                     <!-- I permessi verranno caricati qui -->
                 </div>
@@ -1384,7 +1386,7 @@
             
             <!-- Tabella lotti con bilanci individuali -->
             <div style="background:white;padding:18px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
-                <h4 style="margin:0 0 12px 0;color:#333;"><i class="fas fa-table"></i> Bilancio per Lotto</h4>
+                <h4 style="margin:0 0 12px 0;color:#333;"><i class="fas fa-table"></i> <span data-i18n="bilancio.balance_per_lot">Bilancio per Lotto</span></h4>
                 <div id="bilancio-azienda-lotti-table" style="overflow-x:auto;"></div>
             </div>
         </div>
@@ -1411,7 +1413,7 @@
             <div class="dropdown-menu" id="bilancio-lot-dropdown-menu"></div>
         </div>
         <select id="bilancio-stagione" style="padding: 10px 15px; border: 2px solid #00BCD4; border-radius: 8px; font-weight: bold; cursor: pointer;">
-            <option value="">Tutte le stagioni</option>
+            <option value="" data-i18n="bilancio.all_seasons_opt">Tutte le stagioni</option>
         </select>
         <span id="bilancio-lot-badge" style="background: #00BCD4; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: none;"></span>
     </div>
@@ -1419,15 +1421,15 @@
     <!-- Card Riepilogo -->
     <div id="bilancio-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
         <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; padding: 20px; border-radius: 12px; text-align: center;">
-            <h4>💰 Ricavi Totali</h4>
+            <h4 data-i18n="bilancio.kpi_revenue">💰 Ricavi Totali</h4>
             <p style="font-size: 2rem; font-weight: bold;" id="bilancio-ricavi">€0</p>
         </div>
         <div style="background: linear-gradient(135deg, #f44336, #c62828); color: white; padding: 20px; border-radius: 12px; text-align: center;">
-            <h4>💸 Costi Totali</h4>
+            <h4 data-i18n="bilancio.kpi_costs">💸 Costi Totali</h4>
             <p style="font-size: 2rem; font-weight: bold;" id="bilancio-costi">€0</p>
         </div>
         <div style="background: linear-gradient(135deg, #2196F3, #1565C0); color: white; padding: 20px; border-radius: 12px; text-align: center;">
-            <h4>⚖️ Bilancio</h4>
+            <h4 data-i18n="bilancio.kpi_balance">⚖️ Bilancio</h4>
             <p style="font-size: 2rem; font-weight: bold;" id="bilancio-finale">€0</p>
         </div>
     </div>
@@ -1435,18 +1437,18 @@
     <!-- Grafici -->
     <div class="bilancio-grafici-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 25px;">
         <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-            <h4 style="text-align: center; color: #333;">🍩 Ricavi vs Costi</h4>
+            <h4 style="text-align: center; color: #333;" data-i18n="bilancio.chart_revenue_costs">🍩 Ricavi vs Costi</h4>
             <canvas id="chart-ricavi-costi" width="300" height="300"></canvas>
         </div>
         <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-            <h4 style="text-align: center; color: #333;">📊 Dettaglio Costi</h4>
+            <h4 style="text-align: center; color: #333;" data-i18n="bilancio.chart_costs_detail">📊 Dettaglio Costi</h4>
             <canvas id="chart-dettaglio-costi" width="300" height="300"></canvas>
         </div>
     </div>
     
     <!-- ✅ Confronto multi-stagione: card list (mobile-first) + grafico opzionale (desktop) -->
     <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 25px;">
-        <h4 style="text-align: center; color: #333; margin: 0 0 16px 0;">📈 Confronto Ultime 5 Stagioni</h4>
+        <h4 style="text-align: center; color: #333; margin: 0 0 16px 0;" data-i18n="bilancio.compare_5_seasons">📈 Confronto Ultime 5 Stagioni</h4>
         <!-- Lista card (sempre visibile, perfetta su mobile) -->
         <div id="multi-stagione-list" class="multi-stagione-list"></div>
     </div>
@@ -1458,20 +1460,20 @@
                 <i class="fas fa-file-export"></i>
             </div>
             <div style="flex: 1;">
-                <h3 class="section-title">📥 Esportazione Dati</h3>
-                <p class="section-subtitle">Scarica il bilancio in Excel completo o PDF stampabile</p>
+                <h3 class="section-title" data-i18n="export.title">📥 Esportazione Dati</h3>
+                <p class="section-subtitle" data-i18n="export.subtitle">Scarica il bilancio in Excel completo o PDF stampabile</p>
             </div>
         </div>
         <div class="section-content expanded">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" class="export-buttons-grid">
                 <button class="btn btn-primary" onclick="esportaBilancioCompleto()" style="background: #00BCD4; padding: 14px; font-size: 1rem;">
-                    <i class="fas fa-file-excel"></i> Excel Completo
+                    <i class="fas fa-file-excel"></i> <span data-i18n="export.excel_full">Excel Completo</span>
                 </button>
                 <button class="btn btn-primary" onclick="esportaBilancioPDF()" style="background: #d32f2f; padding: 14px; font-size: 1rem;">
-                    <i class="fas fa-file-pdf"></i> Report PDF Stagione
+                    <i class="fas fa-file-pdf"></i> <span data-i18n="export.pdf_season">Report PDF Stagione</span>
                 </button>
             </div>
-            <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.85rem;">
+            <p style="text-align: center; margin-top: 10px; color: #666; font-size: 0.85rem;" data-i18n-html="export.help">
                 <strong>Excel:</strong> dati grezzi (raccolta, costi, mezzi tecnici, beni durevoli) — <strong>PDF:</strong> bilancio sintetico con grafici e tabella riepilogativa
             </p>
         </div>
@@ -1483,7 +1485,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
         <footer>
-            <p>© 2025 Cropbook - Tutti i diritti riservati</p>
+            <p data-i18n="footer.copyright">© 2025 Cropbook - Tutti i diritti riservati</p>
         </footer>
     </div>
 
@@ -1617,26 +1619,26 @@
 <div id="company-modal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) chiudiCompanyModal()">
     <div class="modal-content" style="max-width: 480px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 id="company-modal-title" style="margin: 0; color: #2E7D32;"><i class="fas fa-building"></i> Nuova Azienda</h3>
+            <h3 id="company-modal-title" style="margin: 0; color: #2E7D32;"><i class="fas fa-building"></i> <span data-i18n="reg_lot.new_company_title">Nuova Azienda</span></h3>
             <button type="button" onclick="chiudiCompanyModal()" style="background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #666;">✕</button>
         </div>
         <form onsubmit="event.preventDefault(); salvaCompany();">
             <div class="form-group">
-                <label for="modal-company-name" class="required-field">Ragione Sociale</label>
-                <input type="text" id="modal-company-name" placeholder="es. Azienda Alpha S.r.l." required style="width: 100%;">
+                <label for="modal-company-name" class="required-field" data-i18n="reg.legal_name">Ragione Sociale</label>
+                <input type="text" id="modal-company-name" data-i18n-placeholder="reg_lot.legal_name_ph" placeholder="es. Azienda Alpha S.r.l." required style="width: 100%;">
             </div>
             <div class="form-group">
-                <label>Settori di attività</label>
+                <label data-i18n="reg_lot.sectors">Settori di attività</label>
                 <div id="modal-company-sectors" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
-                <div class="help-text">Seleziona uno o più settori</div>
+                <div class="help-text" data-i18n="modal.sectors_help">Seleziona uno o più settori</div>
             </div>
             <div class="form-group">
-                <label for="modal-company-address">Sede legale (opzionale)</label>
-                <input type="text" id="modal-company-address" placeholder="es. Via Roma 12, Bari" style="width: 100%;">
+                <label for="modal-company-address" data-i18n="reg_lot.legal_address">Sede legale (opzionale)</label>
+                <input type="text" id="modal-company-address" data-i18n-placeholder="reg_lot.legal_address_ph" placeholder="es. Via Roma 12, Bari" style="width: 100%;">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px;">
-                <button type="button" onclick="chiudiCompanyModal()" class="btn btn-secondary">Annulla</button>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salva</button>
+                <button type="button" onclick="chiudiCompanyModal()" class="btn btn-secondary" data-i18n="common.cancel">Annulla</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> <span data-i18n="common.save">Salva</span></button>
             </div>
         </form>
     </div>

@@ -2699,7 +2699,7 @@ function updateLotGPS(lotId, gpsUrl) {
             const select = document.getElementById('analysis-year');
             if (!select) return;
             
-            select.innerHTML = '<option value="">Seleziona anno</option>';
+            select.innerHTML = `<option value="">${t("det.select_year")}</option>`;
             const currentYear = new Date().getFullYear();
             for (let year = currentYear; year >= currentYear - 10; year--) {
                 const option = document.createElement('option');
@@ -2984,7 +2984,7 @@ function updateLotGPS(lotId, gpsUrl) {
     if (!select) return;
     
     const annoCorrente = new Date().getFullYear();
-    select.innerHTML = '<option value="">Seleziona anno</option>';
+    select.innerHTML = `<option value="">${t("det.select_year")}</option>`;
     
     for (let anno = annoCorrente + 1; anno >= 2000; anno--) {
         const option = document.createElement('option');
@@ -4870,7 +4870,7 @@ function changeItemsPerPage() {
         document.getElementById('location').value = '';
         document.getElementById('gps-coordinates').value = '';
         document.getElementById('product-type').value = '';
-        document.getElementById('product-category').innerHTML = '<option value="">Seleziona prima la tipologia</option>';
+        document.getElementById('product-category').innerHTML = `<option value="">${t('reg_lot.select_type_first')}</option>`;
         document.getElementById('custom-product').value = '';
         document.getElementById('custom-product-container').style.display = 'none';
         document.getElementById('variety').value = '';
@@ -5111,6 +5111,79 @@ if (lot.variety && lot.variety.trim() !== '') {
         }
 
         function showNotification(message, type = 'info') {
+            // ✅ Auto-translation di messaggi Italiani comuni verso la lingua attiva
+            try {
+                if (typeof window !== 'undefined' && window.i18n && typeof window.__notifyDict === 'undefined') {
+                    // Mappa messaggi IT -> chiave i18n (aggiungere qui man mano)
+                    window.__notifyDict = {
+                        'Inserisci username e password': 'notify.fill_required',
+                        'Login in corso...': 'notify.processing',
+                        'Logout effettuato': 'notify.saved',
+                        'Username deve avere almeno 3 caratteri': 'notify.validation_error',
+                        'Inserisci un indirizzo email valido': 'notify.invalid_email',
+                        'Password deve avere almeno 6 caratteri': 'notify.password_short',
+                        "È necessario accettare l'informativa sulla privacy per registrarsi": 'notify.validation_error',
+                        'Seleziona la tipologia utente': 'notify.validation_error',
+                        'Per titolari e aziende la ragione sociale è obbligatoria': 'notify.validation_error',
+                        'Specifica il settore': 'notify.validation_error',
+                        'Username già esistente': 'notify.validation_error',
+                        'Email già registrata': 'notify.validation_error',
+                        'Registrazione in corso...': 'notify.processing',
+                        'Errore nel caricamento della lista utenti': 'error.load_data',
+                        'Caricamento utenti...': 'notify.loading',
+                        'Errore nel caricamento degli utenti': 'error.load_data',
+                        'Ruolo utente aggiornato': 'notify.updated',
+                        'Non puoi eliminare il tuo account': 'notify.forbidden',
+                        'Utente eliminato': 'notify.deleted',
+                        'Aggiornamento ruolo in corso...': 'notify.processing',
+                        'Eliminazione in corso...': 'notify.processing',
+                        'La password deve avere almeno 6 caratteri': 'notify.password_short',
+                        "Per inviare le credenziali via email è necessario inserire l'indirizzo email": 'notify.validation_error',
+                        'Registrazione utente in corso...': 'notify.processing',
+                        'Password casuale generata': 'notify.saved',
+                        "Seleziona un'azienda dal menù a tendina": 'notify.select_company',
+                        'URL Google Maps generato automaticamente!': 'notify.saved',
+                        'Acquisizione posizione in corso...': 'notify.loading',
+                        'Salvataggio in corso...': 'notify.processing',
+                        'Caricamento in corso...': 'notify.loading',
+                        'Salvato con successo': 'notify.saved',
+                        'Eliminato con successo': 'notify.deleted',
+                        'Aggiornato con successo': 'notify.updated',
+                        'Errore di rete': 'notify.network_error',
+                        'Sessione scaduta': 'notify.session_expired',
+                        'Credenziali non valide': 'notify.login_failed',
+                        'Accesso effettuato': 'notify.login_success',
+                        'PDF scaricato': 'notify.pdf_downloaded',
+                        'Generazione PDF in corso...': 'notify.pdf_generating',
+                        'Copiato negli appunti': 'notify.copied',
+                        'Compila tutti i campi obbligatori': 'notify.fill_required',
+                        'Le password non coincidono': 'notify.password_mismatch',
+                        "Seleziona un'azienda": 'notify.select_company',
+                        'Seleziona un lotto': 'notify.select_lot',
+                        'Operazione fallita': 'notify.operation_failed',
+                        'Dati salvati': 'notify.data_saved',
+                        'Salvato': 'notify.saved',
+                        'Eliminato': 'notify.deleted',
+                        'Aggiornato': 'notify.updated',
+                        'Seleziona prima un lotto': 'notify.select_lot',
+                        'Seleziona prima un lotto dal dropdown': 'notify.select_lot',
+                        'Seleziona prima la stagione agricola': 'notify.select_first',
+                        'Seleziona anno e carica un file': 'notify.select_first',
+                        "Seleziona un'azienda o creane una nuova": 'notify.select_company',
+                        'Seleziona prodotto': 'notify.select_first',
+                        'Seleziona un utente': 'notify.select_first',
+                        'Errore caricamento utenti': 'error.load_data',
+                        'Errore caricamento aziende': 'error.load_data',
+                        'Link di navigazione non valido': 'error.generic'
+                    };
+                }
+                if (typeof window !== 'undefined' && window.__notifyDict && window.__notifyDict[message] && typeof t === 'function') {
+                    const key = window.__notifyDict[message];
+                    const tr = t(key);
+                    if (tr && tr !== key) message = tr;
+                }
+            } catch (_) { /* best-effort translation */ }
+
             const types = {
                 success: { icon: '✅', color: '#4CAF50', bgColor: '#f0f9f0' },
                 error: { icon: '❌', color: '#f44336', bgColor: '#fdf0f0' },
@@ -5163,9 +5236,13 @@ if (lot.variety && lot.variety.trim() !== '') {
         }
 
 // ==================== SPINNER FUNCTIONS ====================
-function showSpinner(message = 'Caricamento in corso...') {
+function showSpinner(message = null) {
     const spinner = document.getElementById('loading-spinner');
     const spinnerMessage = document.getElementById('spinner-message');
+    if (!message) {
+        try { message = (typeof t === 'function') ? t('spinner.loading') : 'Caricamento in corso...'; }
+        catch(_) { message = 'Caricamento in corso...'; }
+    }
     if (spinner) {
         spinner.style.display = 'flex';
         if (spinnerMessage) spinnerMessage.textContent = message;
@@ -8494,7 +8571,7 @@ async function loadAziendeDashboard() {
         cachedCompanies = resp.data || [];
         renderAziendeGrid(cachedCompanies);
     } catch (err) {
-        grid.innerHTML = `<div style="text-align:center;padding:24px;color:#c62828;">Errore caricamento aziende: ${err.message}</div>`;
+        grid.innerHTML = `<div style="text-align:center;padding:24px;color:#c62828;">${t('error.load_data')}: ${err.message}</div>`;
     }
 }
 
@@ -8505,9 +8582,9 @@ function renderAziendeGrid(items) {
         grid.innerHTML = `
             <div style="grid-column: 1/-1; text-align:center;padding:40px;color:#888;">
                 <i class="fas fa-building" style="font-size: 3rem; color:#ddd; display: block; margin-bottom: 12px;"></i>
-                <p>Nessuna azienda registrata. Crea la tua prima azienda per iniziare!</p>
+                <p>${t('lista.empty_first_hint')}</p>
                 <button onclick="apriNuovaAzienda()" class="btn btn-primary" style="margin-top: 10px;">
-                    <i class="fas fa-plus-circle"></i> Crea Azienda
+                    <i class="fas fa-plus-circle"></i> ${t('lista.create_company')}
                 </button>
             </div>`;
         return;
@@ -8527,11 +8604,11 @@ function renderAziendeGrid(items) {
                 <div class="azienda-sectors">${sectorsHtml}</div>
                 ${c.address ? `<div class="azienda-address"><i class="fas fa-map-marker-alt"></i> ${esc(c.address)}</div>` : ''}
                 <div class="azienda-actions">
-                    <button class="azienda-action-btn view" onclick="apriLottiAzienda(${c.id})" title="Vedi lotti">
-                        <i class="fas fa-eye"></i> Lotti
+                    <button class="azienda-action-btn view" onclick="apriLottiAzienda(${c.id})" title="${t('lista.view_lots')}">
+                        <i class="fas fa-eye"></i> ${t('lista.view_lots')}
                     </button>
-                    <button class="azienda-action-btn edit" onclick="openCompanyEditor(${c.id})" title="Modifica azienda">
-                        <i class="fas fa-edit"></i> Modifica
+                    <button class="azienda-action-btn edit" onclick="openCompanyEditor(${c.id})" title="${t('common.edit')}">
+                        <i class="fas fa-edit"></i> ${t('common.edit')}
                     </button>
                 </div>
             </div>
@@ -8719,9 +8796,9 @@ async function loadCompaniesIntoSelect() {
         const resp = await apiCall('/companies');
         cachedCompanies = resp.data || [];
         const current = select.value;
-        select.innerHTML = '<option value="">-- Seleziona azienda esistente --</option>'
+        select.innerHTML = `<option value="">${t('reg_lot.select_existing')}</option>`
             + cachedCompanies.map(c => `<option value="${c.id}">${c.name}${c.lots_count ? ` (${c.lots_count})` : ''}</option>`).join('')
-            + '<option value="__new__">➕ Nuova Azienda</option>';
+            + `<option value="__new__">${t('reg_lot.new_company_opt')}</option>`;
         if (current && Array.from(select.options).some(o => o.value === current)) select.value = current;
     } catch (_) {}
 }
