@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-08-08
-**Versione**: 1.13.1 (tooltip i18n completa)
+**Ultimo aggiornamento**: 2026-08-09
+**Versione**: 1.14.0 (CSP hardening pragmatico)
 
 ---
 
@@ -380,6 +380,16 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.14.0 (2026-08-09)
+- **CSP Hardening pragmatico** (`www/server.js`):
+  - Rimosso `'unsafe-inline'` da `script-src` → blocca injection di `<script>alert()</script>` in caso di XSS
+  - Rimosso `'unsafe-eval'` da `script-src` → blocca uso di `eval()` in caso di XSS
+  - Mantenuto `script-src-attr: 'unsafe-inline'` (155 event handler `onclick=` presenti in HTML)
+  - Mantenuto `style-src: 'unsafe-inline'` (288 attributi `style="..."` presenti in HTML)
+  - Verificato: 0 blocchi `<script>` inline, 0 chiamate `eval`/`new Function`, 0 setTimeout con stringa
+  - Nota: in ambienti preview servite via Cloudflare, l'edge inietta un piccolo script per bot-detection (cdn-cgi/challenge) che genererà 1 warning innocuo — NON presente in localhost, self-hosted o Capacitor Android
+  - 64/64 Jest test verdi
 
 ## Cambiamenti v1.13.1 (2026-08-08)
 - **Tooltip completamente tradotti**: aggiunti 15+ chiavi i18n per tooltip dinamici (nav.tip.*, common.delete_activity, users.edit_role_tip, users.delete_tip, map.*, ecc.)

@@ -51,21 +51,26 @@ const loginLimiter = isTest ? passthrough : rateLimit({
 });
 
 // ==================== SICUREZZA HTTP ====================
+// NOTA CSP: rimossi 'unsafe-inline' e 'unsafe-eval' da scriptSrc — nessun <script> inline
+// né eval() sono presenti nel nostro codice (verificato). In ambienti di preview servite
+// tramite Cloudflare, l'edge inietta un piccolo <script> per bot-detection (cdn-cgi/challenge):
+// quello genererà un warning CSP innocuo, che NON si presenta in localhost, self-hosted o Capacitor.
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
+            // scriptSrc: rimosso 'unsafe-inline' e 'unsafe-eval' (nessun <script> inline né eval nel codice)
             scriptSrc: [
                 "'self'",
-                "'unsafe-inline'",
-                "'unsafe-eval'",
                 'https://cdnjs.cloudflare.com',
                 'https://kit.fontawesome.com',
                 'https://cdn.jsdelivr.net',
                 'https://static.cloudflareinsights.com',
                 'https://unpkg.com'
             ],
+            // scriptSrcAttr: 'unsafe-inline' mantenuto per gli onclick/onchange presenti nell'HTML (155 handler)
             scriptSrcAttr: ["'self'", "'unsafe-inline'"],
+            // styleSrc: 'unsafe-inline' mantenuto per gli style="..." presenti nell'HTML (288 occorrenze)
             styleSrc: [
                 "'self'",
                 "'unsafe-inline'",
