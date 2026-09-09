@@ -3015,7 +3015,8 @@ input[type="radio"]:checked + span {
 }
 
 /* ==================== MAPPA INTERATTIVA (Leaflet) PER SALVA POSIZIONE ==================== */
-#map-picker-modal {
+#map-picker-modal,
+#mappa-lotti-modal {
     display: none;
     position: fixed;
     top: 0; left: 0;
@@ -3028,6 +3029,9 @@ input[type="radio"]:checked + span {
     box-sizing: border-box;
 }
 #map-picker-modal.show { display: flex; }
+#mappa-lotti-modal[style*="display: flex"] { display: flex !important; }
+#mappa-lotti-empty { display: none; }
+#mappa-lotti-empty[style*="display: flex"] { display: flex !important; }
 .map-picker-container {
     background: #fff;
     border-radius: 14px;

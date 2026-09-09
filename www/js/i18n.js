@@ -614,7 +614,23 @@ const translations = {
     'map.street':                     { it: 'Strada',             en: 'Street',              es: 'Calle' },
     'map.satellite':                  { it: 'Satellite',          en: 'Satellite',           es: 'Satélite' },
     'map.street_tip':                 { it: 'Vista stradale (OpenStreetMap)', en: 'Street view (OpenStreetMap)', es: 'Vista de calle (OpenStreetMap)' },
-    'map.satellite_tip':              { it: 'Vista satellitare (Esri World Imagery)', en: 'Satellite view (Esri World Imagery)', es: 'Vista satelital (Esri World Imagery)' }
+    'map.satellite_tip':              { it: 'Vista satellitare (Esri World Imagery)', en: 'Satellite view (Esri World Imagery)', es: 'Vista satelital (Esri World Imagery)' },
+
+    /* ============ MAPPA PANORAMICA — Tutti i lotti ============ */
+    'mappa.vista_mappa':              { it: 'Vista Mappa',        en: 'Map View',            es: 'Vista Mapa' },
+    'mappa.tip_vista_mappa':          { it: 'Visualizza tutti i lotti geolocalizzati su mappa', en: 'View all geolocated lots on map', es: 'Ver todas las parcelas geolocalizadas en el mapa' },
+    'mappa.title':                    { it: 'Panoramica Lotti',   en: 'Lots Overview',       es: 'Panorámica de Parcelas' },
+    'mappa.loading':                  { it: 'Caricamento lotti...', en: 'Loading lots...',   es: 'Cargando parcelas...' },
+    'mappa.no_gps_title':             { it: 'Nessun lotto geolocalizzato', en: 'No geolocated lots', es: 'Sin parcelas geolocalizadas' },
+    'mappa.no_gps_hint':              { it: 'I lotti compaiono qui solo dopo aver inserito le coordinate GPS in fase di registrazione. Aggiungile dalla sezione Registrazione Lotti oppure Modifica lotto.', en: 'Lots appear here only after adding GPS coordinates during registration. Add them from the Lot Registration section or Edit lot.', es: 'Las parcelas aparecen aquí solo después de agregar coordenadas GPS al registrarlas. Añádelas desde Registro de Parcelas o Editar parcela.' },
+    'mappa.footer_hint':              { it: 'Clicca un segnaposto per vedere azienda, lotto e varietà.', en: 'Click a marker to see company, lot and variety.', es: 'Haz clic en un marcador para ver empresa, parcela y variedad.' },
+    'mappa.missing_count':            { it: 'Lotti senza GPS',    en: 'Lots without GPS',    es: 'Parcelas sin GPS' },
+    'mappa.open_lot':                 { it: 'Apri lotto',         en: 'Open lot',            es: 'Abrir parcela' },
+    'common.lot':                     { it: 'Lotto',              en: 'Lot',                 es: 'Parcela' },
+    'common.variety':                 { it: 'Varietà',            en: 'Variety',             es: 'Variedad' },
+    'common.product':                 { it: 'Prodotto',           en: 'Product',             es: 'Producto' },
+    'common.area':                    { it: 'Superficie',         en: 'Area',                es: 'Superficie' },
+    'reg_lot.field_lot_short':        { it: 'Lotto Campo',        en: 'Field Lot',           es: 'Parcela de Campo' }
 };
 
 /* ---------- API pubblica ---------- */

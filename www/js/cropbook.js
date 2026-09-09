@@ -1809,6 +1809,186 @@ function optimizeMobileLoad() {
             showNotification('✅ Posizione salvata', 'success');
         }
 
+        // ============================================================
+        // 🗺️ VISTA PANORAMICA — Tutti i lotti geolocalizzati su mappa
+        // ============================================================
+        const _mappaLotti = { map: null, markersGroup: null, layers: null, currentLayer: 'street' };
+
+        async function apriMappaLotti() {
+            const modal = document.getElementById('mappa-lotti-modal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+
+            // Fetch lots (paginato: max 100 per pagina)
+            let allLots = [];
+            try {
+                showSpinner(t('mappa.loading') || 'Caricamento lotti...');
+                let page = 1;
+                const limit = 100;
+                let hasMore = true;
+                let safety = 0;
+                while (hasMore && safety < 50) {
+                    const data = await apiCall(`/lots?limit=${limit}&page=${page}`);
+                    const batch = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+                    allLots = allLots.concat(batch);
+                    const pag = data.pagination || {};
+                    const totalPages = pag.totalPages || pag.pages || 1;
+                    hasMore = page < totalPages && batch.length > 0;
+                    page++;
+                    safety++;
+                }
+            } catch (err) {
+                console.error('[MappaLotti] fetch fallito:', err);
+                showNotification(t('error.load_data'), 'error');
+                allLots = [];
+            } finally {
+                hideSpinner();
+            }
+
+            // Estrai i lotti con coordinate valide
+            const geoLots = [];
+            let missingCount = 0;
+            allLots.forEach(l => {
+                const coords = extractLatLngFromMapsUrl(l.gps_coordinates || '');
+                if (coords && !isNaN(coords.lat) && !isNaN(coords.lng)) {
+                    geoLots.push({ ...l, _lat: coords.lat, _lng: coords.lng });
+                } else {
+                    missingCount++;
+                }
+            });
+
+            const emptyBox = document.getElementById('mappa-lotti-empty');
+            const badge = document.getElementById('mappa-lotti-badge');
+            const missingEl = document.getElementById('mappa-lotti-missing');
+            if (badge) badge.textContent = geoLots.length;
+            if (missingEl) missingEl.textContent = missingCount > 0
+                ? (t('mappa.missing_count') || 'Lotti senza GPS').replace('{n}', missingCount) + `: ${missingCount}`
+                : '';
+
+            if (geoLots.length === 0) {
+                if (emptyBox) { emptyBox.style.display = 'flex'; }
+                // Chiudi la mappa se esisteva
+                if (_mappaLotti.map) { _mappaLotti.map.remove(); _mappaLotti.map = null; _mappaLotti.markersGroup = null; }
+                return;
+            }
+            if (emptyBox) emptyBox.style.display = 'none';
+
+            // (Ri)inizializza Leaflet
+            if (_mappaLotti.map) {
+                _mappaLotti.map.remove();
+                _mappaLotti.map = null;
+            }
+            const container = document.getElementById('mappa-lotti-container');
+            if (!container) return;
+            // Se c'è già un div .leaflet-container residuo, ripulisci
+            container.querySelectorAll('.leaflet-container').forEach(el => el.remove());
+            // Crea contenitore reale della mappa (l'empty-box è fratello)
+            let mapDiv = container.querySelector('#mappa-lotti-map');
+            if (!mapDiv) {
+                mapDiv = document.createElement('div');
+                mapDiv.id = 'mappa-lotti-map';
+                mapDiv.style.cssText = 'position:absolute;inset:0;';
+                container.appendChild(mapDiv);
+            }
+
+            const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            });
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Sources: Esri, DigitalGlobe, GeoEye, Earthstar Geographics'
+            });
+
+            _mappaLotti.layers = { street, satellite };
+            _mappaLotti.currentLayer = 'street';
+
+            const map = L.map('mappa-lotti-map', { center: [42, 12], zoom: 5, zoomControl: true });
+            street.addTo(map);
+            _mappaLotti.map = map;
+
+            // Marker cluster (fallback semplice: FeatureGroup)
+            const group = L.featureGroup().addTo(map);
+            _mappaLotti.markersGroup = group;
+
+            geoLots.forEach(l => {
+                const popupHtml = buildMappaLottoPopup(l);
+                const marker = L.marker([l._lat, l._lng], { title: `${l.company_name || ''} — ${l.location || ''}` });
+                marker.bindPopup(popupHtml, { maxWidth: 300 });
+                marker.addTo(group);
+            });
+
+            // Fit bounds
+            try {
+                map.fitBounds(group.getBounds().pad(0.15));
+                if (geoLots.length === 1) map.setZoom(13);
+            } catch (_) { /* single point edge */ }
+
+            // Refresh size after modal display
+            setTimeout(() => { try { map.invalidateSize(); } catch(_){} }, 200);
+        }
+
+        function buildMappaLottoPopup(l) {
+            const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            const lbl = (k, fallback) => (typeof t === 'function' ? (t(k) || fallback) : fallback);
+            const rows = [];
+            if (l.company_name) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🏢 ${lbl('common.company','Azienda')}:</td><td><strong>${esc(l.company_name)}</strong></td></tr>`);
+            if (l.location) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">📍 ${lbl('common.lot','Lotto')}:</td><td><strong>${esc(l.location)}</strong></td></tr>`);
+            if (l.variety) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🌱 ${lbl('common.variety','Varietà')}:</td><td>${esc(l.variety)}</td></tr>`);
+            if (l.product_type) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🍎 ${lbl('common.product','Prodotto')}:</td><td>${esc(l.product_type)}${l.product_category ? ' / ' + esc(l.product_category) : ''}</td></tr>`);
+            if (l.field_lot) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🔖 ${lbl('reg_lot.field_lot_short','Lotto Campo')}:</td><td>${esc(l.field_lot)}</td></tr>`);
+            if (l.field_size) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">📐 ${lbl('common.area','Superficie')}:</td><td>${esc(l.field_size)} ha</td></tr>`);
+
+            const detailBtn = `<button type="button" onclick="apriDettagliLottoDaMappa(${l.id})"
+                style="margin-top:8px;background:#1976D2;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;">
+                <i class="fas fa-eye"></i> ${lbl('mappa.open_lot','Apri lotto')}
+            </button>`;
+
+            return `<div style="font-size:0.88rem;line-height:1.4;">
+                <table style="border-collapse:collapse;">${rows.join('')}</table>
+                ${detailBtn}
+            </div>`;
+        }
+
+        function apriDettagliLottoDaMappa(lotId) {
+            chiudiMappaLotti();
+            if (typeof visualizzaDettagliLotto === 'function') {
+                visualizzaDettagliLotto(lotId);
+            } else if (typeof showLotDetails === 'function') {
+                showLotDetails(lotId);
+            }
+        }
+
+        function chiudiMappaLotti() {
+            const modal = document.getElementById('mappa-lotti-modal');
+            if (modal) modal.style.display = 'none';
+            if (_mappaLotti.map) {
+                try { _mappaLotti.map.remove(); } catch(_){}
+                _mappaLotti.map = null;
+                _mappaLotti.markersGroup = null;
+                _mappaLotti.layers = null;
+            }
+        }
+
+        function switchMappaLottiLayer(name) {
+            if (!_mappaLotti.map || !_mappaLotti.layers) return;
+            const btnS = document.getElementById('ml-layer-street');
+            const btnA = document.getElementById('ml-layer-satellite');
+            if (_mappaLotti.currentLayer && _mappaLotti.layers[_mappaLotti.currentLayer]) {
+                _mappaLotti.map.removeLayer(_mappaLotti.layers[_mappaLotti.currentLayer]);
+            }
+            _mappaLotti.layers[name].addTo(_mappaLotti.map);
+            _mappaLotti.currentLayer = name;
+            if (btnS) btnS.classList.toggle('active', name === 'street');
+            if (btnA) btnA.classList.toggle('active', name === 'satellite');
+        }
+
+        // Espone globalmente per gli onclick inline
+        window.apriMappaLotti = apriMappaLotti;
+        window.chiudiMappaLotti = chiudiMappaLotti;
+        window.switchMappaLottiLayer = switchMappaLottiLayer;
+        window.apriDettagliLottoDaMappa = apriDettagliLottoDaMappa;
+
         /**
          * Acquisisce la posizione GPS dello smartphone e centra la mappa sul punto.
          * Usa Capacitor se disponibile, altrimenti navigator.geolocation.

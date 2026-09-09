@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-08-09
-**Versione**: 1.14.0 (CSP hardening pragmatico)
+**Versione**: 1.15.0 (Vista Mappa panoramica lotti)
 
 ---
 
@@ -380,6 +380,20 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.15.0 (2026-08-09)
+- **Vista Mappa panoramica lotti** 🗺️ (`www/index.html`, `www/js/cropbook.js`, `www/js/i18n.js`, `www/css/cropbook.css`):
+  - Nuovo pulsante "🗺️ Vista Mappa" (data-testid `btn-vista-mappa`) nella toolbar di "Aziende e Lotti", tra "Tutti i lotti" e "Nuova Azienda"
+  - Modal overlay fullscreen con mappa Leaflet che mostra TUTTI i lotti con coordinate GPS come segnaposto
+  - Popup su ogni marker con: 🏢 Azienda, 📍 Lotto, 🌱 Varietà, 🍎 Prodotto, 🔖 Lotto Campo, 📐 Superficie + pulsante "Apri lotto" che porta ai dettagli
+  - Toggle Strada (OpenStreetMap) ↔ Satellite (Esri World Imagery)
+  - Auto-fit bounds su tutti i marker + zoom singolo quando c'è un solo lotto
+  - Contatore in header (badge) + footer con "Lotti senza GPS: N" per lotti senza coordinate
+  - Empty state elegante quando nessun lotto ha coordinate
+  - Fetching paginato (limit=100 × N pagine) per aggirare il limite max del backend
+  - Traduzioni complete IT/EN/ES per titolo, header, popup, footer, empty state, tooltip, layer buttons
+  - Cleanup memoria: `map.remove()` alla chiusura per evitare leak
+  - **Verificato dal testing agent: 15/15 assertion superate** (E2E frontend)
 
 ## Cambiamenti v1.14.0 (2026-08-09)
 - **CSP Hardening pragmatico** (`www/server.js`):
