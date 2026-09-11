@@ -5721,6 +5721,19 @@ function closeAllDropdowns() {
         document.addEventListener('DOMContentLoaded', function() {
     console.log('Cropbook Frontend inizializzato');
     
+    // ✅ UX: Enter da tastiera invia login (username o password)
+    ['login-username', 'login-password'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (typeof login === 'function') login();
+                }
+            });
+        }
+    });
+    
     // Inizializza il sistema di autenticazione
     initAuthSystem();
     

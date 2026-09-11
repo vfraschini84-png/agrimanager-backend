@@ -134,13 +134,26 @@ app.use(bodyParser.json({ limit: '10mb' }));
 // ⚠️ Esponiamo SOLO file statici sicuri, NON l'intera directory www/ (che contiene .db / .env / .js).
 const PUBLIC_FILES = [
     'index.html',
-    'reset-password.html'
+    'reset-password.html',
+    'manifest.json',
+    'sw.js'
 ];
 PUBLIC_FILES.forEach(file => {
-    app.get(`/${file}`, (req, res) => res.sendFile(path.join(__dirname, file)));
+    app.get(`/${file}`, (req, res) => {
+        // Service worker: forza scope root e no-cache per aggiornamenti rapidi
+        if (file === 'sw.js') {
+            res.setHeader('Service-Worker-Allowed', '/');
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        } else if (file === 'manifest.json') {
+            res.setHeader('Content-Type', 'application/manifest+json');
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+        }
+        res.sendFile(path.join(__dirname, file));
+    });
 });
 
-// Assets statici: SOLO le cartelle css/ e js/ (mai esporre tutta www/)
+// Assets statici: cartelle css/, js/, icons/ (mai esporre tutta www/)
 const staticOpts = {
     maxAge: NODE_ENV === 'production' ? '7d' : 0,
     fallthrough: true,
@@ -154,6 +167,7 @@ const staticOpts = {
 };
 app.use('/css', express.static(path.join(__dirname, 'css'), staticOpts));
 app.use('/js', express.static(path.join(__dirname, 'js'), staticOpts));
+app.use('/icons', express.static(path.join(__dirname, 'icons'), staticOpts));
 
 app.get('/', (req, res) => {
     logger.info('GET /', { ip: req.ip });

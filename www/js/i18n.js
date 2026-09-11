@@ -630,7 +630,13 @@ const translations = {
     'common.variety':                 { it: 'Varietà',            en: 'Variety',             es: 'Variedad' },
     'common.product':                 { it: 'Prodotto',           en: 'Product',             es: 'Producto' },
     'common.area':                    { it: 'Superficie',         en: 'Area',                es: 'Superficie' },
-    'reg_lot.field_lot_short':        { it: 'Lotto Campo',        en: 'Field Lot',           es: 'Parcela de Campo' }
+    'reg_lot.field_lot_short':        { it: 'Lotto Campo',        en: 'Field Lot',           es: 'Parcela de Campo' },
+
+    /* ============ PWA (installazione + service worker) ============ */
+    'pwa.install_btn':                { it: 'Installa App',       en: 'Install App',         es: 'Instalar App' },
+    'pwa.install_tip':                { it: 'Installa Cropbook sul tuo dispositivo', en: 'Install Cropbook on your device', es: 'Instala Cropbook en tu dispositivo' },
+    'pwa.install_ios_hint':           { it: "Per installare: apri il menu del browser e scegli 'Aggiungi a schermata Home' (iOS Safari) oppure 'Installa app' (Chrome/Edge).", en: "To install: open your browser menu and choose 'Add to Home Screen' (iOS Safari) or 'Install app' (Chrome/Edge).", es: "Para instalar: abre el menú del navegador y elige 'Añadir a la pantalla de inicio' (iOS Safari) o 'Instalar app' (Chrome/Edge)." },
+    'pwa.installed':                  { it: '✅ App installata!',  en: '✅ App installed!',   es: '✅ ¡App instalada!' }
 };
 
 /* ---------- API pubblica ---------- */

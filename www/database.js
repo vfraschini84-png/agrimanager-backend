@@ -19,8 +19,25 @@ const db = new sqlite3.Database(dbPath, (err) => {
         logger.error('Errore connessione database', { error: err.message, dbPath });
     } else {
         logger.info('✅ Connesso al database SQLite', { dbPath });
-        // Abilita foreign keys (SQLite di default le ignora)
-        db.run('PRAGMA foreign_keys = ON');
+        // ✅ OTTIMIZZAZIONE CONCORRENZA (Sprint 1)
+        // WAL: permette letture concorrenti mentre 1 scrittore lavora (5-10x throughput)
+        // busy_timeout: attende fino a 5s prima di dare "SQLITE_BUSY" al secondo scrittore
+        // synchronous NORMAL: sicuro con WAL, 2-3x più veloce di FULL
+        // cache_size negativo = KB (64 MB cache in RAM)
+        // foreign_keys: integrità referenziale
+        // temp_store MEMORY: temp tables/indexes in RAM
+        db.serialize(() => {
+            db.run('PRAGMA journal_mode = WAL');
+            db.run('PRAGMA busy_timeout = 5000');
+            db.run('PRAGMA synchronous = NORMAL');
+            db.run('PRAGMA cache_size = -65536'); // 64 MB
+            db.run('PRAGMA foreign_keys = ON');
+            db.run('PRAGMA temp_store = MEMORY');
+            db.run('PRAGMA wal_autocheckpoint = 1000');
+            db.get('PRAGMA journal_mode', (e, r) => {
+                if (r) logger.info('📊 SQLite tuning applicato', { journal_mode: r.journal_mode, busy_timeout: 5000, cache_kb: 65536 });
+            });
+        });
         initializeDatabase().catch(err => {
             logger.error('Errore inizializzazione DB', { error: err.message, stack: err.stack });
         });
@@ -291,14 +308,25 @@ async function initializeDatabase() {
     // Indici per performance
     const indexes = [
         'CREATE INDEX IF NOT EXISTS idx_lots_owner ON lots(owner_id)',
+        'CREATE INDEX IF NOT EXISTS idx_lots_company ON lots(company_id)',
+        'CREATE INDEX IF NOT EXISTS idx_lots_owner_company ON lots(owner_id, company_id)',
         'CREATE INDEX IF NOT EXISTS idx_lots_created ON lots(created_at DESC)',
+        'CREATE INDEX IF NOT EXISTS idx_companies_owner ON companies(owner_id)',
         'CREATE INDEX IF NOT EXISTS idx_activities_lot ON activities(lot_id)',
+        'CREATE INDEX IF NOT EXISTS idx_activities_owner ON activities(owner_id)',
         'CREATE INDEX IF NOT EXISTS idx_analyses_lot ON analyses(lot_id)',
+        'CREATE INDEX IF NOT EXISTS idx_analyses_owner ON analyses(owner_id)',
         'CREATE INDEX IF NOT EXISTS idx_economic_lot ON economic_records(lot_id)',
+        'CREATE INDEX IF NOT EXISTS idx_economic_lot_stagione ON economic_records(lot_id, stagione_agricola)',
         'CREATE INDEX IF NOT EXISTS idx_lot_details_lot ON lot_details(lot_id)',
         'CREATE INDEX IF NOT EXISTS idx_costi_personale_lot ON costi_personale(lot_id)',
         'CREATE INDEX IF NOT EXISTS idx_costi_personale_stagione ON costi_personale(stagione_agricola)',
+        'CREATE INDEX IF NOT EXISTS idx_costi_personale_lot_stagione ON costi_personale(lot_id, stagione_agricola)',
         'CREATE INDEX IF NOT EXISTS idx_costi_mezzi_lot ON costi_mezzi_tecnici(lot_id)',
+        'CREATE INDEX IF NOT EXISTS idx_costi_mezzi_lot_stagione ON costi_mezzi_tecnici(lot_id, stagione_agricola)',
+        'CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)',
+        'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+        'CREATE INDEX IF NOT EXISTS idx_users_parent ON users(parent_id)',
         'CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token)'
     ];
 

@@ -9,6 +9,17 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Cropbook">
+    <meta name="application-name" content="Cropbook">
+    <meta name="description" content="Cropbook — App multitenant per la gestione di aziende agricole, lotti, attività, analisi, costi e bilanci">
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <!-- Favicon & Apple touch icon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
     <title>CROPBOOK - Gestione Lotti</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
@@ -63,7 +74,7 @@
     
     <!-- RIGA CON PULSANTE ACCEDI E CHECKBOX RICORDAMI AFFIANCATI -->
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap;">
-        <button class="btn btn-primary" onclick="login()" style="flex: 2;">
+        <button type="button" class="btn btn-primary" onclick="login()" style="flex: 2;">
             <i class="fas fa-sign-in-alt"></i> <span data-i18n="auth.signin_btn">Accedi</span>
         </button>
         
@@ -266,6 +277,13 @@
         data-i18n-title="nav.tip.utenti" title="Gestione Utenti e Permessi">
     <i class="fas fa-users-cog"></i> <span data-i18n="header.user_management">Gestione Utenti</span>
 </button>
+    <button id="pwa-install-btn" data-testid="pwa-install-btn" onclick="installPWA()"
+        style="display:none; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: all 0.3s ease; align-items:center; gap:6px;"
+        onmouseover="this.style.background='rgba(255,255,255,0.4)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.2)'"
+        data-i18n-title="pwa.install_tip" title="Installa Cropbook sul tuo dispositivo">
+        <i class="fas fa-download"></i> <span data-i18n="pwa.install_btn">Installa App</span>
+    </button>
     <button class="logout-btn" onclick="logout()">
         <i class="fas fa-sign-out-alt"></i> <span data-i18n="header.logout">Logout</span>
     </button>
@@ -1496,6 +1514,8 @@
 
     <script src="js/i18n.js"></script>
     <script src="js/cropbook.js"></script>
+    <!-- PWA: registrazione Service Worker + prompt di installazione (esterno per rispettare CSP senza unsafe-inline) -->
+    <script src="js/pwa.js" defer></script>
 <div class="safe-area-bottom"></div>
 
 <!-- ============ MODAL: Vista Mappa Globale dei Lotti ============ -->

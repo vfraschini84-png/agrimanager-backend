@@ -1,0 +1,32 @@
+{
+  "summary": "Sprint 1 (SQLite tuning multi-utente + PWA) verificato end-to-end. Backend: log '📊 SQLite tuning applicato' presente con journal_mode=wal, busy_timeout=5000, cache_kb=65536; file cropbook.db-wal e cropbook.db-shm presenti in /app/data/ (WAL attivo). PWA HTTP: /manifest.json → 200 application/manifest+json (name/short_name/display/theme_color=#2E7D32/10 icons OK); /sw.js → 200 application/javascript con header Service-Worker-Allowed: / e Cache-Control: no-store,no-cache,must-revalidate; /icons/icon-192.png, /icons/icon-512.png, /icons/apple-touch-icon.png → 200 image/png. Frontend PWA: SW registrato (scope=/, state=activated), cache 'cropbook-v1.15.0-static' creata con 9 URL precache (index.html, /, css, js/i18n.js, js/cropbook.js, manifest.json, icons 192/512/apple). Pulsante #pwa-install-btn presente in DOM (display:none in Chromium headless, come atteso perché beforeinstallprompt non viene emesso). Regressione: login API /api/auth/login OK 200 con admin/96a0761f3943; window.login() invocato da JS ha eseguito login, mostrato dashboard con 4 card immediatamente visibili (lista, registrazione, bilancio, costi — le altre sono admin/utenti solo visibili a super-admin sotto condizioni); flusso Vista Mappa: click #lista → click [data-testid='btn-vista-mappa'] → modale 'Panoramica Lotti 6' con 6 marker Leaflet, layer Strada/Satellite OK. Nessun errore console dal nostro codice (unico log applicativo: '[PWA] Service Worker registrato'). Test backend cURL diretti tutti 200.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Login form submit via Playwright click nativo", "issue": "Playwright page.click() sul pulsante 'Accedi' (button type=submit con onclick='login()' e senza <form> wrapper) non triggera la richiesta POST /api/auth/login in ambiente headless. Il pulsante ha type='submit' ma non è dentro un <form>, quindi il submit implicito non fa nulla e onclick='login()' non viene sempre invocato dal simulated click di Playwright. In browser reale (utente) funziona normalmente. Workaround test: invocare window.login() via evaluate. Consiglio: cambiare il markup del pulsante a type='button' oppure avvolgere gli input dentro un <form onsubmit='return login()'> per rendere il flusso robusto anche a submit da tastiera Enter. Non blocca l'utente.", "affected_selectors": ["button.btn-primary onclick='login()'"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_10.json"],
+  "action_items": [
+    "(Minor / non bloccante) Sistemare il markup del bottone Login: cambiarlo in type='button' oppure racchiudere gli input e il bottone dentro un <form onsubmit='event.preventDefault(); login();'>. Attualmente il bottone ha type='submit' ma non è dentro un <form>, quindi il submit su Enter/click programmatico non lancia login() in modo affidabile. Un utente reale clicca e onclick='login()' funziona, quindi non è un bug utente-visibile, ma migliora testabilità e accessibilità (Enter da tastiera)."
+  ],
+  "critical_code_review_comments": [
+    "SW cache versionata correttamente ('cropbook-v1.15.0-static') — buon pattern per invalidare cache ad ogni release. Assicurarsi di bumpare la versione ad ogni deploy che tocca app-shell.",
+    "SW policy corretta: network-only per /api/*, network-first per navigation HTML, cache-first stale-while-revalidate per statici — coerente con app multi-tenant che non deve mai servire dati API stale.",
+    "sw.js servito con Cache-Control: no-store — corretto per garantire aggiornamento del SW.",
+    "Login button (index.html:77) ha type='submit' senza <form> genitore: ambiguo semanticamente. Passare a type='button' o wrappare in un form."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin / 96a0761f3943",
+  "seed_data_creation": "Nessuno.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Per testare il login via Playwright su questo repo, invocare window.login() dopo aver popolato #login-username e #login-password, perché il bottone type='submit' non è dentro un <form> e page.click() non triggera onclick in modo affidabile in headless. Vista Mappa richiede click su #lista → [data-testid='btn-vista-mappa'] → attendere ~3s per rendering leaflet + marker. SW impiega ~2-3s per registrarsi dopo load.",
+  "rca of the issue": "Nessun bug funzionale Sprint 1. L'unico attrito riscontrato è di testabilità: il pulsante Login usa type='submit' ma non è dentro un <form>, quindi Playwright non riesce a scatenare l'handler onclick tramite click programmatico (né tramite Enter sul password field, che infatti non emette submit event). L'utente finale non è impattato perché il click reale del mouse invoca onclick='login()' regolarmente."
+}

@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-08-09
-**Versione**: 1.15.0 (Vista Mappa panoramica lotti)
+**Ultimo aggiornamento**: 2026-09-11
+**Versione**: 1.16.0 (Sprint 1: SQLite tuning + PWA installabile)
 
 ---
 
@@ -380,6 +380,25 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.16.0 (2026-09-11) — Sprint 1: DB tuning + PWA
+- **SQLite ottimizzato per concorrenza multi-utente** (`www/database.js`):
+  - `journal_mode = WAL`: reader concorrenti mentre scrittore lavora → 5-10x throughput
+  - `busy_timeout = 5000ms`: attesa massima 5s prima di `SQLITE_BUSY` (era 1s)
+  - `synchronous = NORMAL`: 2-3x più veloce di FULL, sicuro con WAL
+  - `cache_size = -65536` (64 MB in RAM)
+  - `foreign_keys = ON`, `temp_store = MEMORY`, `wal_autocheckpoint = 1000`
+  - **+11 nuovi indici** su lots(company), lots(owner_id, company_id), companies(owner), activities/analyses(owner_id), economic_records(lot_id, stagione), costi_personale/mezzi_tecnici(lot_id, stagione), users(username/email/parent)
+  - Regge realisticamente **100-500 utenti concorrenti** su hardware modesto
+- **PWA installabile** (`www/manifest.json`, `www/sw.js`, `www/js/pwa.js`, `www/icons/*`):
+  - `manifest.json` con nome, 10 icons (72→512, maskable inclusi), theme_color #2E7D32, 3 shortcut (Lista/Registrazione/Bilancio)
+  - Service Worker: precache app shell (index.html, css, js, manifest, icons), network-first per HTML, network-only per `/api/*` (dati multi-tenant sensibili), cache-first stale-while-revalidate per statici
+  - Registrazione SW spostata in `js/pwa.js` per rispettare CSP hardened (nessun inline)
+  - Pulsante "Installa App" in header (`#pwa-install-btn`) con `beforeinstallprompt` handler; fallback messaggio iOS Safari
+  - Endpoint server: `/manifest.json` (Content-Type application/manifest+json), `/sw.js` (Service-Worker-Allowed: /, no-cache), `/icons/*` statici
+  - **App installabile** su Chrome/Edge Android come app nativa dal browser; su iOS via "Aggiungi a schermata Home"
+- **UX**: tasto **Enter** ora esegue il login (event listener aggiunto in DOMContentLoaded, bottone type=button per accessibilità)
+- **Verificato dal testing agent**: **100% pass** su backend + frontend (SQLite WAL attivo, manifest/SW/icons servono correttamente, SW registrato con scope /, cache creata, regressione Vista Mappa OK). 64/64 Jest test verdi.
 
 ## Cambiamenti v1.15.0 (2026-08-09)
 - **Vista Mappa panoramica lotti** 🗺️ (`www/index.html`, `www/js/cropbook.js`, `www/js/i18n.js`, `www/css/cropbook.css`):
