@@ -44,9 +44,9 @@
             <!-- Language selector (visible on auth) -->
             <p class="auth-lang-hint" data-i18n="auth.language_hint">Scegli la lingua:</p>
             <div class="auth-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua">
-                <button type="button" data-lang-btn="it" data-testid="auth-lang-it" onclick="setCurrentLang('it')" aria-pressed="true">🇮🇹 Italiano</button>
-                <button type="button" data-lang-btn="en" data-testid="auth-lang-en" onclick="setCurrentLang('en')" aria-pressed="false">🇬🇧 English</button>
-                <button type="button" data-lang-btn="es" data-testid="auth-lang-es" onclick="setCurrentLang('es')" aria-pressed="false">🇪🇸 Español</button>
+                <button type="button" data-lang-btn="it" data-testid="auth-lang-it" onclick="setCurrentLang('it')" title="Italiano" aria-label="Italiano" aria-pressed="true"><span class="lang-flag" aria-hidden="true">🇮🇹</span></button>
+                <button type="button" data-lang-btn="en" data-testid="auth-lang-en" onclick="setCurrentLang('en')" title="English" aria-label="English" aria-pressed="false"><span class="lang-flag" aria-hidden="true">🇬🇧</span></button>
+                <button type="button" data-lang-btn="es" data-testid="auth-lang-es" onclick="setCurrentLang('es')" title="Español" aria-label="Español" aria-pressed="false"><span class="lang-flag" aria-hidden="true">🇪🇸</span></button>
             </div>
             
             <div class="auth-tabs">
@@ -254,18 +254,18 @@
          style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:22px;">
         <button type="button" data-lang-btn="it" data-testid="lang-btn-it"
                 onclick="setCurrentLang('it')"
-                title="Italiano" aria-pressed="true">
-            <span class="lang-flag" aria-hidden="true">🇮🇹</span><span class="lang-code">IT</span>
+                title="Italiano" aria-label="Italiano" aria-pressed="true">
+            <span class="lang-flag" aria-hidden="true">🇮🇹</span>
         </button>
         <button type="button" data-lang-btn="en" data-testid="lang-btn-en"
                 onclick="setCurrentLang('en')"
-                title="English" aria-pressed="false">
-            <span class="lang-flag" aria-hidden="true">🇬🇧</span><span class="lang-code">EN</span>
+                title="English" aria-label="English" aria-pressed="false">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span>
         </button>
         <button type="button" data-lang-btn="es" data-testid="lang-btn-es"
                 onclick="setCurrentLang('es')"
-                title="Español" aria-pressed="false">
-            <span class="lang-flag" aria-hidden="true">🇪🇸</span><span class="lang-code">ES</span>
+                title="Español" aria-label="Español" aria-pressed="false">
+            <span class="lang-flag" aria-hidden="true">🇪🇸</span>
         </button>
     </div>
     <span id="current-user-display" data-i18n="header.user_default">Utente</span>

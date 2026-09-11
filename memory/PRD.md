@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-09-11
-**Versione**: 1.16.0 (Sprint 1: SQLite tuning + PWA installabile)
+**Versione**: 1.16.1 (DB reset + selettori lingua a bandiere)
 
 ---
 
@@ -380,6 +380,17 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.16.1 (2026-09-11)
+- **Database azzerato**: cancellato `/app/data/cropbook.db` + WAL/SHM, nuovo super-admin auto-generato
+  - Nuove credenziali: `admin` / `9ded04059b99`
+  - Backup del vecchio DB in `/app/data/cropbook.db.backup-20260911_154141`
+- **Selettori lingua semplificati** (`www/index.html`, `www/css/cropbook.css`):
+  - Rimossi i testi "IT / EN / ES" e "Italiano / English / Español"
+  - Ora **SOLO bandiere**: 🇮🇹 (IT), 🇬🇧 (EN), 🇪🇸 (ES)
+  - Bandiere ingrandite: 1.6rem in header (1.85rem quando attive), 2rem su login (2.25rem quando attive)
+  - `title` e `aria-label` mantengono i nomi delle lingue per accessibilità (screen reader)
+  - Rimossa la regola CSS duplicata `.auth-lang-switcher` che conflittava con quella nuova
 
 ## Cambiamenti v1.16.0 (2026-09-11) — Sprint 1: DB tuning + PWA
 - **SQLite ottimizzato per concorrenza multi-utente** (`www/database.js`):

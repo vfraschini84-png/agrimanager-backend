@@ -3739,36 +3739,6 @@ input[type="radio"]:checked + span {
     color: #2E7D32 !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
-.auth-lang-switcher {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 18px;
-    padding: 10px;
-    background: #f5f5f5;
-    border-radius: 10px;
-}
-.auth-lang-switcher [data-lang-btn] {
-    border: 2px solid #ddd;
-    background: white;
-    color: #666;
-    padding: 8px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 700;
-    transition: all .15s;
-}
-.auth-lang-switcher [data-lang-btn]:hover {
-    border-color: #4CAF50;
-    color: #2E7D32;
-}
-.auth-lang-switcher [data-lang-btn].lang-btn-active {
-    background: #4CAF50;
-    border-color: #2E7D32;
-    color: white;
-    box-shadow: 0 3px 10px rgba(76,175,80,0.35);
-}
 .auth-lang-hint {
     text-align: center;
     color: #666;
@@ -3777,55 +3747,101 @@ input[type="radio"]:checked + span {
     font-weight: 600;
 }
 
-/* ============ Header language buttons (bandiere prominenti) ============ */
+/* ============ Header language buttons (solo bandiere, prominenti) ============ */
 .header-lang-switcher {
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
 .header-lang-switcher [data-lang-btn] {
-    border: none;
+    border: 2px solid transparent;
     background: transparent;
     color: white;
-    padding: 6px 12px;
-    border-radius: 18px;
+    padding: 5px 8px;
+    border-radius: 50%;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    line-height: 1;
-    transition: background .18s, box-shadow .18s, transform .1s;
-    min-width: 60px;
     justify-content: center;
+    line-height: 1;
+    transition: background .18s, box-shadow .18s, transform .1s, border-color .18s;
+    min-width: 40px;
+    min-height: 40px;
 }
 .header-lang-switcher [data-lang-btn] .lang-flag {
-    font-size: 1.35rem;
+    font-size: 1.6rem;
     line-height: 1;
     /* Rende la bandiera più nitida su ogni SO/browser */
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
     font-family: "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",EmojiOne,"Twemoji Mozilla",sans-serif;
-}
-.header-lang-switcher [data-lang-btn] .lang-code {
-    letter-spacing: 0.6px;
-    font-size: 0.78rem;
-    opacity: 0.92;
+    display: inline-block;
 }
 .header-lang-switcher [data-lang-btn].lang-btn-active {
     background: white !important;
-    color: #2E7D32 !important;
+    border-color: rgba(46, 125, 50, 0.9);
     box-shadow: 0 3px 10px rgba(0,0,0,0.28);
     transform: translateY(-1px);
 }
 .header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag {
-    font-size: 1.55rem;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+    font-size: 1.85rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 .header-lang-switcher [data-lang-btn]:not(.lang-btn-active):hover {
     background: rgba(255,255,255,0.24);
 }
+.header-lang-switcher [data-lang-btn]:focus-visible {
+    outline: 2px solid #FFC107;
+    outline-offset: 2px;
+}
 @media (max-width: 480px) {
-    .header-lang-switcher [data-lang-btn] { padding: 5px 8px; min-width: 46px; gap: 4px; }
-    .header-lang-switcher [data-lang-btn] .lang-flag { font-size: 1.2rem; }
-    .header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag { font-size: 1.35rem; }
-    .header-lang-switcher [data-lang-btn] .lang-code { font-size: 0.72rem; }
+    .header-lang-switcher [data-lang-btn] { padding: 4px 6px; min-width: 36px; min-height: 36px; }
+    .header-lang-switcher [data-lang-btn] .lang-flag { font-size: 1.45rem; }
+    .header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag { font-size: 1.6rem; }
+}
+
+/* ============ Auth (pre-login) language buttons — bandiere grandi ============ */
+.auth-lang-switcher {
+    display: inline-flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.auth-lang-switcher [data-lang-btn] {
+    border: 2px solid #e0e0e0;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: all 0.18s;
+    min-width: 58px;
+    min-height: 52px;
+}
+.auth-lang-switcher [data-lang-btn] .lang-flag {
+    font-size: 2rem;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",EmojiOne,"Twemoji Mozilla",sans-serif;
+    display: inline-block;
+}
+.auth-lang-switcher [data-lang-btn].lang-btn-active,
+.auth-lang-switcher [data-lang-btn][aria-pressed="true"] {
+    border-color: #2E7D32;
+    background: #E8F5E9;
+    box-shadow: 0 4px 12px rgba(46,125,50,0.25);
+    transform: translateY(-2px);
+}
+.auth-lang-switcher [data-lang-btn].lang-btn-active .lang-flag,
+.auth-lang-switcher [data-lang-btn][aria-pressed="true"] .lang-flag {
+    font-size: 2.25rem;
+}
+.auth-lang-switcher [data-lang-btn]:hover:not(.lang-btn-active) {
+    border-color: #4CAF50;
+    background: #F1F8E9;
+}
+.auth-lang-switcher [data-lang-btn]:focus-visible {
+    outline: 3px solid #FFC107;
+    outline-offset: 2px;
 }

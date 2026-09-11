@@ -3,7 +3,7 @@
 ## Super-admin (auto-creato al primo avvio)
 - **Username**: `admin`
 - **Email**: `admin@cropbook.com`
-- **Password attuale**: `96a0761f3943` (valida finché non viene cancellato il DB `/app/data/cropbook.db`)
+- **Password attuale**: `9ded04059b99` (aggiornata 2026-09-11 dopo reset DB — valida finché non viene cancellato il DB `/app/data/cropbook.db`)
 - **Ruolo**: `admin` (super-admin se username === 'admin')
 - **privacy_accepted**: 1 (auto-impostato dal seed)
 
