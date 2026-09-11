@@ -3747,7 +3747,7 @@ input[type="radio"]:checked + span {
     font-weight: 600;
 }
 
-/* ============ Header language buttons (solo bandiere, prominenti) ============ */
+/* ============ Header language buttons (bandiere SVG, prominenti, cross-browser) ============ */
 .header-lang-switcher {
     box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
@@ -3755,24 +3755,25 @@ input[type="radio"]:checked + span {
     border: 2px solid transparent;
     background: transparent;
     color: white;
-    padding: 5px 8px;
-    border-radius: 50%;
+    padding: 4px;
+    border-radius: 8px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
     transition: background .18s, box-shadow .18s, transform .1s, border-color .18s;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 34px;
 }
-.header-lang-switcher [data-lang-btn] .lang-flag {
-    font-size: 1.6rem;
-    line-height: 1;
-    /* Rende la bandiera più nitida su ogni SO/browser */
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
-    font-family: "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",EmojiOne,"Twemoji Mozilla",sans-serif;
-    display: inline-block;
+.header-lang-switcher [data-lang-btn] .flag-svg {
+    width: 32px;
+    height: auto;
+    display: block;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+    overflow: hidden;
+    transition: transform .18s, box-shadow .18s;
 }
 .header-lang-switcher [data-lang-btn].lang-btn-active {
     background: white !important;
@@ -3780,9 +3781,10 @@ input[type="radio"]:checked + span {
     box-shadow: 0 3px 10px rgba(0,0,0,0.28);
     transform: translateY(-1px);
 }
-.header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag {
-    font-size: 1.85rem;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+.header-lang-switcher [data-lang-btn].lang-btn-active .flag-svg {
+    width: 38px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    transform: scale(1.05);
 }
 .header-lang-switcher [data-lang-btn]:not(.lang-btn-active):hover {
     background: rgba(255,255,255,0.24);
@@ -3792,12 +3794,12 @@ input[type="radio"]:checked + span {
     outline-offset: 2px;
 }
 @media (max-width: 480px) {
-    .header-lang-switcher [data-lang-btn] { padding: 4px 6px; min-width: 36px; min-height: 36px; }
-    .header-lang-switcher [data-lang-btn] .lang-flag { font-size: 1.45rem; }
-    .header-lang-switcher [data-lang-btn].lang-btn-active .lang-flag { font-size: 1.6rem; }
+    .header-lang-switcher [data-lang-btn] { padding: 3px; min-width: 38px; min-height: 30px; }
+    .header-lang-switcher [data-lang-btn] .flag-svg { width: 26px; }
+    .header-lang-switcher [data-lang-btn].lang-btn-active .flag-svg { width: 32px; }
 }
 
-/* ============ Auth (pre-login) language buttons — bandiere grandi ============ */
+/* ============ Auth (pre-login) language buttons — bandiere SVG grandi ============ */
 .auth-lang-switcher {
     display: inline-flex;
     gap: 12px;
@@ -3816,15 +3818,17 @@ input[type="radio"]:checked + span {
     justify-content: center;
     line-height: 1;
     transition: all 0.18s;
-    min-width: 58px;
+    min-width: 66px;
     min-height: 52px;
 }
-.auth-lang-switcher [data-lang-btn] .lang-flag {
-    font-size: 2rem;
-    line-height: 1;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25));
-    font-family: "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji",EmojiOne,"Twemoji Mozilla",sans-serif;
-    display: inline-block;
+.auth-lang-switcher [data-lang-btn] .flag-svg {
+    width: 42px;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    overflow: hidden;
+    transition: transform .18s;
 }
 .auth-lang-switcher [data-lang-btn].lang-btn-active,
 .auth-lang-switcher [data-lang-btn][aria-pressed="true"] {
@@ -3833,9 +3837,10 @@ input[type="radio"]:checked + span {
     box-shadow: 0 4px 12px rgba(46,125,50,0.25);
     transform: translateY(-2px);
 }
-.auth-lang-switcher [data-lang-btn].lang-btn-active .lang-flag,
-.auth-lang-switcher [data-lang-btn][aria-pressed="true"] .lang-flag {
-    font-size: 2.25rem;
+.auth-lang-switcher [data-lang-btn].lang-btn-active .flag-svg,
+.auth-lang-switcher [data-lang-btn][aria-pressed="true"] .flag-svg {
+    width: 48px;
+    transform: scale(1.05);
 }
 .auth-lang-switcher [data-lang-btn]:hover:not(.lang-btn-active) {
     border-color: #4CAF50;

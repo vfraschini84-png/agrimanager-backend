@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-09-11
-**Versione**: 1.16.1 (DB reset + selettori lingua a bandiere)
+**Versione**: 1.17.0 (Bandiere SVG + SMTP Brevo + Icona custom)
 
 ---
 
@@ -380,6 +380,22 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.17.0 (2026-09-11)
+- **BUG FIX bandiere non visibili su PC** (`www/index.html`, `www/css/cropbook.css`):
+  - Emoji unicode `🇮🇹🇬🇧🇪🇸` sostituiti con **SVG inline** (Windows/Chrome desktop non renderizza le regional indicator emoji)
+  - IT: 3 rect verde/bianco/rosso; UK: Union Jack completo (blu #012169 + croci); ES: rosso/giallo/rosso
+  - Applicato sia al selettore login (.auth-lang-switcher) che all'header post-login (.header-lang-switcher)
+  - Stato attivo: SVG scala +20% con border verde + box-shadow
+  - Verificato dal testing agent: **100% pass frontend+backend**
+- **SMTP Brevo configurato** (`www/.env`):
+  - Host: `smtp-relay.brevo.com`, port 587, user `b8f1e5001@smtp-brevo.com`, API key salvata (non in codice)
+  - Verificato: `transporter.verify()` OK, POST `/api/auth/register` con `send_credentials_email:true` → `email_sent:true`, log server mostra "Email credenziali inviata" senza errori 535
+  - ⚠️ TODO: il from address `no-reply@cropbook.local` andrà cambiato in un mittente verificato in Brevo (Domain/Sender verificato nel dashboard Brevo) per garantire consegna in Inbox (altrimenti finisce in spam)
+- **Icona app custom generata** (`www/icons/*.png`):
+  - Design proprio: foglia stilizzata verde chiaro + libro/pagine sotto + gradiente verde `#66BB6A → #1B5E20` + rounded corners iOS-style (28%)
+  - Generate 13 dimensioni via Python/PIL: 16/32/72/96/128/144/152/180/192/384/512 + 192-maskable + 512-maskable + favicon.ico multi-size
+  - SW `CACHE_VERSION` bumped a `v1.17.0` per invalidare cache vecchia icona
 
 ## Cambiamenti v1.16.1 (2026-09-11)
 - **Database azzerato**: cancellato `/app/data/cropbook.db` + WAL/SHM, nuovo super-admin auto-generato

@@ -1,7 +1,7 @@
 /* ==============================================================
    Cropbook Service Worker — offline shell + smart caching
    ============================================================== */
-const CACHE_VERSION = 'cropbook-v1.15.0';
+const CACHE_VERSION = 'cropbook-v1.17.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
