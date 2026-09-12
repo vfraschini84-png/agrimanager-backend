@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
-**Ultimo aggiornamento**: 2026-09-11
-**Versione**: 1.17.0 (Bandiere SVG + SMTP Brevo + Icona custom)
+**Ultimo aggiornamento**: 2026-09-12
+**Versione**: 1.17.1 (Deploy locale Windows + Ngrok autostart)
 
 ---
 
@@ -380,6 +380,20 @@
 - [ ] Reset password admin con UI dedicata
 - [ ] Selettore tema chiaro/scuro
 - [ ] Ricerca/filtri nella lista utenti
+
+## Cambiamenti v1.17.1 (2026-09-12) — Deploy locale Windows
+- **Deploy pack Windows**: nuova cartella `/app/deploy-windows/` con:
+  - `README.md`: guida step-by-step in italiano (prerequisiti, authtoken ngrok, dominio statico, .env, autostart, troubleshooting)
+  - `start-cropbook.bat`: avvia il server Node.js con log in `logs/`
+  - `start-ngrok.bat`: apre tunnel HTTPS con dominio ngrok statico + log
+  - `install-autostart.ps1`: registra 2 task Scheduler Windows (`Cropbook-Server` e `Cropbook-Ngrok`) come SYSTEM, trigger "At startup", restart automatico 3-5 tentativi, ngrok parte con 20s di delay per dare tempo al server
+  - `uninstall-autostart.ps1`: rimozione idempotente dei task + kill processi node/ngrok
+  - Lo script `install-autostart.ps1` aggiorna anche `.env`: PUBLIC_URL e ALLOWED_ORIGINS ricevono il dominio ngrok
+- **CORS pattern estesi** (`www/server.js`):
+  - Accetta automaticamente qualsiasi `*.ngrok-free.app`, `*.ngrok.app`, `*.ngrok.io` (HTTPS)
+  - Accetta automaticamente `*.trycloudflare.com` (per Cloudflare Tunnel)
+  - Accetta origin LAN `192.168.x.x`, `10.x.x.x` per test da smartphone in rete locale
+  - Verificato con curl: 204 + headers CORS corretti su tutti i pattern
 
 ## Cambiamenti v1.17.0 (2026-09-11)
 - **BUG FIX bandiere non visibili su PC** (`www/index.html`, `www/css/cropbook.css`):

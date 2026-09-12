@@ -103,13 +103,19 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     'http://localhost:3000,http://127.0.0.1:3000,capacitor://localhost,http://localhost:5500,http://192.168.0.69:5500')
     .split(',').map(o => o.trim()).filter(Boolean);
 
-// Pattern aggiuntivi: sottodomini Emergent preview e localhost dev
+// Pattern aggiuntivi: sottodomini Emergent preview, ngrok tunnels e localhost dev
 const ORIGIN_PATTERNS = [
     /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentagent\.com$/i,
     /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentcf\.cloud$/i,
     /^https?:\/\/([a-z0-9-]+\.)*emergentagent\.com$/i,
+    /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i,     // ngrok free tunnels
+    /^https:\/\/[a-z0-9-]+\.ngrok\.app$/i,          // ngrok pro/business tunnels
+    /^https:\/\/[a-z0-9-]+\.ngrok\.io$/i,           // ngrok legacy tunnels
+    /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i,  // Cloudflare Tunnel free
     /^http:\/\/localhost(:\d+)?$/i,
-    /^http:\/\/127\.0\.0\.1(:\d+)?$/i
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/i,
+    /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/i,        // LAN dev
+    /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/i           // LAN dev
 ];
 
 const corsOptions = {
