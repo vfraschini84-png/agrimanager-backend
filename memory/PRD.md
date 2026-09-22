@@ -465,6 +465,13 @@
   - Nota: in ambienti preview servite via Cloudflare, l'edge inietta un piccolo script per bot-detection (cdn-cgi/challenge) che genererà 1 warning innocuo — NON presente in localhost, self-hosted o Capacitor Android
   - 64/64 Jest test verdi
 
+## Cambiamenti v1.13.2 (2026-02) — Fix CORS Ngrok `.ngrok-free.dev`
+- **Bug**: login via tunnel Ngrok `https://shon-whisperous-laconically.ngrok-free.dev` bloccato con errore CORS "origine non consentita"
+- **Root cause**: in `www/server.js` `ORIGIN_PATTERNS` accettava solo `.ngrok-free.app`, `.ngrok.app`, `.ngrok.io` — i nuovi account Ngrok free assegnano invece il TLD `.ngrok-free.dev` non coperto dalla regex
+- **Fix**: aggiunte due regex `/^https:\/\/[a-z0-9-]+\.ngrok-free\.dev$/i` e `/^https:\/\/[a-z0-9-]+\.ngrok\.dev$/i` alla whitelist
+- **Verifica curl**: preflight OPTIONS ritorna 204 + header `Access-Control-Allow-Origin` corretto; POST `/api/auth/login` con `Origin: *.ngrok-free.dev` restituisce token JWT valido; origini non whitelisted restano bloccate (403)
+- **Visualizzazione mobile**: risolta autonomamente dall'utente prima del fix
+
 ## Cambiamenti v1.13.1 (2026-08-08)
 - **Tooltip completamente tradotti**: aggiunti 15+ chiavi i18n per tooltip dinamici (nav.tip.*, common.delete_activity, users.edit_role_tip, users.delete_tip, map.*, ecc.)
 - **HTML**: aggiunti 21 `data-i18n-title` alle 5 icone di navigazione (Dettagli/Ricavi/Costi/Bilancio/Lista) replicate in tutte le sezioni, rimosso attributo duplicato su `#btn-gestione-utenti`

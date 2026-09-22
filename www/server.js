@@ -108,8 +108,10 @@ const ORIGIN_PATTERNS = [
     /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentagent\.com$/i,
     /^https?:\/\/([a-z0-9-]+\.)*preview\.emergentcf\.cloud$/i,
     /^https?:\/\/([a-z0-9-]+\.)*emergentagent\.com$/i,
-    /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i,     // ngrok free tunnels
+    /^https:\/\/[a-z0-9-]+\.ngrok-free\.app$/i,     // ngrok free tunnels (.app TLD)
+    /^https:\/\/[a-z0-9-]+\.ngrok-free\.dev$/i,     // ngrok free tunnels (.dev TLD - nuovi account)
     /^https:\/\/[a-z0-9-]+\.ngrok\.app$/i,          // ngrok pro/business tunnels
+    /^https:\/\/[a-z0-9-]+\.ngrok\.dev$/i,          // ngrok pro/business tunnels (.dev)
     /^https:\/\/[a-z0-9-]+\.ngrok\.io$/i,           // ngrok legacy tunnels
     /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i,  // Cloudflare Tunnel free
     /^http:\/\/localhost(:\d+)?$/i,
