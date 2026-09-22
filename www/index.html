@@ -243,18 +243,23 @@
         </div>
         
         <header id="app-header" style="display: none;">
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 12px;">
+    <div class="header-row-1" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
             <button id="header-home-btn" onclick="goHome()" data-i18n-title="common.back"
                     style="background: rgba(255,255,255,0.18); color: white; border: 2px solid rgba(255,255,255,0.4); width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: none; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s;">
                 <i class="fas fa-home"></i>
             </button>
-            <div>
+            <div class="header-title-block" style="min-width: 0;">
                 <h1 style="margin: 0;">CROPBOOK</h1>
                 <p class="app-description" data-i18n="header.tagline" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
             </div>
         </div>
-        <div class="user-info" style="flex-wrap: wrap; gap: 8px; align-items: center;">
+        <button class="logout-btn header-logout-top" onclick="logout()" data-testid="header-logout-btn"
+            data-i18n-title="header.logout" title="Logout">
+            <i class="fas fa-sign-out-alt"></i> <span class="logout-label" data-i18n="header.logout">Logout</span>
+        </button>
+    </div>
+    <div class="user-info header-row-2" style="display:flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px;">
     <!-- Language switcher (compact, with prominent flag) -->
     <div class="header-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua"
          style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:22px;">
@@ -290,11 +295,20 @@
         data-i18n-title="pwa.install_tip" title="Installa Cropbook sul tuo dispositivo">
         <i class="fas fa-download"></i> <span data-i18n="pwa.install_btn">Installa App</span>
     </button>
-    <button class="logout-btn" onclick="logout()">
-        <i class="fas fa-sign-out-alt"></i> <span data-i18n="header.logout">Logout</span>
-    </button>
 </div>
-    </div>
+    <!-- Quick-nav bar: 5 icone tonde di scorciatoia (visibile solo fuori dalla home) -->
+    <nav id="header-quick-nav" class="header-quick-nav" role="navigation" aria-label="Scorciatoie sezioni" style="display:none;">
+        <button type="button" class="section-nav-btn" data-target="dettagli-section" data-testid="header-nav-dettagli"
+                onclick="navigateToSection('dettagli-section')" data-i18n-title="nav.tip.dettagli" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
+        <button type="button" class="section-nav-btn" data-target="gestione-economica-section" data-testid="header-nav-ricavi"
+                onclick="navigateToSection('gestione-economica-section')" data-i18n-title="nav.tip.gestione_economica" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+        <button type="button" class="section-nav-btn" data-target="gestione-costi-section" data-testid="header-nav-costi"
+                onclick="navigateToSection('gestione-costi-section')" data-i18n-title="nav.tip.gestione_costi" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+        <button type="button" class="section-nav-btn" data-target="bilancio-section" data-testid="header-nav-bilancio"
+                onclick="navigateToSection('bilancio-section')" data-i18n-title="nav.tip.bilancio" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
+        <button type="button" class="section-nav-btn" data-target="lista-section" data-testid="header-nav-lista"
+                onclick="navigateToSection('lista-section')" data-i18n-title="nav.tip.lista" title="Lista Lotti"><i class="fas fa-list"></i></button>
+    </nav>
 </header>
         
         <div class="main-menu" id="main-menu" style="display: none;">

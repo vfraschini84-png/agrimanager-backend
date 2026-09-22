@@ -333,6 +333,128 @@ body.is-scrolling * {
     }
 }
 
+/* ==================== HEADER LAYOUT MOBILE-FRIENDLY ==================== */
+/* Row 1 sempre: Home | Titolo | Logout allineati */
+.header-row-1 { align-items: center; }
+.header-row-1 .header-title-block h1 { line-height: 1.1; }
+
+/* Logout compatto in top-right sulla row 1 */
+.logout-btn.header-logout-top {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background var(--animation-duration, .2s);
+}
+.logout-btn.header-logout-top:hover { background: rgba(255,255,255,0.35); }
+
+/* Quick-nav bar sotto le info utente: 5 icone tonde sempre visibili fuori home */
+.header-quick-nav {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.25);
+}
+.header-quick-nav .section-nav-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 1.05rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    border: 2px solid rgba(255,255,255,0.35);
+}
+
+@media (max-width: 600px) {
+    /* Logout su mobile: SOLO icona (nascondi label) per stare sulla row 1 */
+    .logout-btn.header-logout-top .logout-label { display: none; }
+    .logout-btn.header-logout-top {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        justify-content: center;
+        font-size: 1.05rem;
+    }
+    /* Header quick-nav: cerchi più piccoli per stare comodi */
+    .header-quick-nav { gap: 8px; margin-top: 10px; padding-top: 8px; }
+    .header-quick-nav .section-nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.95rem;
+    }
+    /* Row 2: mantenere flex-wrap con user-info sotto le bandiere */
+    .header-row-2 { gap: 6px !important; }
+    .header-row-2 > * { flex-shrink: 0; }
+}
+
+/* ==================== NASCONDI SECTION-NAV DUPLICATA NELLE SEZIONI ==================== */
+/* Sulla home no, ma dentro le sezioni la nav-bar interna è ridondante rispetto a quella dell'header.
+   Nascondi solo i pulsanti duplicati, mantieni il titolo. */
+.section .section-nav-bar .section-nav-buttons { display: none; }
+.section .section-nav-bar { border-bottom: 1px solid #eee; padding-bottom: 10px; }
+
+/* ==================== SECTION TITLE CENTRATO + NO DUPLICATE ICON ==================== */
+.section-header-enhanced .section-title-icon {
+    display: none !important; /* Rimuovi cerchio icona duplicato sopra al titolo */
+}
+.section-title { text-align: center; }
+.section-header-enhanced {
+    justify-content: center;
+    text-align: center;
+    flex: 1 1 100%;
+}
+.section-nav-bar { justify-content: center; }
+.section-nav-bar .section-title,
+.section-nav-bar .section-header-enhanced {
+    text-align: center;
+    flex: 1 1 100%;
+}
+
+/* ==================== SELETTORI/TOGGLE SOTTO IL TITOLO: CENTRATI SU MOBILE ==================== */
+@media (max-width: 600px) {
+    /* Aziende & Lotti: Per Azienda / Tutti i lotti / Vista Mappa / Nuova Azienda */
+    .vista-toggle {
+        justify-content: center !important;
+        gap: 8px !important;
+        flex-wrap: wrap;
+    }
+    .vista-toggle > button {
+        margin-left: 0 !important; /* neutralizza il push a destra del bottone Vista Mappa */
+        flex: 1 1 45%;
+        min-width: 130px;
+        justify-content: center;
+    }
+    /* Dettagli/Economica/Costi: contenitore selettori (stagione + azienda + lotto) */
+    .dettagli-stagione-wrapper,
+    .cascade-selettori,
+    .cascade-azienda-wrapper {
+        justify-content: center !important;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    /* Il div contenitore inline che usa "space-between" nelle sezioni Dettagli/Costi/Economica */
+    #dettagli-section > div[style*="space-between"],
+    #gestione-economica-section > div[style*="space-between"],
+    #gestione-costi-section > div[style*="space-between"],
+    #bilancio-section > div[style*="space-between"] {
+        justify-content: center !important;
+        gap: 10px !important;
+    }
+    /* Selettori compatti in orizzontale quando possibile */
+    .cascade-selettori .dropdown { flex: 1 1 100%; }
+    .cascade-selettori .dropdown-toggle { width: 100%; justify-content: center; }
+}
+
 .section-header-enhanced {
     display: flex;
     align-items: center;

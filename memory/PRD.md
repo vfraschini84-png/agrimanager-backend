@@ -465,6 +465,14 @@
   - Nota: in ambienti preview servite via Cloudflare, l'edge inietta un piccolo script per bot-detection (cdn-cgi/challenge) che genererà 1 warning innocuo — NON presente in localhost, self-hosted o Capacitor Android
   - 64/64 Jest test verdi
 
+## Cambiamenti v1.13.3 (2026-02) — Fix Layout Mobile Header + Sezioni
+- **Bug home**: icone di "Dettagli Lotto" e "Gestione Economica" apparivano a sinistra invece che centrate → causato da JS che forzava `display: 'block'` sui menu-item (rompeva il flex column). Fix in `cropbook.js` `updateUIForUserRole()`: `display: 'flex'` per entrambi
+- **Header ristrutturato**: nuovo layout a righe → Row 1: Home icon | CROPBOOK | Esci (icon-only su mobile); Row 2: bandiere + user + Utenti; Row 3: `#header-quick-nav` con 5 icone tonde di scorciatoia sezioni (dettagli/ricavi/costi/bilancio/lista) sempre visibili fuori dalla home
+- **Sezioni**: nascosti i pulsanti `.section-nav-buttons` duplicati (ora nell'header), rimosso il cerchio icona duplicato `.section-title-icon` sopra al titolo, `.section-title` centrato su tutte le sezioni
+- **Selettori centrati**: `.vista-toggle` (Per Azienda / Tutti i lotti / Vista Mappa / Nuova Azienda), `.cascade-selettori`, `.dettagli-stagione-wrapper` ora centrati e con flex-wrap ordinato su mobile (`max-width: 600px`)
+- **Nuovi data-testid**: `header-logout-btn`, `header-nav-dettagli`, `header-nav-ricavi`, `header-nav-costi`, `header-nav-bilancio`, `header-nav-lista`
+- **Verificato**: 64/64 Jest test verdi, screenshot mobile (412px) + desktop (1280px) OK
+
 ## Cambiamenti v1.13.2 (2026-02) — Fix CORS Ngrok `.ngrok-free.dev`
 - **Bug**: login via tunnel Ngrok `https://shon-whisperous-laconically.ngrok-free.dev` bloccato con errore CORS "origine non consentita"
 - **Root cause**: in `www/server.js` `ORIGIN_PATTERNS` accettava solo `.ngrok-free.app`, `.ngrok.app`, `.ngrok.io` — i nuovi account Ngrok free assegnano invece il TLD `.ngrok-free.dev` non coperto dalla regex

@@ -440,13 +440,13 @@ if (sezioneUtenti) {
     // Dettagli Lotti (solo con permesso)
     const dettagliItem = document.getElementById('dettagli');
     if (dettagliItem) {
-        dettagliItem.style.display = permissions.canAccessDetails ? 'block' : 'none';
+        dettagliItem.style.display = permissions.canAccessDetails ? 'flex' : 'none';
     }
     
     // Gestione Economica/Ricavi (solo con permesso)
     const economiaItem = document.getElementById('economia');
     if (economiaItem) {
-        economiaItem.style.display = permissions.canAccessEconomic ? 'block' : 'none';
+        economiaItem.style.display = permissions.canAccessEconomic ? 'flex' : 'none';
     }
     
     // Gestione Costi (solo con permesso)
@@ -4827,6 +4827,14 @@ function addHomeButton(section, sectionId) {
     if (headerHomeBtn) {
         headerHomeBtn.style.display = (sectionId === 'home') ? 'none' : 'inline-flex';
     }
+    // ✅ Quick-nav bar nell'header: visibile fuori dalla home, evidenzia sezione corrente
+    const quickNav = document.getElementById('header-quick-nav');
+    if (quickNav) {
+        quickNav.style.display = (sectionId === 'home' || !sectionId) ? 'none' : 'flex';
+        quickNav.querySelectorAll('.section-nav-btn').forEach(btn => {
+            btn.classList.toggle('is-current', btn.dataset.target === sectionId);
+        });
+    }
     if (sectionId === 'home') return;
 
     // Rimuovi eventuali vecchi bottoni "Torna alla home" creati in precedenza
@@ -4887,6 +4895,11 @@ function showHome() {
         homeSection.style.display = 'block';
         homeSection.classList.add('active');
     }
+    // ✅ Nascondi quick-nav in home
+    const quickNav = document.getElementById('header-quick-nav');
+    if (quickNav) quickNav.style.display = 'none';
+    const headerHomeBtn = document.getElementById('header-home-btn');
+    if (headerHomeBtn) headerHomeBtn.style.display = 'none';
 }
 
         async function loadLots(page = 1) {
