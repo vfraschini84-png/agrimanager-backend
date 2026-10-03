@@ -9,7 +9,7 @@ REM     https://dashboard.ngrok.com/domains
 REM  3) Sostituito TUO-DOMINIO-STATICO.ngrok-free.app qui sotto con il tuo
 REM ============================================================
 
-set NGROK_DOMAIN=TUO-DOMINIO-STATICO.ngrok-free.app
+set NGROK_DOMAIN=https://shon-whisperous-laconically.ngrok-free.dev
 set NGROK_PORT=3000
 
 REM Cartella logs (comune con start-cropbook.bat)
@@ -25,8 +25,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if "%NGROK_DOMAIN%"=="TUO-DOMINIO-STATICO.ngrok-free.app" (
-    echo [ERRORE] Modifica start-ngrok.bat: sostituisci TUO-DOMINIO-STATICO.ngrok-free.app
+if "%NGROK_DOMAIN%"=="https://shon-whisperous-laconically.ngrok-free.dev" (
+    echo [ERRORE] Modifica start-ngrok.bat: sostituisci https://shon-whisperous-laconically.ngrok-free.dev
     echo         con il dominio che hai creato su https://dashboard.ngrok.com/domains
     pause
     exit /b 1
