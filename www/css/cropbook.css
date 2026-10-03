@@ -338,6 +338,37 @@ body.is-scrolling * {
 .header-row-1 { align-items: center; }
 .header-row-1 .header-title-block h1 { line-height: 1.1; }
 
+/* Icon button generico header (hamburger) */
+.header-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    transition: background .2s, transform .2s;
+    flex-shrink: 0;
+}
+.header-icon-btn:hover { background: rgba(255,255,255,0.35); }
+.header-icon-btn[aria-expanded="true"] {
+    background: rgba(255,255,255,0.4);
+    transform: rotate(90deg);
+}
+
+/* Pannello menu hamburger (contiene bandiere + user + Utenti + PWA install) */
+.header-menu-panel {
+    animation: slideDownFade 0.22s ease-out;
+}
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Logout compatto in top-right sulla row 1 */
 .logout-btn.header-logout-top {
     flex-shrink: 0;
@@ -637,11 +668,12 @@ input:valid, select:valid {
     transform: none !important;
     box-shadow: none;
 }
+.section-nav-btn[data-target="registrazione-section"]     { background: #4CAF50; }
 .section-nav-btn[data-target="dettagli-section"]          { background: #2196F3; }
 .section-nav-btn[data-target="gestione-economica-section"]{ background: #9C27B0; }
 .section-nav-btn[data-target="gestione-costi-section"]    { background: #FF5722; }
 .section-nav-btn[data-target="bilancio-section"]          { background: #00BCD4; }
-.section-nav-btn[data-target="lista-section"]             { background: #4CAF50; }
+.section-nav-btn[data-target="lista-section"]             { background: #FF9800; }
 
 /* Mobile: pulsanti più piccoli, layout full-width sotto il titolo */
 @media (max-width: 600px) {

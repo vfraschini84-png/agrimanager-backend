@@ -465,6 +465,15 @@
   - Nota: in ambienti preview servite via Cloudflare, l'edge inietta un piccolo script per bot-detection (cdn-cgi/challenge) che genererà 1 warning innocuo — NON presente in localhost, self-hosted o Capacitor Android
   - 64/64 Jest test verdi
 
+## Cambiamenti v1.13.4 (2026-02) — Scorciatoie riordinate + Menu Hamburger
+- **Scorciatoie header riordinate (5 in nuovo ordine)**: Registrazione Lotti (verde) → Aziende e Lotti (arancione) → Gestione Costi (rosso) → Gestione Economica (viola) → Bilancio & Report (ciano). Scorciatoia Dettagli Lotto rimossa dalla barra (resta accessibile dalla home)
+- **Nuova scorciatoia Registrazione** aggiunta con icona `fa-clipboard-list` verde + tooltip i18n `nav.tip.registrazione`
+- **Menu hamburger**: nuovo bottone `#header-hamburger-btn` (icona ☰) nella row 1 accanto a Esci. Bandiere + "Vito/admin" + Gestione Utenti + Installa App ora in panel collassabile `#header-menu` (nascosto di default)
+- **UX menu**: animazione slide-down, hamburger ruota 90° quando aperto (`aria-expanded`), chiusura automatica cliccando fuori o navigando a una sezione (`showSection` chiama `toggleHeaderMenu(false)`)
+- **i18n**: aggiunta chiave `header.menu` in IT/EN/ES
+- **Nuovi data-testid**: `header-hamburger-btn`, `header-nav-registrazione`
+- **Verificato**: 64/64 Jest test verdi, screenshot mobile 412px — menu chiuso/aperto + navigazione scorciatoia OK
+
 ## Cambiamenti v1.13.3 (2026-02) — Fix Layout Mobile Header + Sezioni
 - **Bug home**: icone di "Dettagli Lotto" e "Gestione Economica" apparivano a sinistra invece che centrate → causato da JS che forzava `display: 'block'` sui menu-item (rompeva il flex column). Fix in `cropbook.js` `updateUIForUserRole()`: `display: 'flex'` per entrambi
 - **Header ristrutturato**: nuovo layout a righe → Row 1: Home icon | CROPBOOK | Esci (icon-only su mobile); Row 2: bandiere + user + Utenti; Row 3: `#header-quick-nav` con 5 icone tonde di scorciatoia sezioni (dettagli/ricavi/costi/bilancio/lista) sempre visibili fuori dalla home

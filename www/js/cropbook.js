@@ -4693,6 +4693,10 @@ function popolaFormEconomico(record) {
 
         // ==================== FUNZIONI PRINCIPALI ====================
        function showSection(sectionId) {
+    // Chiudi hamburger menu se aperto quando si naviga
+    const hMenu = document.getElementById('header-menu');
+    if (hMenu && hMenu.style.display === 'flex') toggleHeaderMenu(false);
+
     const permissions = getUserPermissions();
     
     if (sectionId === 'registrazione-section' && !permissions.canCreateLots) {
@@ -4852,6 +4856,28 @@ function goHome() {
     if (storico) storico.style.display = 'none';
     showHome();
 }
+
+// ==================== HAMBURGER MENU HEADER ====================
+function toggleHeaderMenu(forceState) {
+    const menu = document.getElementById('header-menu');
+    const btn = document.getElementById('header-hamburger-btn');
+    if (!menu || !btn) return;
+    const willOpen = (typeof forceState === 'boolean')
+        ? forceState
+        : menu.style.display === 'none' || menu.style.display === '';
+    menu.style.display = willOpen ? 'flex' : 'none';
+    menu.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
+    btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+}
+
+// Chiudi menu hamburger quando si clicca fuori
+document.addEventListener('click', function(ev) {
+    const menu = document.getElementById('header-menu');
+    const btn  = document.getElementById('header-hamburger-btn');
+    if (!menu || !btn || menu.style.display !== 'flex') return;
+    if (menu.contains(ev.target) || btn.contains(ev.target)) return;
+    toggleHeaderMenu(false);
+}, true);
 
 function enhanceSectionHeader(section, sectionId) {
     const sectionTitle = section.querySelector('.section-title');

@@ -254,12 +254,19 @@
                 <p class="app-description" data-i18n="header.tagline" style="margin: 0;">Gestione avanzata dei lotti di produzione</p>
             </div>
         </div>
-        <button class="logout-btn header-logout-top" onclick="logout()" data-testid="header-logout-btn"
-            data-i18n-title="header.logout" title="Logout">
-            <i class="fas fa-sign-out-alt"></i> <span class="logout-label" data-i18n="header.logout">Logout</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+            <button type="button" id="header-hamburger-btn" class="header-icon-btn" data-testid="header-hamburger-btn"
+                onclick="toggleHeaderMenu()" aria-expanded="false" aria-controls="header-menu"
+                data-i18n-title="header.menu" title="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <button class="logout-btn header-logout-top" onclick="logout()" data-testid="header-logout-btn"
+                data-i18n-title="header.logout" title="Logout">
+                <i class="fas fa-sign-out-alt"></i> <span class="logout-label" data-i18n="header.logout">Logout</span>
+            </button>
+        </div>
     </div>
-    <div class="user-info header-row-2" style="display:flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px;">
+    <div id="header-menu" class="user-info header-menu-panel" aria-hidden="true" style="display:none; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px;">
     <!-- Language switcher (compact, with prominent flag) -->
     <div class="header-lang-switcher" role="group" data-i18n-aria-label="header.change_language" aria-label="Cambia lingua"
          style="display:inline-flex;gap:2px;background:rgba(255,255,255,0.15);padding:3px;border-radius:22px;">
@@ -298,16 +305,16 @@
 </div>
     <!-- Quick-nav bar: 5 icone tonde di scorciatoia (visibile solo fuori dalla home) -->
     <nav id="header-quick-nav" class="header-quick-nav" role="navigation" aria-label="Scorciatoie sezioni" style="display:none;">
-        <button type="button" class="section-nav-btn" data-target="dettagli-section" data-testid="header-nav-dettagli"
-                onclick="navigateToSection('dettagli-section')" data-i18n-title="nav.tip.dettagli" title="Dettagli lotto"><i class="fas fa-info-circle"></i></button>
-        <button type="button" class="section-nav-btn" data-target="gestione-economica-section" data-testid="header-nav-ricavi"
-                onclick="navigateToSection('gestione-economica-section')" data-i18n-title="nav.tip.gestione_economica" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
+        <button type="button" class="section-nav-btn" data-target="registrazione-section" data-testid="header-nav-registrazione"
+                onclick="navigateToSection('registrazione-section')" data-i18n-title="nav.tip.registrazione" title="Registrazione Lotti"><i class="fas fa-clipboard-list"></i></button>
+        <button type="button" class="section-nav-btn" data-target="lista-section" data-testid="header-nav-lista"
+                onclick="navigateToSection('lista-section')" data-i18n-title="nav.tip.lista" title="Aziende e Lotti"><i class="fas fa-list"></i></button>
         <button type="button" class="section-nav-btn" data-target="gestione-costi-section" data-testid="header-nav-costi"
                 onclick="navigateToSection('gestione-costi-section')" data-i18n-title="nav.tip.gestione_costi" title="Gestione Costi"><i class="fas fa-wallet"></i></button>
+        <button type="button" class="section-nav-btn" data-target="gestione-economica-section" data-testid="header-nav-ricavi"
+                onclick="navigateToSection('gestione-economica-section')" data-i18n-title="nav.tip.gestione_economica" title="Gestione Ricavi"><i class="fas fa-euro-sign"></i></button>
         <button type="button" class="section-nav-btn" data-target="bilancio-section" data-testid="header-nav-bilancio"
                 onclick="navigateToSection('bilancio-section')" data-i18n-title="nav.tip.bilancio" title="Bilancio e Report"><i class="fas fa-chart-pie"></i></button>
-        <button type="button" class="section-nav-btn" data-target="lista-section" data-testid="header-nav-lista"
-                onclick="navigateToSection('lista-section')" data-i18n-title="nav.tip.lista" title="Lista Lotti"><i class="fas fa-list"></i></button>
     </nav>
 </header>
         

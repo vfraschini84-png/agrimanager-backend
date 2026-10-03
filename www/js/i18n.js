@@ -55,6 +55,7 @@ const translations = {
                              es: 'Gestión Agrícola Multi-Tenant' },
     'header.login':        { it: 'Accedi',        en: 'Sign in',      es: 'Iniciar sesión' },
     'header.logout':       { it: 'Esci',          en: 'Logout',       es: 'Cerrar sesión' },
+    'header.menu':         { it: 'Menu',          en: 'Menu',         es: 'Menú' },
     'header.user_management': { it: 'Utenti',     en: 'Users',        es: 'Usuarios' },
     'header.change_language': { it: 'Cambia lingua', en: 'Change language', es: 'Cambiar idioma' },
 
