@@ -345,7 +345,6 @@ const translations = {
     'det.doc_select_lot':     { it: 'Seleziona prima un lotto', en: 'Select a lot first', es: 'Selecciona primero una parcela' },
     'det.doc_download_error': { it: 'Errore nel download del file', en: 'Error downloading the file', es: 'Error al descargar el archivo' },
     'det.doc_upload_error':   { it: 'Errore nel caricamento del file', en: 'Error uploading the file', es: 'Error al subir el archivo' },
-    'det.no_analyses':        { it: 'Nessuna analisi caricata', en: 'No analyses uploaded', es: 'Ningún análisis subido' },
     'det.no_analyses_season': { it: 'Nessuna analisi caricata per la stagione {season}', en: 'No analyses uploaded for season {season}', es: 'Ningún análisis subido para la temporada {season}' },
     'det.doc_no_permission':  { it: 'Non hai i permessi per caricare documenti', en: 'You do not have permission to upload documents', es: 'No tienes permisos para subir documentos' },
     'det.general_notes_title':{ it: 'Note Generali Lotto', en: 'Lot General Notes',   es: 'Notas Generales de Parcela' },

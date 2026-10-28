@@ -1,7 +1,7 @@
 # PRD — Cropbook
 
 **Ultimo aggiornamento**: 2026-09-12
-**Versione**: 1.17.1 (Deploy locale Windows + Ngrok autostart)
+**Versione**: 1.18.0 (Documenti lotti su Object Storage)
 
 ---
 
@@ -514,3 +514,16 @@ sudo supervisorctl restart cropbook
 sudo supervisorctl tail -f cropbook
 ```
 URL pubblico: https://c95dfaa0-006a-45f3-82cf-48bf48aa2b11.preview.emergentagent.com/
+
+
+### Sessione (2026-06): Documenti dei lotti su Emergent Object Storage
+- Backend: `storage.js` (client Object Storage, init all'avvio, EMERGENT_LLM_KEY in www/.env), tabella `lot_documents` (soft-delete), `routes/documents.js`:
+  `GET /api/documents/lot/:lotId?group=analisi|documenti`, `POST /api/documents/lot/:lotId` (multipart, max 20MB, whitelist estensioni), `GET /api/documents/:id/download`, `DELETE /api/documents/:id` (uploader o admin).
+- Frontend: "Analisi Multiresiduali" ora salva davvero su server (prima localStorage/blob); nuova sezione "Documenti del Lotto" (contratto/certificazione/fattura/altro), bottone "Scatta foto" (capture=environment), Apri/Scarica/Elimina, i18n IT/EN/ES, form upload nascosti a chi non può caricare.
+- Fix: permessi UI di default per ruolo quando il dispositivo non ha permessi salvati (operatori/visitatori dal proprio telefono), rate limiter generale 100→1000/15min.
+- Test: iteration_12/13 (backend 22/22 pytest, jest 64/64, frontend 100%).
+
+## Backlog
+- P1: Migrazione SQLite → PostgreSQL/MySQL
+- P1: Spostare i permessi per-utente da localStorage al DB
+- P2: Pulizia periodica degli oggetti soft-deleted; modularizzare cropbook.js

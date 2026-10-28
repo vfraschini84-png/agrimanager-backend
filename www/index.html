@@ -710,7 +710,7 @@
                 
                 <div class="section-content expanded">
                     <!-- FORM PER INSERIMENTO NUOVA ANALISI -->
-                    <div class="section-grid">
+                    <div class="section-grid doc-upload-form">
                         <div class="form-group">
                             <label for="analysis-year"><i class="fas fa-calendar"></i> <span data-i18n="det.analysis_year">Anno Riferimento</span></label>
                             <select id="analysis-year" class="special-input">
@@ -732,12 +732,12 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group doc-upload-form">
                         <label for="analysis-notes"><i class="fas fa-clipboard"></i> <span data-i18n="det.analysis_notes">Note Analisi</span></label>
                         <textarea id="analysis-notes" rows="2" data-i18n-placeholder="det.analysis_notes_ph" placeholder="Note sull'analisi..." class="special-input"></textarea>
                     </div>
                     
-                    <div class="section-actions">
+                    <div class="section-actions doc-upload-form">
                         <button class="btn btn-secondary" data-testid="analysis-upload-btn" onclick="uploadAnalysis()" style="background: #2196F3;">
                             <i class="fas fa-upload"></i> <span data-i18n="det.upload_analysis">Carica Analisi</span>
                         </button>
@@ -777,7 +777,7 @@
                 </div>
 
                 <div class="section-content expanded">
-                    <div class="section-grid">
+                    <div class="section-grid doc-upload-form">
                         <div class="form-group">
                             <label for="document-category"><i class="fas fa-tag"></i> <span data-i18n="det.doc_category">Tipo documento</span></label>
                             <select id="document-category" class="special-input" data-testid="document-category-select">
@@ -802,12 +802,12 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group doc-upload-form">
                         <label for="document-notes"><i class="fas fa-clipboard"></i> <span data-i18n="det.doc_notes">Note</span></label>
                         <textarea id="document-notes" rows="2" data-testid="document-notes-input" data-i18n-placeholder="det.doc_notes_ph" placeholder="Es. contratto di affitto 2026, scadenza..." class="special-input"></textarea>
                     </div>
 
-                    <div class="section-actions">
+                    <div class="section-actions doc-upload-form">
                         <button class="btn btn-secondary" data-testid="document-upload-btn" onclick="uploadDocument()" style="background: #6D4C41;">
                             <i class="fas fa-upload"></i> <span data-i18n="det.upload_document">Carica Documento</span>
                         </button>

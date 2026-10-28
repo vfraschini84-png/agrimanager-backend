@@ -2959,6 +2959,7 @@ function updateLotGPS(lotId, gpsUrl) {
         }
 
         async function loadLotDocuments(lotId) {
+            document.getElementById('dettagli-section')?.classList.toggle('no-doc-upload', !getUserPermissions().canUploadAnalyses);
             lotDocuments = await fetchLotDocs(lotId, 'documenti');
             displayDocuments();
         }
@@ -3096,7 +3097,7 @@ function updateLotGPS(lotId, gpsUrl) {
             
             const valoreCorrente = select.value;
             const opzioni = Array.from(anni).filter(y => !isNaN(y)).sort((a, b) => b - a);
-            select.innerHTML = opzioni.map(y => `<option value="${y}">Stagione ${y}</option>`).join('');
+            select.innerHTML = opzioni.map(y => `<option value="${y}">${t('common.season')} ${y}</option>`).join('');
             // Mantieni selezione se valida, altrimenti default = anno corrente
             if (opzioni.includes(parseInt(valoreCorrente))) {
                 select.value = valoreCorrente;
@@ -9518,6 +9519,7 @@ document.addEventListener('cropbook:lang-changed', () => {
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
         const dettagliSection = document.getElementById('dettagli-section');
         if (dettagliSection && dettagliSection.classList.contains('active')) {
+            populateDettagliStagioneSelect();
             displayAnalyses();
             displayDocuments();
         }

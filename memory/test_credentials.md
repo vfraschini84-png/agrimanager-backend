@@ -38,3 +38,8 @@ Body opzionale: `send_credentials_email: true` + `email` valida.
 
 ## Reset password forzato (super-admin)
 - `POST /api/auth/admin-reset-password` con `{ userId, newPassword }` + Bearer token del super-admin
+
+## Utenti di test (creati dal testing agent)
+- Tenant admin: `TEST_uiown_1793212415` (lotto 21)
+- Operatore: `TEST_uiop_1793212415` / `password123`
+- Visitatore: `TEST_uivis_1793212415` / `password123`

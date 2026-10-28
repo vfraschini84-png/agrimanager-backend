@@ -186,3 +186,26 @@ class TestPermissions:
         assert lst.status_code == 200 and all(x["can_delete"] for x in lst.json()["data"])
         assert requests.delete(f"{API}/documents/{ctx['doc_ana']}", headers=H(ctx["sa"]), timeout=20).status_code == 200
         assert requests.delete(f"{API}/documents/{ctx['doc_pdf']}", headers=H(ctx["a"]), timeout=20).status_code == 200
+
+
+# ---- Iteration 13: rate limiter raised + missing storage object -> 404
+class TestIter13Fixes:
+    def test_general_rate_limit_is_1000(self, ctx):
+        r = requests.get(f"{API}/documents/lot/{ctx['lot']}", headers=H(ctx["a"]), timeout=20)
+        assert r.status_code == 200
+        limit = r.headers.get("RateLimit-Limit") or r.headers.get("ratelimit-limit")
+        assert limit is not None and int(limit.split(",")[0].split(";")[0]) == 1000, r.headers
+
+    def test_missing_storage_object_returns_404(self, ctx):
+        import sqlite3
+        r = upload(ctx["a"], ctx["lot"], name="TEST_missing.pdf")
+        assert r.status_code == 201, r.text
+        doc_id = r.json()["data"]["id"]
+        con = sqlite3.connect("/app/data/cropbook.db")
+        con.execute("UPDATE lot_documents SET storage_path = ? WHERE id = ?",
+                    (f"cropbook/lots/{ctx['lot']}/TEST_does_not_exist_{NOW}.pdf", doc_id))
+        con.commit(); con.close()
+        d = requests.get(f"{API}/documents/{doc_id}/download", headers=H(ctx["a"]), timeout=60)
+        assert d.status_code == 404, f"{d.status_code} {d.text}"
+        assert "error" in d.json()
+        requests.delete(f"{API}/documents/{doc_id}", headers=H(ctx["a"]), timeout=20)

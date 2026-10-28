@@ -1,0 +1,34 @@
+{
+  "summary": "Retest of the 6 fixes from iteration 12 for Documents/Analyses on Emergent Object Storage. All 6 fixes are verified. BACKEND: pytest test_documents_storage.py 22/22 passes. Two tests were added: RateLimit-Limit header = 1000, and download of a doc whose storage_path does not exist returns 404 (no longer 500). Jest 64/64 passes. FRONTEND: (1) Uploading an analysis for 2023 while season 2026 is selected moves #dettagli-stagione-select to 2023 and the analysis appears in #analyses-list. (2) setCurrentLang en/es/it while in Lot Details re-translates the items: category, Open/Download/Delete, Uploaded on, Notes, date format, empty message. (3) det.no_analyses_season is shown translated in EN/ES. (4) Operator on a clean browser (agriManager_permissions = null) gets the role permissions: sees the Lot Details card, uploads a document and deletes their own document. Visitor sees details, can Download/Open, has no Delete button, gets a translated error notification in the UI on upload, and the backend returns 403. (5) The Delete button is red rgb(229,57,53) with white text. At 390px a long file name wraps inside the card, buttons show icon only (span display:none, title present), they do not overlap, and there is no horizontal scroll (scrollWidth 390). (6) Verified via pytest. Admin regression for upload/list/download/delete is OK.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Lot Details - season selector", "issues": ["Pre-existing: the options in #dettagli-stagione-select are generated as 'Stagione ${y}' hardcoded in Italian (populateDettagliStagioneSelect) and stay in Italian in EN/ES"]},
+      {"screen": "Lot Details - visitor", "issues": ["The upload forms (Upload Analysis/Upload Document, Take photo) are visible to the visitor even though they are not allowed to upload. Clicking only shows the 'You do not have permission' notification. Consider hiding or disabling them when !canUploadAnalyses"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_documents_storage.py", "/app/test_reports/pytest/pytest_documents_iter13.xml"],
+  "action_items": [
+    "(Low) i18n.js: duplicate key 'det.no_analyses' (lines 304 and 348); the second one wins. Remove the duplicate",
+    "(Low) Translate the 'Stagione X' label in the options of #dettagli-stagione-select",
+    "(Low) Hide/disable the upload forms for users without canUploadAnalyses (visitor)"
+  ],
+  "critical_code_review_comments": [
+    "The role defaults give the operator canManageEconomics/canAccessBilancio/canEditLots too: check that this is what you want (the backend is the real guard).",
+    "Customised permissions are still only in the admin's browser localStorage: on other devices role defaults apply, so per-user customisations are not portable (acceptable as a fallback).",
+    "storage.js still retries every 404 with a re-init of the key (2 init + 2 GET for a genuinely missing object). It is correct now that it returns 404, but adds latency."
+  ],
+  "updated_files": ["/app/backend/tests/test_documents_storage.py"],
+  "success_rate": {"backend": "100% (22/22 pytest + 64/64 jest)", "frontend": "100% of the requested fixes verified"},
+  "test_credentials": "admin / 9ded04059b99; TEST_uiop_1793212415, TEST_uivis_1793212415, TEST_uiown_1793212415 / password123 (lot 21)",
+  "seed_data_creation": "The pytest suite creates TEST_doc*_<ts> users/lots on each run. The new test temporarily changes the storage_path of a TEST_missing.pdf document in /app/data/cropbook.db and then soft-deletes it. The UI test documents (lot 14 id 18, lot 21 ids 19 and 20) have been soft-deleted. The DB has not been deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login UI: #login-username/#login-password/#login-form .btn.btn-primary. Use page.evaluate('loadLotDetails(14)') for admin, lot 21 for the TEST_ui* users. File inputs: #analysis-file, #analysis-camera, #document-file, #document-camera. Upload buttons: [data-testid=analysis-upload-btn] and [data-testid=document-upload-btn]. The rate limiter is now 1000/15min, and no restart was needed during the tests.",
+  "rca of the issue": "No new bugs. All fixes from iteration 12 are confirmed."
+}
