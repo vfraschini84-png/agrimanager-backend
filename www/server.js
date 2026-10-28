@@ -35,7 +35,7 @@ const passthrough = (req, res, next) => next();
 
 const generalLimiter = isTest ? passthrough : rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 1000,
     message: { error: 'Troppe richieste. Riprova più tardi.' },
     standardHeaders: true,
     legacyHeaders: false

@@ -141,7 +141,7 @@ router.get('/:id/download', authenticateToken, requirePermission('analyses:read'
         res.send(data);
     } catch (error) {
         logger.error('Errore download documento', { error: error.message });
-        res.status(500).json({ error: 'Errore nel download del file' });
+        res.status(error.status === 404 ? 404 : 500).json({ error: 'Errore nel download del file' });
     }
 });
 

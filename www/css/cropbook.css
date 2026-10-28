@@ -1666,7 +1666,29 @@ footer {
     font-size: 0.78rem;
 }
 
+.analysis-file-info {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.analysis-file-actions .btn-danger {
+    background: #e53935;
+    color: #fff;
+    border: none;
+}
+
+.analysis-file-actions .btn-danger:hover {
+    background: #c62828;
+}
+
+.file-info .file-size {
+    white-space: nowrap;
+}
+
 @media (max-width: 600px) {
+    .analysis-file-actions .btn span {
+        display: none;
+    }
     .analysis-file-item {
         flex-direction: column;
         align-items: stretch;

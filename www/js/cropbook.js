@@ -120,6 +120,16 @@ const emptyPermissions = {
     canAccessCosts: false,
     canAccessBilancio: false  // ✅ NUOVO
 };        
+// Permessi di default per ruolo (usati sui dispositivi dove l'admin non ha salvato permessi personalizzati)
+function getRoleDefaultPermissions(role) {
+    const p = { ...emptyPermissions };
+    const read = ['canViewLots', 'canAccessDetails', 'canAccessEconomic', 'canAccessCosts', 'canAccessBilancio', 'canExportData'];
+    const write = ['canCreateLots', 'canEditLots', 'canAddActivities', 'canUploadAnalyses', 'canManageEconomics'];
+    if (['operatore', 'operator', 'manager'].includes(role)) [...read, ...write].forEach(k => { p[k] = true; });
+    else if (['visitatore', 'viewer'].includes(role)) read.forEach(k => { p[k] = true; });
+    if (role === 'manager') p.canDeleteLots = true;
+    return p;
+}
         // Inizializza il sistema di autenticazione
         async function initAuthSystem() {
     // Carica utenti dal localStorage o usa quelli predefiniti
@@ -497,11 +507,11 @@ function updateActionButtonsVisibility() {
         };
     }
     
-    // Altrimenti usa i permessi personalizzati o quelli vuoti
+    // Altrimenti usa i permessi personalizzati o quelli di default del ruolo
     if (currentUser && userPermissions[currentUser.username]) {
         return userPermissions[currentUser.username];
     }
-    return { ...emptyPermissions };
+    return getRoleDefaultPermissions(currentUser?.role);
 }
         
         async function registerUserAdvanced() {
@@ -2883,7 +2893,7 @@ function updateLotGPS(lotId, gpsUrl) {
         async function sendLotDocument(prefix, fields) {
             const lotId = document.getElementById('current-lot-id')?.value;
             if (!lotId) {
-                showNotification('Seleziona prima un lotto', 'error');
+                showNotification(t('det.doc_select_lot'), 'error');
                 return false;
             }
             const file = getPickedFile(prefix);
@@ -2906,7 +2916,7 @@ function updateLotGPS(lotId, gpsUrl) {
                 return true;
             } catch (error) {
                 console.error('Errore upload documento:', error);
-                showNotification(error.message || 'Errore nel caricamento del file', 'error');
+                showNotification(error.message || t('det.doc_upload_error'), 'error');
                 return false;
             }
         }
@@ -2914,20 +2924,24 @@ function updateLotGPS(lotId, gpsUrl) {
         async function uploadAnalysis() {
             const permissions = getUserPermissions();
             if (!permissions.canUploadAnalyses) {
-                showNotification('Non hai i permessi per caricare analisi', 'error');
+                showNotification(t('det.doc_no_permission'), 'error');
                 return;
             }
             const year = document.getElementById('analysis-year').value;
             if (!year) {
-                showNotification('Seleziona anno e carica un file', 'error');
+                showNotification(t('det.doc_select_year'), 'error');
                 return;
             }
             const notes = document.getElementById('analysis-notes').value;
             const ok = await sendLotDocument('analysis', { category: 'analisi', year, notes });
             if (!ok) return;
-            document.getElementById('analysis-year').value = '';
             document.getElementById('analysis-notes').value = '';
-            loadLotAnalyses(document.getElementById('current-lot-id').value);
+            await loadLotAnalyses(document.getElementById('current-lot-id').value);
+            const stagioneSelect = document.getElementById('dettagli-stagione-select');
+            if (stagioneSelect && stagioneSelect.value !== String(year)) {
+                stagioneSelect.value = String(year);
+                onCambioStagioneDettagli();
+            }
         }
 
         async function uploadDocument() {
@@ -2966,13 +2980,13 @@ function updateLotGPS(lotId, gpsUrl) {
                         </div>
                     </div>
                     <div class="analysis-file-actions">
-                        <button class="btn btn-secondary" data-testid="lot-doc-open-${doc.id}" onclick="openLotDocument(${doc.id}, false)">
+                        <button class="btn btn-secondary" data-testid="lot-doc-open-${doc.id}" title="${t('det.doc_open')}" onclick="openLotDocument(${doc.id}, false)">
                             <i class="fas fa-eye"></i> <span>${t('det.doc_open')}</span>
                         </button>
-                        <button class="btn btn-secondary" data-testid="lot-doc-download-${doc.id}" onclick="openLotDocument(${doc.id}, true)">
+                        <button class="btn btn-secondary" data-testid="lot-doc-download-${doc.id}" title="${t('det.doc_download')}" onclick="openLotDocument(${doc.id}, true)">
                             <i class="fas fa-download"></i> <span>${t('det.doc_download')}</span>
                         </button>
-                        ${doc.canDelete ? `<button class="btn btn-danger" data-testid="lot-doc-delete-${doc.id}" onclick="deleteLotDocument(${doc.id}, '${kind}')">
+                        ${doc.canDelete ? `<button class="btn btn-danger" data-testid="lot-doc-delete-${doc.id}" title="${t('common.delete')}" onclick="deleteLotDocument(${doc.id}, '${kind}')">
                             <i class="fas fa-trash"></i> <span>${t('common.delete')}</span>
                         </button>` : ''}
                     </div>
@@ -3014,7 +3028,7 @@ function updateLotGPS(lotId, gpsUrl) {
                 setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
             } catch (error) {
                 if (popup) popup.close();
-                showNotification(error.message || 'Errore nel download del file', 'error');
+                showNotification(error.message || t('det.doc_download_error'), 'error');
             }
         }
 
@@ -3181,8 +3195,8 @@ function updateLotGPS(lotId, gpsUrl) {
             
             if (visibili.length === 0) {
                 const msg = stagioneSel
-                    ? `Nessuna analisi caricata per la stagione ${stagioneSel}`
-                    : 'Nessuna analisi caricata';
+                    ? t('det.no_analyses_season', { season: stagioneSel })
+                    : t('det.no_analyses');
                 container.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${msg}</p>`;
                 historyContainer.style.display = lotAnalyses.length > 0 ? 'block' : 'none';
                 countBadge.textContent = '0';
@@ -9502,6 +9516,11 @@ document.addEventListener('cropbook:lang-changed', () => {
             if (typeof loadUserManagement === 'function') loadUserManagement();
         }
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
+        const dettagliSection = document.getElementById('dettagli-section');
+        if (dettagliSection && dettagliSection.classList.contains('active')) {
+            displayAnalyses();
+            displayDocuments();
+        }
         const bilancioSection = document.getElementById('bilancio-section');
         if (bilancioSection && bilancioSection.classList.contains('active')) {
             if (currentBilancioMode === 'azienda') {

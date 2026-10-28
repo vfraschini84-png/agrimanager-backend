@@ -1,0 +1,49 @@
+{
+  "summary": "Testato end-to-end la funzione Documenti/Analisi del lotto su Emergent Object Storage. BACKEND 20/20 pytest OK: upload PDF/PNG (201), year obbligatorio per analisi (400), .exe 400, categoria invalida 400, nessun file 400, >20MB 413, senza token 401, lotto inesistente 404; list con group=analisi|documenti corretto e solo non eliminati; download binario identico con Content-Type e Content-Disposition attachment/inline; DELETE: uploader OK, tenant-admin OK, super-admin OK, operatore non uploader 403, visitatore 403; dopo delete download 404 e scompare dalla lista; tenant B riceve 403 su list/download/delete/upload; visitatore puo listare/scaricare ma upload 403. Jest regressione 64/64 OK. FRONTEND: upload da file input, da input camera nascosto (accept=image/*, capture=environment su #document-camera e #analysis-camera, label document-camera-name valorizzata e azzerata dopo upload), upload analisi anno 2026; persistenza dopo reload OK; Scarica (download evento, nome corretto) e Apri (popup blob:) OK; elimina con confirm aggiorna lista e badge (documenti e analisi); operatore non vede delete su file altrui e lo vede sui propri; nessuno scroll orizzontale a 390px. Trovati 1 problema funzionale preesistente che blocca operatori/visitatori nella UI, 2 bug UX/i18n e piccoli difetti di design.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "global /api rate limiter (server.js generalLimiter)", "issue": "max 100 richieste / 15 min per IP: un solo utente lo esaurisce in pochi minuti (loadLotDetails fa molte chiamate; dopo ~5 aperture di lotto + upload il login restituisce 'Troppe richieste'). Durante il test ho dovuto riavviare cropbook per azzerarlo. Preesistente, ma con l'upload/lista documenti il numero di chiamate cresce."},
+      {"endpoint": "POST /api/auth/register (pubblico)", "issue": "Preesistente: finalRole = role || 'visitatore', quindi una registrazione pubblica puo scegliere role='admin' dal body (resta confinata al proprio tenant, ma il commento nel frontend dice che il backend assegna il ruolo)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Analisi Multiresiduali - storico", "issue": "Un'analisi caricata con anno diverso dalla 'Stagione' selezionata (es. anno 2023 con Stagione 2026) viene salvata ma NON appare nella lista ('Nessuna analisi caricata per la stagione 2026'), mentre il badge storico mostra 2 e analisi-count 1. L'utente crede che l'upload non sia andato a buon fine. Suggerimento: dopo l'upload impostare #dettagli-stagione-select sull'anno caricato oppure mostrare tutte le analisi con un raggruppamento per anno.", "selector": "#analyses-list, #dettagli-stagione-select", "priority": "MEDIUM"},
+      {"component": "Lista documenti/analisi - i18n al cambio lingua", "issue": "Se cambi lingua mentre sei in Dettagli Lotto, gli elementi renderizzati (titolo categoria, 'Apri/Scarica/Elimina', 'Caricato il', 'Note', messaggio vuoto) restano nella lingua precedente finche non ricarichi il lotto. Causa: il listener 'cropbook:lang-changed' (cropbook.js ~riga 9490) non richiama displayDocuments()/displayAnalyses() quando dettagli-section e attiva. Se invece il lotto viene caricato gia in EN/ES le traduzioni det.doc_* sono corrette.", "selector": "[data-testid^='lot-doc-item-']", "priority": "MEDIUM"},
+      {"component": "displayAnalyses / uploadAnalysis", "issue": "Stringhe hardcoded in italiano non tradotte: 'Nessuna analisi caricata per la stagione X', 'Nessuna analisi caricata', 'Seleziona anno e carica un file', 'Non hai i permessi per caricare analisi', 'Seleziona prima un lotto', 'Errore nel download del file'.", "selector": "#analyses-list", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Operatore/Visitatore usano i documenti dal proprio dispositivo", "issue": "PREESISTENTE ma blocca la feature: getUserPermissions() (cropbook.js:480) per ruoli non-admin legge i permessi da localStorage 'agriManager_permissions', che viene scritto solo nel browser dell'admin. Un operatore che fa login dal suo telefono ottiene tutti i permessi a false: la dashboard mostra solo 2 card (niente Dettagli Lotto) e uploadDocument() restituisce 'Non hai i permessi'. Il backend invece permette l'upload all'operatore (verificato). Ho potuto testare la UI dell'operatore solo iniettando i permessi in localStorage. Per lo scenario 'foto da telefono' i permessi vanno salvati nel DB e restituiti dal login (/api/auth/me) oppure ricavati dal ruolo.", "affected_selectors": ["[data-testid='document-upload-btn']", "[data-testid='analysis-upload-btn']"]}
+    ],
+    "design_issues": [
+      {"screen": "Dettagli lotto - item documento (mobile 390px)", "issues": ["Un nome file lungo senza spazi esce dal card e viene tagliato: aggiungere overflow-wrap:anywhere / word-break su .analysis-file-info", "I 3 bottoni Apri/Scarica/Elimina sono stretti e 'Scarica' tocca 'Elimina'; '1 KB' va a capo su due righe. Valutare bottoni solo icona su mobile o flex-wrap"]},
+      {"screen": "Dettagli lotto - bottone Elimina", "issues": [".btn-danger non ha stile CSS definito: sfondo grigio di default del browser rgb(239,239,239) con testo nero, non sembra un'azione distruttiva e non e coerente con gli altri bottoni"]},
+      {"screen": "Dettagli lotto", "issues": ["Preesistente: molte etichette statiche (Attivita di Raccolta, Stagione, Seleziona Lotto, Coordinate non inserite) restano in italiano in EN/ES"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_documents_storage.py", "/app/test_reports/pytest/pytest_documents.xml"],
+  "action_items": [
+    "Spostare i permessi UI per-utente da localStorage al backend (o derivarli dal ruolo) cosi operatori e visitatori possono usare Documenti/Analisi dal proprio dispositivo",
+    "Dopo l'upload di un'analisi, impostare la stagione selezionata sull'anno caricato (o mostrare tutte le analisi raggruppate per anno)",
+    "Nel listener cropbook:lang-changed rieseguire displayDocuments() e displayAnalyses() quando dettagli-section e attiva",
+    "Tradurre le stringhe hardcoded in displayAnalyses, uploadAnalysis, sendLotDocument e openLotDocument",
+    "Aggiungere lo stile .btn-danger e il word-break sui nomi file; sistemare la riga dei bottoni su mobile",
+    "Valutare di alzare il generalLimiter (100/15 min per IP e molto basso per una SPA)"
+  ],
+  "critical_code_review_comments": [
+    "routes/documents.js e pulito: multer in memoria con limite 20MB, whitelist delle estensioni, controllo tenant tramite assertLotAccess, soft-delete, nessun _id/oggetti grezzi esposti. Il content-type e derivato dall'estensione, non dal mime del client (corretto).",
+    "Il soft-delete non rimuove l'oggetto dall'Object Storage (accettabile, ma servira una pulizia periodica o una policy se lo spazio conta).",
+    "canDelete usa req.user.role dal JWT: se il ruolo di un utente viene cambiato, il permesso resta quello vecchio fino al nuovo login (comportamento preesistente in tutta l'app).",
+    "storage.js ritenta su 404 re-inizializzando la chiave: un GET di un oggetto davvero mancante fa 2 init + 2 GET prima di dare 500; il download di un oggetto mancante restituisce 500 invece di 404.",
+    "cropbook.js ha 9636 righe: il blocco documenti andrebbe estratto in un modulo separato."
+  ],
+  "updated_files": ["/app/backend/tests/test_documents_storage.py"],
+  "success_rate": {"backend": "100% (20/20 pytest + 64/64 jest)", "frontend": "~85% (flussi principali OK; bug sul filtro stagione delle analisi, sul re-render i18n e sul gating dei permessi per non-admin)"},
+  "test_credentials": "admin / 9ded04059b99 (super-admin). Utenti di test creati: TEST_uiop_1793212415 (operatore) e TEST_uivis_1793212415 (visitatore), password password123, figli di TEST_uiown_1793212415 (role admin, lotto 21). Gli utenti TEST_doc*_<ts> vengono creati dalla suite pytest a ogni esecuzione.",
+  "seed_data_creation": "Creati i tenant/utenti TEST_* e i lotti TEST_ via API. Ho eliminato (soft-delete) tutti i documenti di test che avevo caricato sul lotto 14 (id 7, 8, 9, 10) e sul lotto 21 (11, 12). Il documento id 2 'contratto.pdf' del main agent e rimasto. Riavviato una volta il servizio cropbook per azzerare il rate limiter in memoria; il DB non e stato toccato.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login UI: #login-username, #login-password, #login-form .btn.btn-primary. I bottoni lingua dell'header sono nascosti nel menu hamburger: usare page.evaluate(\"setCurrentLang('en')\") e aspettare ~3s dopo il login, perche la preferenza lingua salvata puo sovrascrivere una chiamata fatta subito. Aprire i dettagli con page.evaluate('loadLotDetails(14)'). Attenzione al rate limit globale di 100 richieste / 15 min per IP: se il login risponde 'Troppe richieste', fare sudo supervisorctl restart cropbook. Per testare un operatore nella UI bisogna iniettare localStorage agriManager_permissions con {username:{canAccessDetails:true, canUploadAnalyses:true, ...}} prima del login.",
+  "rca of the issue": "1) Analisi 'sparita': displayAnalyses filtra lotAnalyses su parseInt(a.year) === #dettagli-stagione-select, e uploadAnalysis non allinea la stagione all'anno caricato. 2) i18n stale: le liste sono generate via innerHTML con t() solo al render, e il listener cropbook:lang-changed rirenderizza solo lista-section, user-management e bilancio. 3) Operatore senza permessi: getUserPermissions restituisce i permessi da localStorage['agriManager_permissions'][username], che esiste solo nel browser in cui l'admin li ha impostati, quindi su un altro dispositivo restituisce emptyPermissions."
+}
