@@ -292,6 +292,27 @@ async function initializeDatabase() {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
             )`
+        },
+        {
+            name: 'lot_documents',
+            sql: `CREATE TABLE IF NOT EXISTS lot_documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                lot_id INTEGER NOT NULL,
+                category TEXT NOT NULL DEFAULT 'altro',
+                year INTEGER,
+                original_name TEXT NOT NULL,
+                storage_path TEXT NOT NULL,
+                content_type TEXT NOT NULL,
+                size INTEGER,
+                notes TEXT,
+                owner_id INTEGER,
+                uploaded_by_id INTEGER,
+                uploaded_by TEXT,
+                is_deleted INTEGER NOT NULL DEFAULT 0,
+                deleted_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (lot_id) REFERENCES lots (id) ON DELETE CASCADE
+            )`
         }
     ];
 
@@ -316,6 +337,7 @@ async function initializeDatabase() {
         'CREATE INDEX IF NOT EXISTS idx_activities_owner ON activities(owner_id)',
         'CREATE INDEX IF NOT EXISTS idx_analyses_lot ON analyses(lot_id)',
         'CREATE INDEX IF NOT EXISTS idx_analyses_owner ON analyses(owner_id)',
+        'CREATE INDEX IF NOT EXISTS idx_lot_documents_lot ON lot_documents(lot_id, is_deleted)',
         'CREATE INDEX IF NOT EXISTS idx_economic_lot ON economic_records(lot_id)',
         'CREATE INDEX IF NOT EXISTS idx_economic_lot_stagione ON economic_records(lot_id, stagione_agricola)',
         'CREATE INDEX IF NOT EXISTS idx_lot_details_lot ON lot_details(lot_id)',

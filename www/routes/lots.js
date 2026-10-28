@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const ExcelJS = require('exceljs');
 const db = require('../database');
 const logger = require('../logger');
 const { requirePermission, requireAuth } = require('../middleware/rbac');
@@ -220,6 +221,143 @@ router.get('/', authenticateToken, requirePermission('lots:read'), async (req, r
     } catch (error) {
         logger.error('Errore GET lots', { error: error.message });
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== EXPORT EXCEL LOTTI (multilingua) ====================
+// IMPORTANT: deve stare PRIMA di `/:id` per non essere catchato come lotto id
+router.get('/export/excel', authenticateToken, requirePermission('lots:read'), async (req, res) => {
+    try {
+        const lang = (req.query.lang || 'it').toLowerCase();
+        const currentUserId = req.user.id;
+        const currentUserRole = req.user.role;
+        const currentUsername = req.user.username;
+
+        const userRow = await db.getAsync('SELECT parent_id FROM users WHERE id = ?', [currentUserId]);
+        const parentId = userRow?.parent_id || null;
+
+        let whereClause = '';
+        let params = [];
+        if (currentUsername === 'admin') {
+            whereClause = '';
+        } else if (currentUserRole === 'admin') {
+            const subUsers = await db.allAsync('SELECT id FROM users WHERE parent_id = ?', [currentUserId]);
+            const ownerIds = [currentUserId, ...subUsers.map(u => u.id)];
+            whereClause = `WHERE owner_id IN (${ownerIds.map(() => '?').join(',')})`;
+            params = ownerIds;
+        } else if (parentId) {
+            whereClause = 'WHERE owner_id = ?';
+            params = [parentId];
+        } else {
+            whereClause = 'WHERE owner_id = ?';
+            params = [currentUserId];
+        }
+
+        const lots = await db.allAsync(
+            `SELECT * FROM lots ${whereClause} ORDER BY company_name ASC, created_at DESC`,
+            params
+        );
+
+        // Dizionario i18n per intestazioni/metadata del report (IT/EN/ES)
+        const T = {
+            it: { title: 'Lotti Registrati', sheet: 'Lotti',
+                  company: 'Nome Azienda (Ragione Sociale)', type: 'Tipologia Prodotto',
+                  product: 'Prodotto', variety: 'Varietà', field_lot: 'Lotto Campo',
+                  area: 'Superficie (ha)', location_gps: 'Luogo e Coordinate GPS', notes: 'Note' },
+            en: { title: 'Registered Lots', sheet: 'Lots',
+                  company: 'Company Name', type: 'Product Type',
+                  product: 'Product', variety: 'Variety', field_lot: 'Field Lot',
+                  area: 'Area (ha)', location_gps: 'Location and GPS Coordinates', notes: 'Notes' },
+            es: { title: 'Lotes Registrados', sheet: 'Lotes',
+                  company: 'Nombre Empresa (Razón Social)', type: 'Tipo de Producto',
+                  product: 'Producto', variety: 'Variedad', field_lot: 'Lote de Campo',
+                  area: 'Superficie (ha)', location_gps: 'Lugar y Coordenadas GPS', notes: 'Notas' }
+        };
+        const t = T[lang] || T.it;
+
+        const wb = new ExcelJS.Workbook();
+        wb.creator = 'Cropbook';
+        wb.created = new Date();
+        const ws = wb.addWorksheet(t.sheet, { views: [{ state: 'frozen', ySplit: 1 }] });
+
+        // Ordine colonne richiesto dall'utente
+        ws.columns = [
+            { header: t.company,       key: 'company',       width: 34 },
+            { header: t.type,          key: 'type',          width: 20 },
+            { header: t.product,       key: 'product',       width: 20 },
+            { header: t.variety,       key: 'variety',       width: 18 },
+            { header: t.field_lot,     key: 'field_lot',     width: 18 },
+            { header: t.area,          key: 'area',          width: 14 },
+            { header: t.location_gps,  key: 'location_gps',  width: 44 },
+            { header: t.notes,         key: 'notes',         width: 30 }
+        ];
+
+        const headerRow = ws.getRow(1);
+        headerRow.height = 34;
+        headerRow.eachCell(c => {
+            c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D32' } };
+            c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            c.border = {
+                top:    { style: 'thin',  color: { argb: 'FF1B5E20' } },
+                left:   { style: 'thin',  color: { argb: 'FF1B5E20' } },
+                right:  { style: 'thin',  color: { argb: 'FF1B5E20' } },
+                bottom: { style: 'medium', color: { argb: 'FF1B5E20' } }
+            };
+        });
+
+        // Righe dati (campi vuoti → cella vuota come richiesto)
+        lots.forEach(l => {
+            const locParts = [];
+            if (l.location) locParts.push(l.location);
+            if (l.gps_coordinates) locParts.push(l.gps_coordinates);
+            ws.addRow({
+                company:      l.company_name || '',
+                type:         l.product_type || '',
+                product:      l.product_category || '',
+                variety:      l.variety || '',
+                field_lot:    l.field_lot || '',
+                area:         (l.field_size !== null && l.field_size !== undefined && l.field_size !== '') ? l.field_size : '',
+                location_gps: locParts.join(' | '),
+                notes:        l.notes || ''
+            });
+        });
+
+        // Stile zebra + bordi + wrap per righe dati
+        for (let r = 2; r <= ws.rowCount; r++) {
+            const row = ws.getRow(r);
+            row.alignment = { vertical: 'middle', wrapText: true };
+            row.eachCell(c => {
+                c.border = {
+                    top:    { style: 'hair', color: { argb: 'FFCCCCCC' } },
+                    bottom: { style: 'hair', color: { argb: 'FFCCCCCC' } },
+                    left:   { style: 'hair', color: { argb: 'FFCCCCCC' } },
+                    right:  { style: 'hair', color: { argb: 'FFCCCCCC' } }
+                };
+            });
+            if (r % 2 === 0) {
+                row.eachCell(c => {
+                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F8E9' } };
+                });
+            }
+            row.getCell('area').numFmt = '0.00';
+            row.getCell('area').alignment = { vertical: 'middle', horizontal: 'right' };
+        }
+
+        // Nome file i18n
+        const today = new Date().toISOString().slice(0, 10);
+        const slug = String(t.title || 'Lots').replace(/[^A-Za-z0-9]+/g, '_');
+        const filename = `${slug}_${today}.xlsx`;
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        await wb.xlsx.write(res);
+        res.end();
+
+        logger.info('✅ Export Excel lotti', { user: currentUsername, lang, count: lots.length });
+    } catch (error) {
+        logger.error('Errore export Excel lotti', { error: error.message });
+        if (!res.headersSent) res.status(500).json({ error: error.message });
     }
 });
 

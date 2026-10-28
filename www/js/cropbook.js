@@ -2500,6 +2500,7 @@ function updateLotGPS(lotId, gpsUrl) {
         // ✅ 4. Carica attività e analisi
         loadLotActivities(lotIdNum);
         loadLotAnalyses(lotIdNum);
+        loadLotDocuments(lotIdNum);
         populateAnalysisYears();
         
         showNotification('Dettagli caricati con successo', 'success');
@@ -2819,59 +2820,213 @@ function updateLotGPS(lotId, gpsUrl) {
             showNotification('Attività di raccolta aggiunta!', 'success');
         }
 
+        // ==================== DOCUMENTI LOTTO (Object Storage) ====================
+        const DOC_KINDS = {
+            analisi: { prefix: 'analysis', list: 'analyses-list', history: 'analyses-history-container', count: 'analisi-count' },
+            documenti: { prefix: 'document', list: 'documents-list', history: 'documents-history-container', count: 'documenti-count' }
+        };
+        const cameraFiles = {};
+        let lotDocuments = [];
+
+        function mapLotDoc(d) {
+            return {
+                id: d.id, year: d.year, category: d.category,
+                originalName: d.original_name, notes: d.notes, contentType: d.content_type,
+                fileSize: d.size >= 1048576 ? (d.size / 1048576).toFixed(2) + ' MB' : Math.max(1, Math.round(d.size / 1024)) + ' KB',
+                uploadDate: d.created_at ? d.created_at.replace(' ', 'T') + 'Z' : null,
+                uploadedBy: d.uploaded_by, canDelete: d.can_delete
+            };
+        }
+
+        async function fetchLotDocs(lotId, group) {
+            try {
+                const res = await apiCall(`/documents/lot/${lotId}?group=${group}`);
+                return (res.data || []).map(mapLotDoc);
+            } catch (e) {
+                return [];
+            }
+        }
+
+        async function apiUpload(endpoint, formData) {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'X-Language': (typeof getCurrentLang === 'function') ? getCurrentLang() : 'it'
+                },
+                body: formData
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || response.statusText);
+            return data;
+        }
+
+        function onCameraPick(prefix, input) {
+            cameraFiles[prefix] = input.files[0] || null;
+            const label = document.getElementById(`${prefix}-camera-name`);
+            if (label) label.textContent = cameraFiles[prefix] ? `📷 ${cameraFiles[prefix].name}` : '';
+            const fileInput = document.getElementById(`${prefix}-file`);
+            if (fileInput && cameraFiles[prefix]) fileInput.value = '';
+        }
+
+        function getPickedFile(prefix) {
+            return document.getElementById(`${prefix}-file`)?.files[0] || cameraFiles[prefix] || null;
+        }
+
+        function resetPickedFile(prefix) {
+            cameraFiles[prefix] = null;
+            ['file', 'camera'].forEach(k => { const el = document.getElementById(`${prefix}-${k}`); if (el) el.value = ''; });
+            const label = document.getElementById(`${prefix}-camera-name`);
+            if (label) label.textContent = '';
+        }
+
+        async function sendLotDocument(prefix, fields) {
+            const lotId = document.getElementById('current-lot-id')?.value;
+            if (!lotId) {
+                showNotification('Seleziona prima un lotto', 'error');
+                return false;
+            }
+            const file = getPickedFile(prefix);
+            if (!file) {
+                showNotification(t('det.doc_select_file'), 'error');
+                return false;
+            }
+            if (file.size > 20 * 1024 * 1024) {
+                showNotification(t('det.doc_too_large'), 'error');
+                return false;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            Object.entries(fields).forEach(([k, v]) => { if (v) formData.append(k, v); });
+            try {
+                showNotification(t('det.doc_uploading'), 'loading');
+                await apiUpload(`/documents/lot/${lotId}`, formData);
+                resetPickedFile(prefix);
+                showNotification(t('det.doc_uploaded'), 'success');
+                return true;
+            } catch (error) {
+                console.error('Errore upload documento:', error);
+                showNotification(error.message || 'Errore nel caricamento del file', 'error');
+                return false;
+            }
+        }
+
         async function uploadAnalysis() {
-            // Controlla i permessi
             const permissions = getUserPermissions();
             if (!permissions.canUploadAnalyses) {
                 showNotification('Non hai i permessi per caricare analisi', 'error');
                 return;
             }
-            
-            const lotId = document.getElementById('current-lot-id')?.value;
-            if (!lotId) {
-                showNotification('Seleziona prima un lotto', 'error');
-                return;
-            }
-            
             const year = document.getElementById('analysis-year').value;
-            const fileInput = document.getElementById('analysis-file');
-            const notes = document.getElementById('analysis-notes').value;
-            
-            if (!year || !fileInput.files[0]) {
+            if (!year) {
                 showNotification('Seleziona anno e carica un file', 'error');
                 return;
             }
-            
+            const notes = document.getElementById('analysis-notes').value;
+            const ok = await sendLotDocument('analysis', { category: 'analisi', year, notes });
+            if (!ok) return;
+            document.getElementById('analysis-year').value = '';
+            document.getElementById('analysis-notes').value = '';
+            loadLotAnalyses(document.getElementById('current-lot-id').value);
+        }
+
+        async function uploadDocument() {
+            const permissions = getUserPermissions();
+            if (!permissions.canUploadAnalyses) {
+                showNotification(t('det.doc_no_permission'), 'error');
+                return;
+            }
+            const category = document.getElementById('document-category').value;
+            const notes = document.getElementById('document-notes').value;
+            const ok = await sendLotDocument('document', { category, notes });
+            if (!ok) return;
+            document.getElementById('document-notes').value = '';
+            loadLotDocuments(document.getElementById('current-lot-id').value);
+        }
+
+        async function loadLotDocuments(lotId) {
+            lotDocuments = await fetchLotDocs(lotId, 'documenti');
+            displayDocuments();
+        }
+
+        function renderDocItem(doc, kind) {
+            const title = kind === 'analisi'
+                ? `🔬 ${t('det.doc_cat.analisi')} ${doc.year || ''}`
+                : `📄 ${t('det.doc_cat.' + doc.category)}`;
+            const date = doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString(getCurrentLang ? getCurrentLang() : 'it') : '';
+            return `
+                <div class="analysis-file-item" data-testid="lot-doc-item-${doc.id}">
+                    <div class="analysis-file-info">
+                        <h4>${title}</h4>
+                        <p><strong>File:</strong> <span data-testid="lot-doc-name-${doc.id}">${escapeHtml(doc.originalName)}</span></p>
+                        ${doc.notes ? `<p><strong>${t('det.doc_notes')}:</strong> ${escapeHtml(doc.notes)}</p>` : ''}
+                        <div class="file-info">
+                            <span class="file-size">${doc.fileSize}</span>
+                            <small>${t('det.doc_uploaded_on')} ${date} — ${escapeHtml(doc.uploadedBy || '')}</small>
+                        </div>
+                    </div>
+                    <div class="analysis-file-actions">
+                        <button class="btn btn-secondary" data-testid="lot-doc-open-${doc.id}" onclick="openLotDocument(${doc.id}, false)">
+                            <i class="fas fa-eye"></i> <span>${t('det.doc_open')}</span>
+                        </button>
+                        <button class="btn btn-secondary" data-testid="lot-doc-download-${doc.id}" onclick="openLotDocument(${doc.id}, true)">
+                            <i class="fas fa-download"></i> <span>${t('det.doc_download')}</span>
+                        </button>
+                        ${doc.canDelete ? `<button class="btn btn-danger" data-testid="lot-doc-delete-${doc.id}" onclick="deleteLotDocument(${doc.id}, '${kind}')">
+                            <i class="fas fa-trash"></i> <span>${t('common.delete')}</span>
+                        </button>` : ''}
+                    </div>
+                </div>`;
+        }
+
+        function displayDocuments() {
+            const cfg = DOC_KINDS.documenti;
+            const container = document.getElementById(cfg.list);
+            if (!container) return;
+            document.getElementById(cfg.history).style.display = 'block';
+            document.getElementById(cfg.count).textContent = lotDocuments.length;
+            const badge = document.querySelector(`#${cfg.history} .analysis-badge`);
+            if (badge) badge.textContent = lotDocuments.length;
+            container.innerHTML = lotDocuments.length
+                ? lotDocuments.map(d => renderDocItem(d, 'documenti')).join('')
+                : `<p style="text-align: center; color: #666; padding: 20px;" data-testid="documents-empty">${t('det.no_documents')}</p>`;
+        }
+
+        async function openLotDocument(docId, asDownload) {
+            const doc = [...lotAnalyses, ...lotDocuments].find(d => d.id === docId);
+            const popup = asDownload ? null : window.open('', '_blank');
             try {
-                showNotification('Caricamento analisi in corso...', 'loading');
-                
-                const file = fileInput.files[0];
-                const fileUrl = await simulateFileUpload(file);
-                
-                const analysis = {
-                    id: Date.now(),
-                    year: year,
-                    filename: file.name,
-                    originalName: file.name,
-                    fileUrl: fileUrl,
-                    notes: notes,
-                    uploadDate: new Date().toISOString(),
-                    fileSize: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                    uploadedBy: currentUser.username
-                };
-                
-                lotAnalyses.push(analysis);
-                saveLotAnalyses();
-                displayAnalyses();
-                
-                document.getElementById('analysis-year').value = '';
-                document.getElementById('analysis-file').value = '';
-                document.getElementById('analysis-notes').value = '';
-                
-                showNotification('Analisi caricata con successo!', 'success');
+                const response = await fetch(`${API_BASE_URL}/documents/${docId}/download`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+                });
+                if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || response.statusText);
+                const blobUrl = URL.createObjectURL(await response.blob());
+                if (popup) {
+                    popup.location.href = blobUrl;
+                } else {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = doc?.originalName || 'documento';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                }
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
             } catch (error) {
-                console.error('Errore upload analisi:', error);
-                showNotification('Errore nel caricamento del file', 'error');
+                if (popup) popup.close();
+                showNotification(error.message || 'Errore nel download del file', 'error');
+            }
+        }
+
+        async function deleteLotDocument(docId, kind) {
+            if (!confirm(t('det.doc_confirm_delete'))) return;
+            try {
+                await apiCall(`/documents/${docId}`, { method: 'DELETE' });
+                const lotId = document.getElementById('current-lot-id')?.value;
+                if (kind === 'analisi') loadLotAnalyses(lotId); else loadLotDocuments(lotId);
+                showNotification(t('det.doc_deleted'), 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
             }
         }
 
@@ -2889,26 +3044,10 @@ function updateLotGPS(lotId, gpsUrl) {
             }
         }
 
-        function simulateFileUpload(file) {
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    const fileUrl = URL.createObjectURL(file);
-                    resolve(fileUrl);
-                }, 1000);
-            });
-        }
-
         function saveLotActivities() {
             const lotId = document.getElementById('current-lot-id')?.value;
             if (lotId) {
                 localStorage.setItem(`agriManager_activities_${lotId}`, JSON.stringify(lotActivities));
-            }
-        }
-
-        function saveLotAnalyses() {
-            const lotId = document.getElementById('current-lot-id')?.value;
-            if (lotId) {
-                localStorage.setItem(`agriManager_analyses_${lotId}`, JSON.stringify(lotAnalyses));
             }
         }
 
@@ -2972,13 +3111,8 @@ function updateLotGPS(lotId, gpsUrl) {
             }
         }
 
-        function loadLotAnalyses(lotId) {
-            const saved = localStorage.getItem(`agriManager_analyses_${lotId}`);
-            if (saved) {
-                lotAnalyses = JSON.parse(saved);
-            } else {
-                lotAnalyses = [];
-            }
+        async function loadLotAnalyses(lotId) {
+            lotAnalyses = await fetchLotDocs(lotId, 'analisi');
             populateDettagliStagioneSelect();
             displayAnalyses();
         }
@@ -3060,27 +3194,7 @@ function updateLotGPS(lotId, gpsUrl) {
             countBadge.textContent = visibili.length;
             if (historyBadge) historyBadge.textContent = lotAnalyses.length;
             
-            container.innerHTML = visibili.map(analysis => `
-                <div class="analysis-file-item">
-                    <div class="analysis-file-info">
-                        <h4>🔬 Analisi ${analysis.year}</h4>
-                        <p><strong>File:</strong> ${analysis.originalName}</p>
-                        ${analysis.notes ? `<p><strong>Note:</strong> ${analysis.notes}</p>` : ''}
-                        <div class="file-info">
-                            <span class="file-size">${analysis.fileSize}</span>
-                            <small>Caricato il: ${new Date(analysis.uploadDate).toLocaleDateString('it-IT')} da ${analysis.uploadedBy || 'Utente'}</small>
-                        </div>
-                    </div>
-                    <div class="analysis-file-actions">
-                        <button class="btn btn-secondary" onclick="downloadFile('${analysis.fileUrl}', '${analysis.originalName}')">
-                            <i class="fas fa-download"></i> Scarica
-                        </button>
-                        <button class="btn btn-danger" onclick="deleteAnalysis(${analysis.id})">
-                            <i class="fas fa-trash"></i> Elimina
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+            container.innerHTML = visibili.map(a => renderDocItem(a, 'analisi')).join('');
             
             setTimeout(loadHistoryState, 100);
         }
@@ -3098,22 +3212,6 @@ function updateLotGPS(lotId, gpsUrl) {
                 saveLotActivities();
                 displayActivities();
                 showNotification('Attività eliminata', 'success');
-            }
-        }
-
-        function deleteAnalysis(analysisId) {
-            // Controlla i permessi
-            const permissions = getUserPermissions();
-            if (!permissions.canEditLots) {
-                showNotification('Non hai i permessi per eliminare analisi', 'error');
-                return;
-            }
-            
-            if (confirm('Sei sicuro di voler eliminare questa analisi?')) {
-                lotAnalyses = lotAnalyses.filter(a => a.id !== parseInt(analysisId));
-                saveLotAnalyses();
-                displayAnalyses();
-                showNotification('Analisi eliminata', 'success');
             }
         }
 
@@ -3250,9 +3348,7 @@ function toggleMetodoCalcolo() {
         if (campoTotale) campoTotale.style.display = 'none';
         if (labelKg) labelKg.classList.add('active');
         if (inputTotale) inputTotale.value = '';
-        
-        setTimeout(() => inputKg?.focus(), 150);
-        
+
     } else {
         // 🎯 PREZZO TOTALE ATTIVO (campo SINISTRA)
         if (campoKg) campoKg.style.display = 'none';
@@ -3263,8 +3359,7 @@ function toggleMetodoCalcolo() {
         }
         if (labelTotale) labelTotale.classList.add('active');
         if (inputKg) inputKg.value = '';
-        
-        setTimeout(() => inputTotale?.focus(), 150);
+
     }
     
     calcolaPrezzoAutomatico();
@@ -4546,7 +4641,7 @@ function popolaFormEconomico(record) {
     const allAnalyses = [];
     
     for (const lot of allLots) {
-        const analyses = getLotAnalysesFromStorage(lot.id);
+        const analyses = await fetchLotDocs(lot.id, 'analisi');
         analyses.forEach(analysis => {
             allAnalyses.push({
                 'ID Lotto': lot.id,
@@ -4638,11 +4733,6 @@ function popolaFormEconomico(record) {
 
         function getLotActivitiesFromStorage(lotId) {
             const saved = localStorage.getItem(`agriManager_activities_${lotId}`);
-            return saved ? JSON.parse(saved) : [];
-        }
-
-        function getLotAnalysesFromStorage(lotId) {
-            const saved = localStorage.getItem(`agriManager_analyses_${lotId}`);
             return saved ? JSON.parse(saved) : [];
         }
 
@@ -7570,7 +7660,7 @@ async function esportaBilancioCompleto() {
         
         // 4. Foglio Analisi
         try {
-            const analysesRes = await apiCall(`/analyses/${currentBilancioLotId}`);
+            const analysesRes = await apiCall(`/documents/lot/${currentBilancioLotId}?group=analisi`);
             if (analysesRes.data?.length > 0) {
                 const analysesSheet = XLSX.utils.json_to_sheet(analysesRes.data.map(a => ({
                     'Anno': a.year || '',
@@ -8852,6 +8942,43 @@ function renderAziendeGrid(items) {
 let currentVistaLotti = 'aziende';
 let currentAziendaFilter = null;
 
+// ==================== EXPORT EXCEL LOTTI (multilingua) ====================
+async function esportaLottiExcel() {
+    const btn = document.getElementById('btn-export-excel-lotti');
+    const originalHTML = btn ? btn.innerHTML : '';
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>${t('lista.export_excel_wait')}</span>`;
+        }
+        const token = localStorage.getItem('auth_token');
+        const lang = (typeof getCurrentLang === 'function') ? getCurrentLang() : 'it';
+        const resp = await fetch(`${API_BASE_URL}/lots/export/excel?lang=${encodeURIComponent(lang)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) {
+            const txt = await resp.text().catch(() => '');
+            throw new Error(txt || `HTTP ${resp.status}`);
+        }
+        // Nome file dall'header Content-Disposition (fallback: nome di default)
+        const disp = resp.headers.get('Content-Disposition') || '';
+        const m = /filename="([^"]+)"/.exec(disp);
+        const filename = m ? m[1] : `cropbook_lots_${new Date().toISOString().slice(0,10)}.xlsx`;
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+        if (typeof mostraFeedback === 'function') mostraFeedback(t('lista.export_excel_ok'), 'success');
+    } catch (err) {
+        console.error('Export excel errore:', err);
+        alert(`${t('lista.export_excel_err')}: ${err.message}`);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = originalHTML; }
+    }
+}
+
 function setVistaLotti(vista, companyId = null) {
     currentVistaLotti = vista;
     currentAziendaFilter = companyId;
@@ -8863,13 +8990,15 @@ function setVistaLotti(vista, companyId = null) {
     const btnBack = document.getElementById('back-aziende-btn');
     const btnAdd = document.getElementById('btn-add-azienda');
     const aziendaHeader = document.getElementById('lista-azienda-header');
-    
+
+    // Helper: azzera stato attivo
+    const setActive = (el, on) => { if (el) el.classList.toggle('is-active', !!on); };
+
     if (vista === 'aziende') {
         if (grid) grid.style.display = '';
         if (search) search.style.display = 'none';
         if (list) list.style.display = 'none';
-        if (btnAz) { btnAz.style.background = '#4CAF50'; btnAz.style.color = 'white'; }
-        if (btnTutti) { btnTutti.style.background = '#fff'; btnTutti.style.color = '#555'; }
+        setActive(btnAz, true); setActive(btnTutti, false);
         if (btnBack) btnBack.style.display = 'none';
         if (btnAdd) btnAdd.style.display = '';
         loadAziendeDashboard();
@@ -8878,8 +9007,7 @@ function setVistaLotti(vista, companyId = null) {
         if (search) search.style.display = '';
         if (list) list.style.display = '';
         if (aziendaHeader) aziendaHeader.style.display = 'none';
-        if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
-        if (btnTutti) { btnTutti.style.background = '#4CAF50'; btnTutti.style.color = 'white'; }
+        setActive(btnAz, false); setActive(btnTutti, true);
         if (btnBack) btnBack.style.display = 'none';
         if (btnAdd) btnAdd.style.display = '';
         currentAziendaFilter = null;
@@ -8890,8 +9018,7 @@ function setVistaLotti(vista, companyId = null) {
         if (list) list.style.display = '';
         if (aziendaHeader) aziendaHeader.style.display = '';
         if (btnBack) btnBack.style.display = '';
-        if (btnAz) { btnAz.style.background = '#fff'; btnAz.style.color = '#555'; }
-        if (btnTutti) { btnTutti.style.background = '#fff'; btnTutti.style.color = '#555'; }
+        setActive(btnAz, false); setActive(btnTutti, false);
         if (btnAdd) btnAdd.style.display = 'none';
         if (typeof loadLots === 'function') loadLots();
     }
@@ -9119,12 +9246,13 @@ function setBilancioMode(mode) {
     const btnAz = document.getElementById('bilancio-mode-azienda-btn');
     const btnLot = document.getElementById('bilancio-mode-lotto-btn');
     const hint = document.getElementById('bilancio-mode-hint');
-    
+
+    const setActive = (el, on) => { if (el) el.classList.toggle('is-active', !!on); };
+
     if (mode === 'azienda') {
         if (viewAz) viewAz.style.display = '';
         if (viewLot) viewLot.style.display = 'none';
-        if (btnAz) { btnAz.style.background = '#00BCD4'; btnAz.style.color = 'white'; }
-        if (btnLot) { btnLot.style.background = 'white'; btnLot.style.color = '#00BCD4'; }
+        setActive(btnAz, true); setActive(btnLot, false);
         if (hint) hint.textContent = t('bilancio.hint_azienda');
         // Mostra griglia aziende (chiudi eventuale drill-down)
         chiudiBilancioAziendaDetail();
@@ -9132,8 +9260,7 @@ function setBilancioMode(mode) {
     } else {
         if (viewAz) viewAz.style.display = 'none';
         if (viewLot) viewLot.style.display = '';
-        if (btnAz) { btnAz.style.background = 'white'; btnAz.style.color = '#00BCD4'; }
-        if (btnLot) { btnLot.style.background = '#00BCD4'; btnLot.style.color = 'white'; }
+        setActive(btnAz, false); setActive(btnLot, true);
         if (hint) hint.textContent = t('bilancio.hint_lotto');
         // Popola select Azienda della modalità lotto
         popolaSelectAziendeCascade('bilancio');

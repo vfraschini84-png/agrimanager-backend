@@ -232,6 +232,8 @@ mountRoute('/api/costi', './routes/costi');
 mountRoute('/api/reports', './routes/reports');
 mountRoute('/api/admin', './routes/admin');
 mountRoute('/api/users', './routes/users');
+mountRoute('/api/documents', './routes/documents');
+if (NODE_ENV !== 'test') require('./storage').initOnStartup();
 
 // ==================== 404 ====================
 app.use((req, res) => {

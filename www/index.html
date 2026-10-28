@@ -505,27 +505,32 @@
     <h2 class="section-title"><i class="fas fa-list"></i> <span data-i18n="section.lista_title">Lista Lotti Registrati</span></h2>
     
     <!-- ✅ Toggle vista Aziende / Tutti i lotti -->
-    <div class="vista-toggle" style="display:flex; gap:6px; margin-bottom: 14px; flex-wrap: wrap;">
-        <button type="button" id="vista-aziende-btn" onclick="setVistaLotti('aziende')" 
-                class="btn btn-secondary" style="background: #4CAF50; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+    <div class="vista-toggle cmd-bar" style="display:flex; gap:10px; margin-bottom: 14px; flex-wrap: wrap;">
+        <button type="button" id="vista-aziende-btn" onclick="setVistaLotti('aziende')"
+                class="btn-command cmd-primary is-active" data-testid="btn-vista-aziende">
             <i class="fas fa-building"></i> <span data-i18n="lista.per_azienda">Per Azienda</span>
         </button>
-        <button type="button" id="vista-tutti-btn" onclick="setVistaLotti('tutti')" 
-                class="btn btn-secondary" style="background: #fff; color: #555; border: 1px solid #ccc; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+        <button type="button" id="vista-tutti-btn" onclick="setVistaLotti('tutti')"
+                class="btn-command cmd-primary" data-testid="btn-vista-tutti">
             <i class="fas fa-list"></i> <span data-i18n="lista.all_lots">Tutti i lotti</span>
         </button>
-        <button type="button" id="back-aziende-btn" onclick="setVistaLotti('aziende')" 
-                style="display:none; background: #607D8B; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+        <button type="button" id="back-aziende-btn" onclick="setVistaLotti('aziende')"
+                class="btn-command cmd-neutral" style="display:none;" data-testid="btn-back-aziende">
             <i class="fas fa-arrow-left"></i> <span data-i18n="bilancio.back_to_companies">Torna alle aziende</span>
         </button>
         <button type="button" id="btn-vista-mappa" data-testid="btn-vista-mappa" onclick="apriMappaLotti()"
-                style="margin-left: auto; background: #1976D2; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;"
+                class="btn-command cmd-info"
                 data-i18n-title="mappa.tip_vista_mappa" title="Visualizza tutti i lotti geolocalizzati">
             <i class="fas fa-map-marked-alt"></i> <span data-i18n="mappa.vista_mappa">Vista Mappa</span>
         </button>
         <button type="button" onclick="apriNuovaAzienda()" id="btn-add-azienda"
-                style="background: #2E7D32; color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.9rem;">
+                class="btn-command cmd-success" data-testid="btn-add-azienda">
             <i class="fas fa-plus"></i> <span data-i18n="lista.new_azienda">Nuova Azienda</span>
+        </button>
+        <button type="button" onclick="esportaLottiExcel()" id="btn-export-excel-lotti"
+                class="btn-command cmd-excel" data-testid="btn-export-excel-lotti"
+                data-i18n-title="lista.export_excel_tip" title="Scarica tutti i lotti in Excel">
+            <i class="fas fa-file-excel"></i> <span data-i18n="lista.export_excel">Report Excel</span>
         </button>
     </div>
     
@@ -715,7 +720,15 @@
                         
                         <div class="form-group">
                             <label for="analysis-file"><i class="fas fa-file-upload"></i> <span data-i18n="det.analysis_file">Carica File Analisi</span></label>
-                            <input type="file" id="analysis-file" accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png" class="special-input">
+                            <input type="file" id="analysis-file" data-testid="analysis-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.heic,.heif" class="special-input" onchange="if(this.files[0]) onCameraPick('analysis', {files: []})">
+                            <input type="file" id="analysis-camera" accept="image/*" capture="environment" style="display:none" onchange="onCameraPick('analysis', this)">
+                            <div class="doc-camera-row">
+                                <button type="button" class="btn btn-secondary doc-camera-btn" data-testid="analysis-camera-btn" onclick="document.getElementById('analysis-camera').click()">
+                                    <i class="fas fa-camera"></i> <span data-i18n="det.take_photo">Scatta foto</span>
+                                </button>
+                                <span id="analysis-camera-name" class="doc-camera-name" data-testid="analysis-camera-name"></span>
+                            </div>
+                            <small class="doc-hint" data-i18n="det.doc_hint">PDF, immagini, Word, Excel — max 20 MB</small>
                         </div>
                     </div>
                     
@@ -725,7 +738,7 @@
                     </div>
                     
                     <div class="section-actions">
-                        <button class="btn btn-secondary" onclick="uploadAnalysis()" style="background: #2196F3;">
+                        <button class="btn btn-secondary" data-testid="analysis-upload-btn" onclick="uploadAnalysis()" style="background: #2196F3;">
                             <i class="fas fa-upload"></i> <span data-i18n="det.upload_analysis">Carica Analisi</span>
                         </button>
                     </div>
@@ -742,6 +755,72 @@
                             </button>
                         </div>
                         <div id="analyses-list" class="history-content expanded"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sezione documenti lotto (contratti, certificazioni, fatture...) -->
+            <div class="special-section section-documenti" data-testid="documents-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon icon-documenti">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <h3 class="section-title"><span data-i18n="det.documents_title">Documenti del Lotto</span>
+                            <span id="documenti-count" class="analysis-badge" data-testid="documents-count">0</span>
+                        </h3>
+                        <p class="section-subtitle" data-i18n="det.documents_subtitle">Contratti, certificazioni, fatture e altri file</p>
+                    </div>
+                    <button class="section-toggle" onclick="event.stopPropagation(); toggleSection(this.parentElement)">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+
+                <div class="section-content expanded">
+                    <div class="section-grid">
+                        <div class="form-group">
+                            <label for="document-category"><i class="fas fa-tag"></i> <span data-i18n="det.doc_category">Tipo documento</span></label>
+                            <select id="document-category" class="special-input" data-testid="document-category-select">
+                                <option value="contratto" data-i18n="det.doc_cat.contratto">Contratto</option>
+                                <option value="certificazione" data-i18n="det.doc_cat.certificazione">Certificazione</option>
+                                <option value="fattura" data-i18n="det.doc_cat.fattura">Fattura / Ricevuta</option>
+                                <option value="altro" data-i18n="det.doc_cat.altro">Altro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="document-file"><i class="fas fa-file-upload"></i> <span data-i18n="det.doc_file">Carica file</span></label>
+                            <input type="file" id="document-file" data-testid="document-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.heic,.heif" class="special-input" onchange="if(this.files[0]) onCameraPick('document', {files: []})">
+                            <input type="file" id="document-camera" accept="image/*" capture="environment" style="display:none" onchange="onCameraPick('document', this)">
+                            <div class="doc-camera-row">
+                                <button type="button" class="btn btn-secondary doc-camera-btn" data-testid="document-camera-btn" onclick="document.getElementById('document-camera').click()">
+                                    <i class="fas fa-camera"></i> <span data-i18n="det.take_photo">Scatta foto</span>
+                                </button>
+                                <span id="document-camera-name" class="doc-camera-name" data-testid="document-camera-name"></span>
+                            </div>
+                            <small class="doc-hint" data-i18n="det.doc_hint">PDF, immagini, Word, Excel — max 20 MB</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="document-notes"><i class="fas fa-clipboard"></i> <span data-i18n="det.doc_notes">Note</span></label>
+                        <textarea id="document-notes" rows="2" data-testid="document-notes-input" data-i18n-placeholder="det.doc_notes_ph" placeholder="Es. contratto di affitto 2026, scadenza..." class="special-input"></textarea>
+                    </div>
+
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" data-testid="document-upload-btn" onclick="uploadDocument()" style="background: #6D4C41;">
+                            <i class="fas fa-upload"></i> <span data-i18n="det.upload_document">Carica Documento</span>
+                        </button>
+                    </div>
+
+                    <div id="documents-history-container" style="margin-top: 20px; display: none;">
+                        <div class="history-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px;">
+                            <h4 style="color: #6D4C41; margin: 0; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-folder"></i> <span data-i18n="det.documents_history">Documenti caricati</span>
+                                <span class="analysis-badge">0</span>
+                            </h4>
+                        </div>
+                        <div id="documents-list" class="history-content expanded" data-testid="documents-list"></div>
                     </div>
                 </div>
             </div>
@@ -1382,15 +1461,15 @@
     </div>
     
     <!-- Toggle modalità Bilancio: Per Azienda (default) o Per Lotto -->
-    <div id="bilancio-mode-toggle" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;align-items:center;">
+    <div id="bilancio-mode-toggle" class="cmd-bar" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;">
         <button type="button" id="bilancio-mode-azienda-btn" data-testid="bilancio-mode-azienda-btn"
                 onclick="setBilancioMode('azienda')"
-                class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:#00BCD4;color:white;border-radius:8px;font-weight:700;cursor:pointer;">
+                class="btn-command cmd-bilancio is-active">
             <i class="fas fa-building"></i> <span data-i18n="bilancio.mode_azienda">Vista Aziende</span>
         </button>
         <button type="button" id="bilancio-mode-lotto-btn" data-testid="bilancio-mode-lotto-btn"
                 onclick="setBilancioMode('lotto')"
-                class="btn-mode-toggle" style="padding:9px 16px;border:2px solid #00BCD4;background:white;color:#00BCD4;border-radius:8px;font-weight:700;cursor:pointer;">
+                class="btn-command cmd-bilancio">
             <i class="fas fa-seedling"></i> <span data-i18n="bilancio.mode_lotto">Vista Singolo Lotto</span>
         </button>
         <span id="bilancio-mode-hint" data-i18n="bilancio.hint_azienda" style="color:#666;font-size:0.85rem;font-style:italic;flex:1;min-width:200px;text-align:right;">
