@@ -1,0 +1,50 @@
+{
+  "summary": "Tested the lots Excel export (separate Location and GPS columns, GPS hyperlinks, translated product types and products) and the i18n of the frontend product select, durable assets, permissions, lot list, details, economic, costs and balance sections. The backend Excel export passes in it, en and es (pytest 3/3). jest passes 64/64. Registering a lot through the UI in EN still saves product_category='Mele' (verified via the API, test lot deleted). The product select, durable assets template, permissions panel, role badges, lot card tooltips, details and economic labels translate correctly and re-translate when the language changes. Several spots are still hardcoded in Italian or untranslated, including the user's own example, the 'Total Season Costs' field. A pre-existing HIGH bug breaks the company balance drilldown.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "routes/reports.js PDF", "issue": "Only trProductType is applied. product_category is never shown or translated in the PDF. Acceptable if the PDF never shows the product, but the user asked for translated products 'everywhere'."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Balance > Company view drilldown (renderBilancioAziendaDrilldown / popolaSelectStagioneBilancioAzienda)", "issue": "PRE-EXISTING. apiCall('/lots?limit=1000') returns 400 because the backend allows limit<=100. The code falls back to allLots, which holds only the first page (20 lots). Result: 'Fraschini az. Agr.' (9 lots) shows 0 lots, EUR 0 and 'No data available', with 2 console errors.", "selector": "cropbook.js:9344, 9387", "priority": "HIGH"},
+      {"component": "Economic Management > Total Season Costs (#costo-personale)", "issue": "Placeholder is reset to the hardcoded Italian 'Nessun costo aggiunto' in EN/ES, overriding data-i18n-placeholder eco.no_cost_added. This is the user's own example. Hardcoded at cropbook.js:3829, 3860, 4305 and in the text at 4009.", "selector": "#costo-personale", "priority": "HIGH"},
+      {"component": "Balance season selects", "issue": "Hardcoded Italian 'Tutte le stagioni' at cropbook.js:7277 (lot view #bilancio-stagione), 9361 ('— Tutte le stagioni —') and 9381 (title ' · 📅 Tutte le stagioni'). The keys bilancio.all_seasons and bilancio.all_seasons_opt exist but are unused here.", "selector": "#bilancio-stagione", "priority": "MEDIUM"},
+      {"component": "Balance lot view", "issue": "The i18n key 'bilancio.compare_5_seasons' (index.html:1580) is missing from i18n.js, so the raw key text is shown. Chart legends are hardcoded Italian: 'Ricavi', 'Costi' (cropbook.js:7377) and 'Personale', 'Mezzi Tecnici', 'Ammortamenti' (~7424).", "selector": "[data-i18n=bilancio.compare_5_seasons]", "priority": "MEDIUM"},
+      {"component": "Cost Management lot card (loadCostiLotDetails)", "issue": "Shows the raw '${lot.product_type} - ${variety}' (e.g. 'olivo - '). trType and trProd are not applied (cropbook.js:7756).", "selector": "#costi-lot-info", "priority": "MEDIUM"},
+      {"component": "Balance company drilldown table", "issue": "Shows the raw r.lot.product_type without trType (cropbook.js:9452).", "selector": "bilancio-azienda-lotti-table", "priority": "LOW"},
+      {"component": "Lot picker lists (economic/costs selection)", "issue": "'<location> - null' because variety is null at cropbook.js:4466. Line 7177 gives '<location> - '. Use t('lot.no_variety') like lines 5747 and 5808.", "selector": "small", "priority": "LOW"},
+      {"component": "Cost Management > activity select", "issue": "The '✏️ Altra attività (scrivi liberamente)...' option is hardcoded Italian (cropbook.js:7897). Predefined activity names (Potatura, Raccolta...) come from the DB and stay Italian.", "selector": "#costo-attivita-select", "priority": "LOW"},
+      {"component": "Company filter selects in Costs, Economic and Balance", "issue": "The '— All —' option is not re-rendered after a language change (it stays EN after switching to ES). It works in Details.", "selector": "company filter select", "priority": "LOW"},
+      {"component": "Permissions panel", "issue": "A language change re-renders user management and clears the selected user, so the permission panel is hidden and must be reselected. 'Email: N/D' is hardcoded. Role value 'viewer' (test users) has no role.viewer key, so it shows raw. '1 sub-users' pluralization.", "selector": "#user-permission-select", "priority": "LOW"},
+      {"component": "Lot Registration", "issue": "The product type option reads 'Fruits' (i18n) while products-i18n says 'Fruit' (Excel and cards): inconsistent wording. The hint says 'Select \"others\"' but the option is 'Other (specify)'.", "selector": "#product-type", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Balance > single-lot client-side Excel (cropbook.js ~7617)", "issue": "The sheet uses hardcoded Italian headers ('Prodotto', 'Categoria'...) and raw product_type/product_category, which are not translated. The user asked for translated products in Excel.", "affected_selectors": ["Full Excel button"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_lots_excel_gps_i18n.py", "/app/test_reports/pytest/pytest_iter14.xml"],
+  "action_items": [
+    "Fix the Balance company drilldown: replace '/lots?limit=1000' with paginated fetches (limit<=100) or a dedicated endpoint (cropbook.js:9344, 9387). It currently shows 0 lots for companies whose lots are not on the first page.",
+    "Replace the hardcoded 'Nessun costo aggiunto' with t('eco.no_cost_added') at cropbook.js:3829, 3860, 4305 and 4009.",
+    "Use t('bilancio.all_seasons_opt') / t('bilancio.all_seasons') at cropbook.js:7277, 9361 and 9381.",
+    "Add the 'bilancio.compare_5_seasons' key to i18n.js and translate the Chart.js labels (Ricavi/Costi/Personale/Mezzi Tecnici/Ammortamenti).",
+    "Apply trType/trProd in loadCostiLotDetails (7756) and the bilancio drilldown table (9452). Fix the '- null' variety at 4466.",
+    "Translate the 'Altra attività' option (7897). Re-render the company filter '— All —' on language change in Costs, Economic and Balance.",
+    "Optional: translate the headers and product names of the client-side bilancio Excel. Keep the permission user selection across language changes."
+  ],
+  "critical_code_review_comments": [
+    "cropbook.js is ~9.6k lines (far above the 700-line guideline). The i18n fixes keep missing hardcoded strings because rendering is spread across many innerHTML templates.",
+    "The cropbook:lang-changed listener re-renders many sections. Costs and Economic company filters and the permission panel are not covered.",
+    "parseLatLng is good: it handles q/query/ll/destination, @lat,lng and !3d!4d. Short maps.app.goo.gl links fall back to 'Open map' as a hyperlink, as specified."
+  ],
+  "updated_files": ["/app/backend/tests/test_lots_excel_gps_i18n.py"],
+  "success_rate": {"backend": "100% (3/3 pytest, jest 64/64)", "frontend": "~75% (core requested items OK; several remaining hardcoded IT strings + 1 pre-existing HIGH bug)"},
+  "test_credentials": "admin / 9ded04059b99 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Test lots (TEST_Loc_maps/short/at, company TEST_XLS_*) are created and deleted by the pytest fixture. The UI-created lot 35 (TEST_Loc_UIreg) was deleted. One leaked lot from the first run was cleaned up by the teardown.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login with #login-username/#login-password/#login-form .btn.btn-primary, then page.evaluate(\"setCurrentLang('en')\"). Call showSection(...) BEFORE loadCostiLotDetails(14) or loadEconomicLotDetails(14), otherwise the section is hidden. User management: showSection('user-management-section'), then #user-permission-select (TEST_uiop_1793212415 is an operator). Bilancio lot view: click 'SINGLE LOT VIEW', then loadBilancioData(14). For the company drilldown, click the 'Fraschini' card to reproduce the limit=1000 bug. Backend regression test: pytest /app/backend/tests/test_lots_excel_gps_i18n.py."
+}
