@@ -5,6 +5,17 @@ const db = require('../database');
 const logger = require('../logger');
 const { requirePermission, requireAuth } = require('../middleware/rbac');
 const router = express.Router();
+const { trProductType, trProduct } = require('../js/products-i18n');
+
+// Estrae lat/lng da un link Google Maps (q=, query=, ll=, @lat,lng, !3d..!4d..)
+function parseLatLng(url) {
+    if (!url) return null;
+    const decoded = decodeURIComponent(String(url));
+    const m = decoded.match(/[?&](?:q|query|ll|destination)=(-?\d{1,3}\.\d+),\s*(-?\d{1,3}\.\d+)/)
+        || decoded.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/)
+        || decoded.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/);
+    return m ? { lat: Number(m[1]).toFixed(6), lng: Number(m[2]).toFixed(6) } : null;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -263,15 +274,15 @@ router.get('/export/excel', authenticateToken, requirePermission('lots:read'), a
             it: { title: 'Lotti Registrati', sheet: 'Lotti',
                   company: 'Nome Azienda (Ragione Sociale)', type: 'Tipologia Prodotto',
                   product: 'Prodotto', variety: 'Varietà', field_lot: 'Lotto Campo',
-                  area: 'Superficie (ha)', location_gps: 'Luogo e Coordinate GPS', notes: 'Note' },
+                  area: 'Superficie (ha)', location: 'Luogo', gps: 'Coordinate GPS', map_link: 'Apri mappa', notes: 'Note' },
             en: { title: 'Registered Lots', sheet: 'Lots',
                   company: 'Company Name', type: 'Product Type',
                   product: 'Product', variety: 'Variety', field_lot: 'Field Lot',
-                  area: 'Area (ha)', location_gps: 'Location and GPS Coordinates', notes: 'Notes' },
+                  area: 'Area (ha)', location: 'Location', gps: 'GPS Coordinates', map_link: 'Open map', notes: 'Notes' },
             es: { title: 'Lotes Registrados', sheet: 'Lotes',
                   company: 'Nombre Empresa (Razón Social)', type: 'Tipo de Producto',
                   product: 'Producto', variety: 'Variedad', field_lot: 'Lote de Campo',
-                  area: 'Superficie (ha)', location_gps: 'Lugar y Coordenadas GPS', notes: 'Notas' }
+                  area: 'Superficie (ha)', location: 'Lugar', gps: 'Coordenadas GPS', map_link: 'Abrir mapa', notes: 'Notas' }
         };
         const t = T[lang] || T.it;
 
@@ -288,7 +299,8 @@ router.get('/export/excel', authenticateToken, requirePermission('lots:read'), a
             { header: t.variety,       key: 'variety',       width: 18 },
             { header: t.field_lot,     key: 'field_lot',     width: 18 },
             { header: t.area,          key: 'area',          width: 14 },
-            { header: t.location_gps,  key: 'location_gps',  width: 44 },
+            { header: t.location,      key: 'location',      width: 26 },
+            { header: t.gps,           key: 'gps',           width: 26 },
             { header: t.notes,         key: 'notes',         width: 30 }
         ];
 
@@ -308,19 +320,22 @@ router.get('/export/excel', authenticateToken, requirePermission('lots:read'), a
 
         // Righe dati (campi vuoti → cella vuota come richiesto)
         lots.forEach(l => {
-            const locParts = [];
-            if (l.location) locParts.push(l.location);
-            if (l.gps_coordinates) locParts.push(l.gps_coordinates);
-            ws.addRow({
+            const coords = parseLatLng(l.gps_coordinates);
+            const gpsCell = l.gps_coordinates
+                ? { text: coords ? `${coords.lat}, ${coords.lng}` : t.map_link, hyperlink: l.gps_coordinates }
+                : '';
+            const row = ws.addRow({
                 company:      l.company_name || '',
-                type:         l.product_type || '',
-                product:      l.product_category || '',
+                type:         trProductType(l.product_type, lang),
+                product:      trProduct(l.product_category, lang),
                 variety:      l.variety || '',
                 field_lot:    l.field_lot || '',
                 area:         (l.field_size !== null && l.field_size !== undefined && l.field_size !== '') ? l.field_size : '',
-                location_gps: locParts.join(' | '),
+                location:     l.location || '',
+                gps:          gpsCell,
                 notes:        l.notes || ''
             });
+            if (gpsCell) row.getCell('gps').font = { color: { argb: 'FF1565C0' }, underline: true };
         });
 
         // Stile zebra + bordi + wrap per righe dati

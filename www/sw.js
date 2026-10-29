@@ -1,7 +1,7 @@
 /* ==============================================================
    Cropbook Service Worker — offline shell + smart caching
    ============================================================== */
-const CACHE_VERSION = 'cropbook-v1.18.0';
+const CACHE_VERSION = 'cropbook-v1.19.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -10,6 +10,7 @@ const APP_SHELL = [
     '/',
     '/index.html',
     '/css/cropbook.css',
+    '/js/products-i18n.js',
     '/js/i18n.js',
     '/js/cropbook.js',
     '/manifest.json',

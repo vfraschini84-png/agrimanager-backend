@@ -130,6 +130,8 @@ function getRoleDefaultPermissions(role) {
     if (role === 'manager') p.canDeleteLots = true;
     return p;
 }
+const trType = v => trProductType(v, getCurrentLang());
+const trProd = v => trProduct(v, getCurrentLang());
         // Inizializza il sistema di autenticazione
         async function initAuthSystem() {
     // Carica utenti dal localStorage o usa quelli predefiniti
@@ -900,7 +902,7 @@ function createUserItem(user, isSuperAdmin = false, subUsers = [], isSubUser = f
     }
 
     const adminBadge = isSuperAdmin ? '<span class="badge-super">👑 SUPER ADMIN</span>' : (user.role === 'admin' ? '<span class="badge-admin">👨‍💼 ADMIN</span>' : '');
-    const subBadge = subUsers.length > 0 ? `<span class="badge-count" title="${subUsers.length} sotto-utenti"><i class="fas fa-users"></i> ${subUsers.length}</span>` : '';
+    const subBadge = subUsers.length > 0 ? `<span class="badge-count" title="${subUsers.length} ${t('users.sub_users')}"><i class="fas fa-users"></i> ${subUsers.length}</span>` : '';
     const dateStr = user.created_at ? new Date(user.created_at).toLocaleDateString('it-IT', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '-';
 
     userItem.innerHTML = `
@@ -910,7 +912,7 @@ function createUserItem(user, isSuperAdmin = false, subUsers = [], isSubUser = f
                 <div class="user-card-row1">
                     <span class="user-card-name">${escapeHtml(user.username)}</span>
                     ${adminBadge}
-                    <span class="role-badge role-${user.role}">${user.role}</span>
+                    <span class="role-badge role-${user.role}">${roleLabel(user.role)}</span>
                     ${subBadge}
                 </div>
                 <div class="user-card-row2">
@@ -943,9 +945,9 @@ function createUserItem(user, isSuperAdmin = false, subUsers = [], isSubUser = f
     // Aggiungi selettore utente
     const userSelectorHtml = `
         <div class="form-group">
-            <label for="user-permission-select"><i class="fas fa-user"></i> Seleziona Utente</label>
+            <label for="user-permission-select"><i class="fas fa-user"></i> ${t('perm.select_user')}</label>
             <select id="user-permission-select" class="special-input" onchange="loadUserPermissions(this.value)">
-                <option value="">Seleziona un utente</option>
+                <option value="">${t('perm.select_user_opt')}</option>
             </select>
         </div>
     `;
@@ -968,7 +970,7 @@ async function populateUserSelector() {
         return;
     }
     
-    userSelect.innerHTML = '<option value="">Seleziona un utente</option>';
+    userSelect.innerHTML = `<option value="">${t('perm.select_user_opt')}</option>`;
     
     try {
         // Carica utenti dal backend
@@ -977,14 +979,14 @@ async function populateUserSelector() {
         users.forEach(user => {
             const option = document.createElement('option');
             option.value = user.username;
-            option.textContent = `${user.username} (${user.role})${user.email ? ` - ${user.email}` : ''}`;
+            option.textContent = `${user.username} (${roleLabel(user.role)})${user.email ? ` - ${user.email}` : ''}`;
             userSelect.appendChild(option);
         });
         
         console.log(`✅ Select utenti popolato con ${users.length} utenti`);
     } catch (error) {
         console.error('Errore populateUserSelector:', error);
-        userSelect.innerHTML = '<option value="">Errore caricamento utenti</option>';
+        userSelect.innerHTML = `<option value="">${t('perm.load_error')}</option>`;
     }
 }        
 
@@ -1002,7 +1004,7 @@ async function loadUserPermissions(username) {
         const user = users.find(u => u.username === username);
         
         if (!user) {
-            permissionsContainer.innerHTML = '<p style="color: red;">Utente non trovato</p>';
+            permissionsContainer.innerHTML = `<p style="color: red;">${t('perm.user_not_found')}</p>`;
             permissionsContainer.style.display = 'block';
             return;
         }
@@ -1012,10 +1014,10 @@ async function loadUserPermissions(username) {
         
         let permissionsHtml = `
             <div class="permission-section" style="margin-top: 20px;">
-                <h4><i class="fas fa-user-cog"></i> Permessi per: ${username}</h4>
-                <p>Ruolo: <span class="role-badge role-${user.role}">${user.role}</span></p>
+                <h4><i class="fas fa-user-cog"></i> ${t('perm.for')}: ${username}</h4>
+                <p>${t('perm.role')}: <span class="role-badge role-${user.role}">${roleLabel(user.role)}</span></p>
                 <p>Email: ${user.email || 'N/D'}</p>
-                <p><small><i class="fas fa-info-circle"></i> I permessi sono completamente personalizzabili</small></p>
+                <p><small><i class="fas fa-info-circle"></i> ${t('perm.customizable')}</small></p>
         `;
         
         Object.keys(emptyPermissions).forEach(permission => {
@@ -1041,16 +1043,16 @@ async function loadUserPermissions(username) {
         permissionsHtml += `
                 <div class="section-actions" style="margin-top: 20px;">
                     <button class="btn btn-primary" onclick="saveUserPermissions('${username}')">
-                        <i class="fas fa-save"></i> Salva Permessi
+                        <i class="fas fa-save"></i> ${t('perm.save')}
                     </button>
                     <button class="btn btn-secondary" onclick="setAllPermissions('${username}', true)">
-                        <i class="fas fa-check-circle"></i> Abilita Tutto
+                        <i class="fas fa-check-circle"></i> ${t('perm.enable_all')}
                     </button>
                     <button class="btn btn-secondary" onclick="setAllPermissions('${username}', false)">
-                        <i class="fas fa-times-circle"></i> Disabilita Tutto
+                        <i class="fas fa-times-circle"></i> ${t('perm.disable_all')}
                     </button>
                     <button class="btn btn-secondary" onclick="resetToDefaultPermissions('${username}')">
-                        <i class="fas fa-undo"></i> Ripristina Vuoti
+                        <i class="fas fa-undo"></i> ${t('perm.reset_empty')}
                     </button>
                 </div>
             </div>
@@ -1069,7 +1071,7 @@ async function loadUserPermissions(username) {
         
     } catch (error) {
         console.error('Errore caricamento permessi:', error);
-        permissionsContainer.innerHTML = '<p style="color: red;">❌ Errore nel caricamento dei permessi</p>';
+        permissionsContainer.innerHTML = `<p style="color: red;">❌ ${t('perm.load_error')}</p>`;
         permissionsContainer.style.display = 'block';
     }
 }
@@ -1141,41 +1143,17 @@ function resetToDefaultPermissions(username) {
 }
 
         function getPermissionDisplayName(permission) {
-    const names = {
-        canViewLots: 'Visualizzazione Lotti',
-        canCreateLots: 'Creazione Lotti',
-        canEditLots: 'Modifica Lotti',
-        canDeleteLots: 'Eliminazione Lotti',
-        canAddActivities: 'Aggiunta Attività',
-        canUploadAnalyses: 'Caricamento Analisi',
-        canManageEconomics: 'Gestione Economica',
-        canExportData: 'Esportazione Dati',
-        canManageUsers: 'Gestione Utenti',
-        canAccessDetails: 'Accesso Dettagli Lotti',      // NUOVO
-        canAccessEconomic: 'Accesso Gestione Economica',  // NUOVO
-        canAccessCosts: 'Accesso Gestione Costi',  // ✅ NUOVO
-        canAccessBilancio: 'Accesso Bilancio & Report',  // ✅ NUOVO
-    };
-    return names[permission] || permission;
+    return t('perm.name.' + permission);
 }
-        
-        function getPermissionDescription(permission) {
-    const descriptions = {
-        canViewLots: 'Permette di visualizzare l\'elenco dei lotti',
-        canCreateLots: 'Permette di creare nuovi lotti',
-        canEditLots: 'Permette di modificare i lotti esistenti',
-        canDeleteLots: 'Permette di eliminare i lotti',
-        canAddActivities: 'Permette di aggiungere attività di raccolta',
-        canUploadAnalyses: 'Permette di caricare analisi di laboratorio',
-        canManageEconomics: 'Permette di gestire i dati economici',
-        canExportData: 'Permette di esportare i dati in Excel',
-        canManageUsers: 'Permette di gestire gli utenti del sistema',
-        canAccessDetails: 'Permette di accedere alla sezione Dettagli Lotti',        // NUOVO
-        canAccessEconomic: 'Permette di accedere alla sezione Gestione Economica',    // NUOVO
-        canAccessCosts: 'Permette di accedere alla sezione Gestione Costi',  // ✅ NUOVO
-        canAccessBilancio: 'Permette di accedere alla sezione Bilancio & Report'  // ✅ NUOVO
-    };
-    return descriptions[permission] || 'Descrizione non disponibile';
+
+function getPermissionDescription(permission) {
+    return t('perm.desc.' + permission);
+}
+
+function roleLabel(role) {
+    const key = 'role.' + role;
+    const label = t(key);
+    return label === key ? role : label;
 }
         
         function editUser(userId) {
@@ -1945,7 +1923,7 @@ function optimizeMobileLoad() {
             if (l.company_name) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🏢 ${lbl('common.company','Azienda')}:</td><td><strong>${esc(l.company_name)}</strong></td></tr>`);
             if (l.location) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">📍 ${lbl('common.lot','Lotto')}:</td><td><strong>${esc(l.location)}</strong></td></tr>`);
             if (l.variety) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🌱 ${lbl('common.variety','Varietà')}:</td><td>${esc(l.variety)}</td></tr>`);
-            if (l.product_type) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🍎 ${lbl('common.product','Prodotto')}:</td><td>${esc(l.product_type)}${l.product_category ? ' / ' + esc(l.product_category) : ''}</td></tr>`);
+            if (l.product_type) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🍎 ${lbl('common.product','Prodotto')}:</td><td>${esc(trType(l.product_type))}${l.product_category ? ' / ' + esc(trProd(l.product_category)) : ''}</td></tr>`);
             if (l.field_lot) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">🔖 ${lbl('reg_lot.field_lot_short','Lotto Campo')}:</td><td>${esc(l.field_lot)}</td></tr>`);
             if (l.field_size) rows.push(`<tr><td style="opacity:0.7;padding-right:8px;">📐 ${lbl('common.area','Superficie')}:</td><td>${esc(l.field_size)} ha</td></tr>`);
 
@@ -2150,7 +2128,7 @@ function populateProductCategories(productType) {
     const customContainer = document.getElementById('custom-product-container');
     
     // Reset dei campi
-    categorySelect.innerHTML = '<option value="">Seleziona prodotto</option>';
+    categorySelect.innerHTML = `<option value="">${t('reg_lot.select_product')}</option>`;
     customContainer.style.display = 'none';
     document.getElementById('custom-product').value = '';
     
@@ -2158,7 +2136,7 @@ function populateProductCategories(productType) {
         productCategories[productType].forEach(product => {
             const option = document.createElement('option');
             option.value = product;
-            option.textContent = product;
+            option.textContent = trProd(product);
             categorySelect.appendChild(option);
         });
         
@@ -2524,7 +2502,7 @@ function updateLotGPS(lotId, gpsUrl) {
         function populateDetailsForm(lotData, detailsData) {
             const sectionTitle = document.querySelector('#dettagli-section .section-title');
             if (sectionTitle) {
-                sectionTitle.innerHTML = `<i class="fas fa-info-circle"></i> Dettagli Lotto: ${lotData.company_name}`;
+                sectionTitle.innerHTML = `<i class="fas fa-info-circle"></i> ${t('lot.details_of')}: ${lotData.company_name}`;
             }
             
             let lotIdField = document.getElementById('current-lot-id');
@@ -2552,7 +2530,7 @@ function updateLotGPS(lotId, gpsUrl) {
     // Costruisci le informazioni del prodotto
     let productInfo = '';
     if (lotData.product_category) {
-        productInfo = ` - ${lotData.product_category}`;
+        productInfo = ` - ${trProd(lotData.product_category)}`;
     }
     if (lotData.variety) {
         productInfo += ` (${lotData.variety})`;
@@ -2562,16 +2540,16 @@ function updateLotGPS(lotId, gpsUrl) {
         <div class="lot-summary">
             <h4><i class="fas fa-building"></i> ${lotData.company_name}</h4>
             <p><i class="fas fa-map-marker-alt"></i> ${lotData.location}</p>
-            <p><i class="fas fa-wine-bottle"></i> ${lotData.product_type}${productInfo}</p>
+            <p><i class="fas fa-wine-bottle"></i> ${trType(lotData.product_type)}${productInfo}</p>
             
-            ${lotData.field_lot ? `<p><i class="fas fa-map"></i> Lotto Campo: ${lotData.field_lot}</p>` : ''}
+            ${lotData.field_lot ? `<p><i class="fas fa-map"></i> ${t('lot.field_lot')}: ${lotData.field_lot}</p>` : ''}
             
-            ${lotData.field_size ? `<p><i class="fas fa-ruler-combined"></i> Superficie: ${lotData.field_size} ettari</p>` : ''}
+            ${lotData.field_size ? `<p><i class="fas fa-ruler-combined"></i> ${t('common.area')}: ${lotData.field_size} ${t('lot.hectares')}</p>` : ''}
             
-            ${lotData.gps_coordinates ? `<p><i class="fas fa-link"></i> <a href="${lotData.gps_coordinates}" target="_blank">Vedi su Mappa</a></p>` : '<p><i class="fas fa-map-marker-alt" style="color: #FF9800;"></i> <em>Coordinate non inserite</em></p>'}
+            ${lotData.gps_coordinates ? `<p><i class="fas fa-link"></i> <a href="${lotData.gps_coordinates}" target="_blank">${t('lot.view_on_map')}</a></p>` : `<p><i class="fas fa-map-marker-alt" style="color: #FF9800;"></i> <em>${t('lot.no_coordinates')}</em></p>`}
             
             <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                <small><i class="fas fa-info-circle"></i> <strong>Informazioni di base del lotto</strong></small>
+                <small><i class="fas fa-info-circle"></i> <strong>${t('lot.basic_info')}</strong></small>
             </div>
         </div>
     `;
@@ -3148,8 +3126,8 @@ function updateLotGPS(lotId, gpsUrl) {
             
             if (visibili.length === 0) {
                 const msg = stagioneSel
-                    ? `Nessuna attività di raccolta per la stagione ${stagioneSel}`
-                    : 'Nessuna attività di raccolta registrata';
+                    ? t('det.no_harvest_season', { season: stagioneSel })
+                    : t('det.no_harvest');
                 container.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${msg}</p>`;
                 historyContainer.style.display = lotActivities.length > 0 ? 'block' : 'none';
                 countBadge.textContent = '0';
@@ -3247,8 +3225,8 @@ function updateLotGPS(lotId, gpsUrl) {
         document.getElementById('economic-lot-info').innerHTML = `
             <h4><i class="fas fa-building"></i> ${lot.company_name}</h4>
             <p><i class="fas fa-map-marker-alt"></i> ${lot.location}</p>
-            <p><i class="fas fa-wine-bottle"></i> ${lot.product_type} - ${lot.variety}</p>
-            ${lot.field_lot ? `<p><i class="fas fa-map"></i> Lotto Campo: ${lot.field_lot}</p>` : ''}
+            <p><i class="fas fa-wine-bottle"></i> ${trType(lot.product_type)}${lot.variety ? ' - ' + lot.variety : ''}</p>
+            ${lot.field_lot ? `<p><i class="fas fa-map"></i> ${t('lot.field_lot')}: ${lot.field_lot}</p>` : ''}
         `;
         document.getElementById('economic-lot-info').style.display = 'block';
     }
@@ -3482,6 +3460,12 @@ function calcolaKgRaccoltiAutomaticoCompleto() {
 
 let beniDurevoliCount = 0;
 
+function translateBeneItem(el) {
+    el.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.getAttribute('data-i18n')); });
+    el.querySelectorAll('[data-i18n-placeholder]').forEach(n => { n.placeholder = t(n.getAttribute('data-i18n-placeholder')); });
+    el.querySelectorAll('.bene-anni option').forEach(o => { o.textContent = t(o.value === '1' ? 'costi.year_one' : 'costi.years_n', { n: o.value }); });
+}
+
 function aggiungiBeneDurevole() {
     const container = document.getElementById('beni-durevoli-container');
     const template = document.getElementById('bene-durevole-template');
@@ -3492,6 +3476,7 @@ function aggiungiBeneDurevole() {
     
     const clone = template.content.cloneNode(true);
     const beneDiv = clone.querySelector('.bene-durevole-item');
+    translateBeneItem(beneDiv);
     beneDiv.dataset.index = beniDurevoliCount;
     beneDiv.querySelector('.bene-index').textContent = `#${beniDurevoliCount}`;
     
@@ -3924,7 +3909,7 @@ async function importaCostoPersonaleDaGestioneCosti() {
     console.log('📊 Registrazioni filtrate per lotto:', registrazioniFiltrate.length);
     
     if (registrazioniFiltrate.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">Nessuna registrazione economica</p>';
+        container.innerHTML = `<p style="text-align: center; color: #666; padding: 20px;">${t('eco.no_records')}</p>`;
         if (bilancioContainer) bilancioContainer.style.display = 'none';
         if (countBadge) countBadge.textContent = '0';
         return;
@@ -3971,9 +3956,9 @@ async function importaCostoPersonaleDaGestioneCosti() {
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <i class="fas fa-chevron-down gruppo-chevron" style="transition: transform 0.3s ease;"></i>
                         <div>
-                            <strong style="font-size: 1.1rem;">📅 Stagione ${stagione}</strong>
+                            <strong style="font-size: 1.1rem;">📅 ${t('common.season')} ${stagione}</strong>
                             <br>
-                            <small style="opacity: 0.9;">${regs.length} registrazione${regs.length !== 1 ? 'i' : ''}</small>
+                            <small style="opacity: 0.9;">${regs.length} ${t(regs.length !== 1 ? 'eco.records_many' : 'eco.records_one')}</small>
                             <button onclick="event.stopPropagation(); eliminaStagioneEconomica('${stagione}', ${currentEconomicLotId})" 
         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.5); padding: 8px 15px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; font-weight: bold;"
         title="${t('common.delete_all_season')}">
@@ -4481,7 +4466,7 @@ function popolaFormEconomico(record) {
                             <small>${lot.location} - ${lot.variety}</small>
                         </div>
                         <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
-                            ${lot.product_type}
+                            ${trType(lot.product_type)}
                         </span>
                     </div>
                 `;
@@ -4616,8 +4601,8 @@ function popolaFormEconomico(record) {
             'ID Lotto': lot.id,
             'Azienda': lot.company_name,
             'Luogo': lot.location,
-            'Tipo Prodotto': lot.product_type,
-            'Prodotto': lot.product_category || (lot.product_category === '' ? '' : 'N/D'), // CORREZIONE
+            'Tipo Prodotto': trType(lot.product_type),
+            'Prodotto': trProd(lot.product_category) || '', // CORREZIONE
             'Varietà': lot.variety || (lot.variety === '' ? '' : 'N/D'),
             'Lotto Campo': lot.field_lot || '',
             'Superficie (ettari)': lot.field_size || '',
@@ -4637,8 +4622,8 @@ function popolaFormEconomico(record) {
             allActivities.push({
                 'ID Lotto': lot.id,
                 'Azienda': lot.company_name,
-                'Tipo Prodotto': lot.product_type,
-                'Prodotto': lot.product_category || '', // NUOVO CAMPO
+                'Tipo Prodotto': trType(lot.product_type),
+                'Prodotto': trProd(lot.product_category) || '', // NUOVO CAMPO
                 'Varietà': lot.variety || '', // CAMPO ORA OPZIONALE
                 'Data Raccolta': new Date(activity.date).toLocaleDateString('it-IT'),
                 'Kg Raccolti': activity.kg,
@@ -4661,8 +4646,8 @@ function popolaFormEconomico(record) {
             allAnalyses.push({
                 'ID Lotto': lot.id,
                 'Azienda': lot.company_name,
-                'Tipo Prodotto': lot.product_type,
-                'Prodotto': lot.product_category || '', // NUOVO CAMPO
+                'Tipo Prodotto': trType(lot.product_type),
+                'Prodotto': trProd(lot.product_category) || '', // NUOVO CAMPO
                 'Varietà': lot.variety || '', // CAMPO ORA OPZIONALE
                 'Anno Riferimento': analysis.year,
                 'Nome File': analysis.originalName,
@@ -4690,8 +4675,8 @@ function popolaFormEconomico(record) {
                 allEconomic.push({
                     'ID Lotto': reg.lotId,
                     'Azienda': lot.company_name,
-                    'Tipo Prodotto': lot.product_type,
-                    'Prodotto': lot.product_category || '',
+                    'Tipo Prodotto': trType(lot.product_type),
+                    'Prodotto': trProd(lot.product_category) || '',
                     'Varietà': lot.variety || '',
                     'Stagione Agricola': reg.stagioneAgricola,
                     'Data Acquisto/Vendita': new Date(reg.dataAcquistoVendita).toLocaleDateString('it-IT'),
@@ -5249,7 +5234,7 @@ function changeItemsPerPage() {
         // Costruisci le informazioni del prodotto
         let productInfo = '';
 if (lot.product_category && lot.product_category.trim() !== '') {
-    productInfo = ` - ${lot.product_category}`;
+    productInfo = ` - ${trProd(lot.product_category)}`;
 }
 if (lot.variety && lot.variety.trim() !== '') {
     if (productInfo) {
@@ -5264,28 +5249,28 @@ if (lot.variety && lot.variety.trim() !== '') {
         <h3>${lot.company_name}</h3>
         <p>
             <i class="fas fa-map-marker-alt"></i> ${lot.location} - 
-            <strong>${lot.product_type}</strong>
-            ${lot.product_category ? ` - ${lot.product_category}` : ''}
+            <strong>${trType(lot.product_type)}</strong>
+            ${lot.product_category ? ` - ${trProd(lot.product_category)}` : ''}
             ${lot.variety ? ` (${lot.variety})` : ''}
         </p>
         ${lot.field_lot ? `<p><i class="fas fa-map"></i> Lotto: ${lot.field_lot}</p>` : ''}
-        ${lot.field_size ? `<p><i class="fas fa-ruler-combined"></i> Superficie: ${lot.field_size} ettari</p>` : ''}
-        <small>ID: ${lot.id} - Creato: ${new Date(lot.created_at).toLocaleDateString()} da ${lot.createdBy || 'Utente'}</small>
+        ${lot.field_size ? `<p><i class="fas fa-ruler-combined"></i> ${t('common.area')}: ${lot.field_size} ${t('lot.hectares')}</p>` : ''}
+        <small>ID: ${lot.id} - ${t('lot.created_on')}: ${new Date(lot.created_at).toLocaleDateString(getCurrentLang())} ${t('lot.by')} ${lot.created_by || lot.owner_username || t('lot.user')}</small>
     </div>
             <div class="lotto-actions">
-               <div class="action-btn" onclick="navigateToLot('${lot.gps_coordinates}')" title="Naviga su Maps" style="background: #4CAF50; color: white; border-color: #4CAF50;">
+               <div class="action-btn" onclick="navigateToLot('${lot.gps_coordinates}')" title="${t('lot.tip.navigate')}" style="background: #4CAF50; color: white; border-color: #4CAF50;">
     <i class="fas fa-directions"></i>
 </div>
-<div class="action-btn" onclick="addGPSLater(${lot.id})" title="Aggiungi coordinate GPS" style="background: #FF9800; color: white; border-color: #FF9800;">
+<div class="action-btn" onclick="addGPSLater(${lot.id})" title="${t('lot.tip.add_gps')}" style="background: #FF9800; color: white; border-color: #FF9800;">
     <i class="fas fa-map-marker-alt"></i>
 </div>
-                <div class="action-btn" onclick="loadLotDetails(${lot.id})" title="Vedi dettagli completi" style="background: #2196F3; color: white; border-color: #2196F3;">
+                <div class="action-btn" onclick="loadLotDetails(${lot.id})" title="${t('lot.tip.details')}" style="background: #2196F3; color: white; border-color: #2196F3;">
     <i class="fas fa-chart-bar"></i>
 </div>
-                <div class="action-btn" onclick="goToEconomicManagement(${lot.id})" title="Gestione Economica" style="background: #9C27B0; color: white; border-color: #9C27B0;">
+                <div class="action-btn" onclick="goToEconomicManagement(${lot.id})" title="${t('nav.tip.gestione_economica')}" style="background: #9C27B0; color: white; border-color: #9C27B0;">
                     <i class="fas fa-euro-sign"></i>
                 </div>
-                <div class="action-btn" onclick="showSection('gestione-costi-section'); setTimeout(() => loadCostiLotDetails(${lot.id}), 300);" title="Gestione Costi" style="background: #FF5722;">
+                <div class="action-btn" onclick="showSection('gestione-costi-section'); setTimeout(() => loadCostiLotDetails(${lot.id}), 300);" title="${t('nav.tip.gestione_costi')}" style="background: #FF5722;">
                     <i class="fas fa-wallet"></i>
 </div>
                 ${permissions.canEditLots ? `
@@ -5759,10 +5744,10 @@ function closeAllDropdowns() {
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <div>
                     <strong>${lot.company_name}</strong><br>
-                    <small>${lot.location} - ${lot.variety || 'Nessuna varietà'}</small>
+                    <small>${lot.location} - ${lot.variety || t('lot.no_variety')}</small>
                 </div>
                 <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
-                    ${lot.product_type}
+                    ${trType(lot.product_type)}
                 </span>
             </div>
         `;
@@ -5786,7 +5771,7 @@ function closeAllDropdowns() {
     const viewAllItem = document.createElement('button');
     viewAllItem.className = 'dropdown-item';
     viewAllItem.type = 'button';
-    viewAllItem.innerHTML = '<i class="fas fa-list"></i> Vedi tutti i lotti';
+    viewAllItem.innerHTML = `<i class="fas fa-list"></i> ${t('lot.view_all')}`;
     viewAllItem.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -5820,10 +5805,10 @@ function closeAllDropdowns() {
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                 <div>
                     <strong>${lot.company_name}</strong><br>
-                    <small>${lot.location} - ${lot.variety || 'Nessuna varietà'}</small>
+                    <small>${lot.location} - ${lot.variety || t('lot.no_variety')}</small>
                 </div>
                 <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
-                    ${lot.product_type}
+                    ${trType(lot.product_type)}
                 </span>
             </div>
         `;
@@ -5851,7 +5836,7 @@ function closeAllDropdowns() {
     const viewAllItem = document.createElement('button');
     viewAllItem.className = 'dropdown-item';
     viewAllItem.type = 'button';
-    viewAllItem.innerHTML = '<i class="fas fa-list"></i> Vedi tutti i lotti';
+    viewAllItem.innerHTML = `<i class="fas fa-list"></i> ${t('lot.view_all')}`;
     viewAllItem.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -6820,7 +6805,7 @@ async function exportAllLotsData() {
                 'Azienda': lot.company_name,
                 'Luogo': lot.location,
                 'Tipologia Prodotto': lot.product_type,
-                'Prodotto': lot.product_category || '',
+                'Prodotto': trProd(lot.product_category) || '',
                 'Varietà': lot.variety || '',
                 'Lotto Campo': lot.field_lot || '',
                 'Superficie (ettari)': lot.field_size || '',
@@ -6895,7 +6880,7 @@ async function exportAllActivitiesData() {
                         'Azienda': lot.company_name,
                         'Luogo': lot.location,
                         'Tipologia Prodotto': lot.product_type,
-                        'Prodotto': lot.product_category || '',
+                        'Prodotto': trProd(lot.product_category) || '',
                         'Varietà': lot.variety || '',
                         'Data Raccolta': new Date(activity.date).toLocaleDateString('it-IT'),
                         'Kg Raccolti': activity.kg,
@@ -6992,7 +6977,7 @@ async function exportAllEconomicData() {
                         'Azienda': lot.company_name,
                         'Luogo': lot.location,
                         'Tipologia Prodotto': lot.product_type,
-                        'Prodotto': lot.product_category || '',
+                        'Prodotto': trProd(lot.product_category) || '',
                         'Varietà': lot.variety || '',
                         'Stagione Agricola': record.stagione_agricola || record.stagioneAgricola || '',
                         'Data Acquisto/Vendita': (record.data_acquisto_vendita || record.dataAcquistoVendita) ? 
@@ -7192,7 +7177,7 @@ function initGestioneCosti() {
                     <small>${lot.location} - ${lot.variety || ''}</small>
                 </div>
                 <span style="background: #FF5722; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">
-                    ${lot.product_type}
+                    ${trType(lot.product_type)}
                 </span>
             </div>
         `;
@@ -7291,7 +7276,7 @@ async function loadBilancioData(lotId) {
     
     stagioneSelect.innerHTML = '<option value="">Tutte le stagioni</option>';
     [...stagioni].sort().reverse().forEach(s => {
-        stagioneSelect.innerHTML += `<option value="${s}">📅 Stagione ${s}</option>`;
+        stagioneSelect.innerHTML += `<option value="${s}">📅 ${t('common.season')} ${s}</option>`;
     });
     
     stagioneSelect.onchange = function() {
@@ -7537,14 +7522,14 @@ async function aggiornaGraficoMultiStagione(lotId) {
                 </div>
                 <div class="ms-card-body">
                     <div class="ms-row">
-                        <span class="ms-label"><i class="fas fa-arrow-up" style="color:#4CAF50;"></i> Ricavi</span>
+                        <span class="ms-label"><i class="fas fa-arrow-up" style="color:#4CAF50;"></i> ${t('bilancio.revenue')}</span>
                         <div class="ms-bar-wrapper">
                             <div class="ms-bar ms-bar-ricavi" style="width: ${wRicavi}%;"></div>
                         </div>
                         <span class="ms-value">€${d.ricavi.toFixed(2)}</span>
                     </div>
                     <div class="ms-row">
-                        <span class="ms-label"><i class="fas fa-arrow-down" style="color:#f44336;"></i> Costi</span>
+                        <span class="ms-label"><i class="fas fa-arrow-down" style="color:#f44336;"></i> ${t('bilancio.costs')}</span>
                         <div class="ms-bar-wrapper">
                             <div class="ms-bar-stack" style="width: ${wCosti}%;">
                                 ${d.personale > 0 ? `<div class="ms-bar-segment seg-personale" style="width: ${pctPersonale}%;" title="Personale €${d.personale.toFixed(2)}"></div>` : ''}
@@ -7558,7 +7543,7 @@ async function aggiornaGraficoMultiStagione(lotId) {
                         ${d.personale > 0 ? `<span class="ms-chip chip-personale">👥 Pers. €${d.personale.toFixed(0)}</span>` : ''}
                         ${d.mezzi > 0 ? `<span class="ms-chip chip-mezzi">🧪 Mezzi €${d.mezzi.toFixed(0)}</span>` : ''}
                         ${d.amm > 0 ? `<span class="ms-chip chip-amm">📦 Amm. €${d.amm.toFixed(0)}</span>` : ''}
-                        ${(d.personale + d.mezzi + d.amm) === 0 ? '<span class="ms-chip ms-chip-empty">Nessun costo</span>' : ''}
+                        ${(d.personale + d.mezzi + d.amm) === 0 ? `<span class="ms-chip ms-chip-empty">${t('bilancio.no_cost')}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -7769,7 +7754,7 @@ async function loadCostiLotDetails(lotId) {
             <h4><i class="fas fa-building"></i> ${lot.company_name}</h4>
             <p><i class="fas fa-map-marker-alt"></i> ${lot.location}</p>
             <p><i class="fas fa-wine-bottle"></i> ${lot.product_type} - ${lot.variety || ''}</p>
-            ${lot.field_lot ? `<p><i class="fas fa-map"></i> Lotto Campo: ${lot.field_lot}</p>` : ''}
+            ${lot.field_lot ? `<p><i class="fas fa-map"></i> ${t('lot.field_lot')}: ${lot.field_lot}</p>` : ''}
         `;
         document.getElementById('costi-lot-info').style.display = 'block';
     }
@@ -7908,7 +7893,7 @@ async function popolaAttivitaPredefinite() {
         const attivita = response.data || [];
         
         const select = document.getElementById('costo-attivita-select');
-        select.innerHTML = '<option value="">Seleziona attività predefinita...</option>' +
+        select.innerHTML = `<option value="">${t('costi.select_predefined')}</option>` +
             '<option value="__altra__">✏️ Altra attività (scrivi liberamente)...</option>';
         
         attivita.forEach(a => {
@@ -7988,12 +7973,12 @@ function displayRegistroPersonale(records, vista = 'giornaliera') {
      // Intestazione con stagione
     const headerHtml = `
         <div style="background: #FF5722; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - ${records.length} attività</strong>
+            <strong>📅 ${t('common.season')} ${currentCostiStagione || currentTariffeStagione} - ${records.length} ${t('costi.activities_count')}</strong>
         </div>
     `;
     
     if (records.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">Nessuna attività registrata</p>';
+        container.innerHTML = `<p style="text-align: center; color: #666;">${t('costi.no_activities')}</p>`;
         return;
     }
     
@@ -8257,9 +8242,9 @@ function displayMezziTecniciRegistro(records, vista = 'giornaliera') {
     if (records.length === 0) {
         container.innerHTML = `
             <div style="background: #2196F3; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - 0 registrazioni</strong>
+                <strong>📅 ${t('common.season')} ${currentCostiStagione || currentTariffeStagione} - 0 ${t('costi.records_count')}</strong>
             </div>
-            <p style="text-align: center; color: #666;">Nessun costo registrato</p>
+            <p style="text-align: center; color: #666;">${t('costi.no_costs')}</p>
         `;
         return;
     }
@@ -8267,7 +8252,7 @@ function displayMezziTecniciRegistro(records, vista = 'giornaliera') {
     // Intestazione comune
     let html = `
         <div style="background: #2196F3; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-            <strong>📅 Stagione ${currentCostiStagione || currentTariffeStagione} - ${records.length} registrazioni | Totale: €${records.reduce((sum, r) => sum + (r.importo || 0), 0).toFixed(2)}</strong>
+            <strong>📅 ${t('common.season')} ${currentCostiStagione || currentTariffeStagione} - ${records.length} ${t('costi.records_count')} | ${t('costi.total')}: €${records.reduce((sum, r) => sum + (r.importo || 0), 0).toFixed(2)}</strong>
         </div>
     `;
     
@@ -8484,6 +8469,7 @@ function aggiungiBeneDurevoleCosti() {
     
     const clone = template.content.cloneNode(true);
     const beneDiv = clone.querySelector('.bene-durevole-item');
+    translateBeneItem(beneDiv);
     beneDiv.dataset.index = beniDurevoliCostiCount;
     beneDiv.querySelector('.bene-index').textContent = `#${beniDurevoliCostiCount}`;
     
@@ -8770,13 +8756,13 @@ function renderStoricoBeniDurevoli(records, stagioneRiferimento) {
     const attivi = lista.filter(b => stagioneRef >= b.annoInizio && stagioneRef <= b.annoFine).length;
     const totali = lista.length;
     if (counter) {
-        counter.textContent = totali === 0 ? '0 beni' : `${attivi}/${totali} attivi`;
+        counter.textContent = totali === 0 ? `0 ${t('costi.assets_count')}` : `${attivi}/${totali} ${t('costi.active_count')}`;
     }
     
     if (totali === 0) {
         container.innerHTML = `<div class="bene-storico-empty">
             <i class="fas fa-inbox" style="margin-right:6px;"></i>
-            Nessun bene durevole registrato per questo lotto.
+            ${t('costi.no_durables')}
         </div>`;
         return;
     }
@@ -9373,7 +9359,7 @@ async function popolaSelectStagioneBilancioAzienda() {
     const stagioni = Array.from(stagioniSet).sort((a, b) => parseInt(b) - parseInt(a));
     const prev = sel.value;
     sel.innerHTML = '<option value="">— Tutte le stagioni —</option>'
-        + stagioni.map(s => `<option value="${s}">📅 Stagione ${s}</option>`).join('');
+        + stagioni.map(s => `<option value="${s}">📅 ${t('common.season')} ${s}</option>`).join('');
     // Mantieni la selezione se ancora valida
     if (prev && Array.from(sel.options).some(o => o.value === prev)) sel.value = prev;
     else sel.value = currentBilancioAziendaStagione || '';
@@ -9391,7 +9377,7 @@ async function renderBilancioAziendaDrilldown() {
     try {
         const company = cachedCompanies.find(c => Number(c.id) === currentBilancioAziendaId);
         const stagioneLabel = currentBilancioAziendaStagione
-            ? ` · 📅 Stagione ${currentBilancioAziendaStagione}`
+            ? ` · 📅 ${t('common.season')} ${currentBilancioAziendaStagione}`
             : ' · 📅 Tutte le stagioni';
         if (titleEl) titleEl.innerHTML = `<i class="fas fa-building"></i> ${company ? company.name : 'Azienda #' + currentBilancioAziendaId}<span style="color:#00838F;font-size:0.85rem;font-weight:600;">${stagioneLabel}</span>`;
         
@@ -9517,8 +9503,23 @@ document.addEventListener('cropbook:lang-changed', () => {
             if (typeof loadUserManagement === 'function') loadUserManagement();
         }
         // Bilancio & Report: griglia aziende sempre visibile in vista aziende
+        const typeSelect = document.getElementById('product-type');
+        const catSelect = document.getElementById('product-category');
+        if (typeSelect && catSelect && typeSelect.value) {
+            const prev = catSelect.value;
+            populateProductCategories(typeSelect.value);
+            catSelect.value = prev;
+            if (prev === 'altri') document.getElementById('custom-product-container').style.display = 'block';
+        }
+        document.querySelectorAll('.bene-durevole-item').forEach(translateBeneItem);
+        const costiSection = document.getElementById('gestione-costi-section');
+        if (costiSection && costiSection.classList.contains('active') && currentCostiLotId) loadCostiLotDetails(currentCostiLotId);
+        const ecoSection = document.getElementById('gestione-economica-section');
+        if (ecoSection && ecoSection.classList.contains('active') && currentEconomicLotId) loadEconomicLotDetails(currentEconomicLotId);
         const dettagliSection = document.getElementById('dettagli-section');
-        if (dettagliSection && dettagliSection.classList.contains('active')) {
+        if (dettagliSection && dettagliSection.classList.contains('active') && currentLotId) {
+            loadLotDetails(currentLotId);
+        } else if (dettagliSection && dettagliSection.classList.contains('active')) {
             populateDettagliStagioneSelect();
             displayAnalyses();
             displayDocuments();

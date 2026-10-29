@@ -9,6 +9,7 @@ const { requirePermission } = require('../middleware/rbac');
 const { makePdfTranslator } = require('../middleware/i18n');
 
 const router = express.Router();
+const { trProductType } = require('../js/products-i18n');
 const JWT_SECRET = process.env.JWT_SECRET;
 
 function authenticateToken(req, res, next) {
@@ -611,7 +612,7 @@ router.get('/bilancio/:lotId', authenticateToken, requirePermission('economic:re
         // Info Lotto
         doc.fillColor('#222').fontSize(16).font('Helvetica-Bold').text(lot.company_name);
         doc.fontSize(10).font('Helvetica').fillColor('#555');
-        doc.text(`Lotto #${lot.id}  ·  ${lot.product_type || 'N/D'}${lot.variety ? ' (' + lot.variety + ')' : ''}  ·  ${lot.location}`);
+        doc.text(`Lotto #${lot.id}  ·  ${trProductType(lot.product_type, pdfLang) || 'N/D'}${lot.variety ? ' (' + lot.variety + ')' : ''}  ·  ${lot.location}`);
         if (lot.field_size) doc.text(`Superficie: ${lot.field_size} ha`);
         doc.text(`Stagione: ${stagione || 'Tutte'}  ·  Generato il ${new Date().toLocaleString('it-IT')}`);
         doc.moveDown(1);
@@ -1223,7 +1224,7 @@ router.get('/bilancio-azienda/:id', authenticateToken, requirePermission('lots:r
             let cx = 50;
             const cells = [
                 { v: `#${d.lot.id} ${d.lot.location || ''}`, a: 'left' },
-                { v: `${d.lot.product_type || ''}${d.lot.variety ? ' / ' + d.lot.variety : ''}`, a: 'left' },
+                { v: `${trProductType(d.lot.product_type, pdfLang) || ''}${d.lot.variety ? ' / ' + d.lot.variety : ''}`, a: 'left' },
                 { v: fmtEur(d.ricavi), a: 'right' },
                 { v: fmtEur(d.personale), a: 'right' },
                 { v: fmtEur(d.mezzi), a: 'right' },
